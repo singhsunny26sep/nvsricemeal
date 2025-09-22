@@ -21,7 +21,7 @@ const ProfileScreen: React.FC = () => {
     email: 'john@example.com',
     phone: '+91 9876543210',
     address: '123 Main St, Mumbai, India',
-    avatar: 'https://via.placeholder.com/100',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
     bio: 'Premium Rice Enthusiast',
   };
 
@@ -173,6 +173,10 @@ const styles = StyleSheet.create({
     padding: theme.spacing.xlarge,
     marginBottom: theme.spacing.large,
     ...theme.shadows.card,
+    elevation: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(76, 175, 80, 0.1)',
+    position: 'relative',
   },
   avatar: {
     width: 120,
@@ -181,6 +185,11 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
     borderWidth: 4,
     borderColor: theme.colors.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   name: {
     fontSize: theme.fonts.size.title,
@@ -189,6 +198,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontFamily: theme.fonts.family.bold,
     marginBottom: theme.spacing.small,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   bio: {
     fontSize: theme.fonts.size.large,
@@ -196,6 +208,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: theme.spacing.medium,
+    fontFamily: theme.fonts.family.regular,
   },
   infoCard: {
     backgroundColor: theme.colors.card,
@@ -268,16 +281,23 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: theme.colors.error,
     padding: theme.spacing.large,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: theme.borderRadius.large,
     alignItems: 'center',
     marginHorizontal: theme.spacing.medium,
     marginBottom: theme.spacing.large,
+    ...theme.shadows.card,
+    elevation: 4,
+    shadowColor: theme.colors.error,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   logoutButtonText: {
     color: theme.colors.card,
     fontSize: theme.fonts.size.large,
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
+    letterSpacing: 0.5,
   },
   menuSection: {
     marginHorizontal: theme.spacing.medium,
@@ -299,7 +319,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.large,
     marginBottom: theme.spacing.medium,
     ...theme.shadows.card,
-    elevation: 2,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.08)',
+    position: 'relative',
+    overflow: 'hidden',
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -309,7 +333,8 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.large,
     color: theme.colors.text,
     marginLeft: theme.spacing.medium,
-    fontFamily: theme.fonts.family.regular,
+    fontFamily: theme.fonts.family.medium,
+    fontWeight: '500',
   },
 });
 

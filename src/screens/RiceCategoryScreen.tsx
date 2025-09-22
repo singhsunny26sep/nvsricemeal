@@ -58,7 +58,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onPress }) => {
         <Image
           source={{ uri: category.image }}
           style={styles.categoryImage}
-          defaultSource={{ uri: 'https://via.placeholder.com/200x150/4CAF50/FFFFFF?text=Rice' }}
+          defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=400&h=300&fit=crop&crop=center' }}
         />
         <View style={styles.categoryInfo}>
           <Text style={styles.categoryName}>{category.name}</Text>
@@ -101,7 +101,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart }) => {
       <Image
         source={{ uri: item.image }}
         style={styles.productImage}
-        defaultSource={{ uri: 'https://via.placeholder.com/150' }}
+        defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center' }}
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
@@ -186,9 +186,9 @@ const RiceCategoryScreen: React.FC = () => {
             Discover our premium collection of rice varieties from around the world
           </Text>
           <Image
-            source={{ uri: 'https://via.placeholder.com/300x200/4CAF50/FFFFFF?text=Rice+Collection' }}
+            source={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=600&h=400&fit=crop&crop=center' }}
             style={styles.heroImage}
-            defaultSource={{ uri: 'https://via.placeholder.com/300x200/4CAF50/FFFFFF?text=Rice' }}
+            defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=600&h=400&fit=crop&crop=center' }}
           />
         </View>
 
@@ -263,6 +263,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     marginBottom: theme.spacing.medium,
+    position: 'relative',
+    overflow: 'hidden',
   },
   heroTitle: {
     fontSize: theme.fonts.size.header,
@@ -274,6 +276,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+    letterSpacing: 1,
   },
   heroSubtitle: {
     fontSize: theme.fonts.size.medium,
@@ -283,6 +286,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     fontFamily: theme.fonts.family.regular,
     lineHeight: 22,
+    paddingHorizontal: theme.spacing.medium,
   },
   heroImage: {
     width: 300,
@@ -294,6 +298,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   categoriesSection: {
     padding: theme.spacing.large,
@@ -315,22 +321,25 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
     overflow: 'hidden',
     ...theme.shadows.card,
-    elevation: 8,
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.1)',
+    borderColor: 'rgba(76, 175, 80, 0.15)',
+    position: 'relative',
   },
   categoryImage: {
     width: '100%',
     height: 150,
     resizeMode: 'cover',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(76, 175, 80, 0.1)',
   },
   categoryInfo: {
-    padding: theme.spacing.medium,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    padding: theme.spacing.large,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
   },
   categoryName: {
     fontSize: theme.fonts.size.large,
@@ -339,6 +348,9 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.small,
     fontFamily: theme.fonts.family.bold,
     letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.05)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   categoryDescription: {
     fontSize: theme.fonts.size.small,
@@ -357,10 +369,12 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    paddingHorizontal: theme.spacing.small,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.small,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
   },
   featuresSection: {
     padding: theme.spacing.large,

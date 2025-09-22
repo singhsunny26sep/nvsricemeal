@@ -8,6 +8,8 @@ export const theme = {
     textSecondary: '#666666',
     error: '#F44336',
     success: '#4CAF50',
+    gold: '#FFD700',
+    rice: '#F5DEB3',
   },
   spacing: {
     small: 8,

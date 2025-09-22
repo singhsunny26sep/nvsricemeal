@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useCart } from './src/context/CartContext';
 import {
   NavigationContainer,
@@ -42,6 +43,43 @@ const ProfileStack = createStackNavigator();
 
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from './src/constants/theme';
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  activeIndicator: {
+    width: 30,
+    height: 3,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 2,
+    marginTop: 4,
+    position: 'absolute',
+    bottom: -8,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: theme.colors.error,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.family.bold,
+  },
+});
 
 function HomeStackNavigator() {
   return (
@@ -110,50 +148,76 @@ function MainTabs() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = '';
+          let IconComponent;
+
           if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outlined';
+            iconName = focused ? 'home' : 'home-outline';
+            IconComponent = (
+              <View style={styles.iconContainer}>
+                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+                {focused && <View style={styles.activeIndicator} />}
+              </View>
+            );
           } else if (route.name === 'Cart') {
-            iconName = focused ? 'shopping-cart' : 'shopping-cart-outlined';
+            iconName = focused ? 'shopping-cart' : 'shopping-cart-outline';
+            IconComponent = (
+              <View style={styles.iconContainer}>
+                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+                {focused && <View style={styles.activeIndicator} />}
+                {totalItems > 0 && (
+                  <View style={styles.badgeContainer}>
+                    <Text style={styles.badgeText}>{totalItems > 99 ? '99+' : totalItems}</Text>
+                  </View>
+                )}
+              </View>
+            );
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
+            IconComponent = (
+              <View style={styles.iconContainer}>
+                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+                {focused && <View style={styles.activeIndicator} />}
+              </View>
+            );
           }
-          const iconSize = focused ? 28 : 24;
-          return <Icon name={iconName} size={iconSize} color={color} />;
+
+          return IconComponent;
         },
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarLabelStyle: {
-          fontSize: theme.fonts.size.medium,
+          fontSize: theme.fonts.size.small,
           fontFamily: theme.fonts.family.medium,
           marginBottom: 2,
         },
         tabBarStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
           borderTopWidth: 0,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          height: 70,
-          paddingBottom: 10,
+          borderTopLeftRadius: 25,
+          borderTopRightRadius: 25,
+          height: 80,
+          paddingBottom: 15,
+          paddingTop: 10,
           position: 'absolute',
-          elevation: 20,
+          elevation: 25,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -5 },
-          shadowOpacity: 0.2,
-          shadowRadius: 10,
-          left: 20,
-          right: 20,
-          bottom: 20,
+          shadowOffset: { width: 0, height: -8 },
+          shadowOpacity: 0.25,
+          shadowRadius: 16,
+          left: 15,
+          right: 15,
+          bottom: 15,
           margin: 0,
+          backdropFilter: 'blur(10px)',
+          borderWidth: 1,
+          borderColor: 'rgba(76, 175, 80, 0.1)',
         },
-        headerShown: true,
-        headerStyle: { backgroundColor: theme.colors.primary },
-        headerTintColor: 'white',
-        headerTitleStyle: {
-          fontFamily: theme.fonts.family.bold,
-          fontSize: theme.fonts.size.title,
-        },
+        headerShown: false,
         tabBarIconStyle: {
           marginBottom: 2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 5,
         },
       })}
     >
@@ -171,17 +235,6 @@ function MainTabs() {
         options={{
           title: 'Cart',
           tabBarLabel: 'Cart',
-          tabBarBadge: totalItems > 0 ? totalItems : undefined,
-          tabBarBadgeStyle: {
-            backgroundColor: theme.colors.error,
-            color: 'white',
-            fontSize: 12,
-            minWidth: 20,
-            height: 20,
-            borderRadius: 10,
-            alignItems: 'center',
-            justifyContent: 'center',
-          },
         }}
       />
       <Tab.Screen

@@ -8,10 +8,12 @@ import {
   TextInput,
   Alert,
   Animated,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -50,8 +52,12 @@ const LoginScreen = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Login</Text>
-        <Text style={styles.subtitle}>Welcome back to Rice Mall</Text>
+        <Logo
+          size="medium"
+          showText={true}
+          style={styles.logo}
+        />
+        <Text style={styles.subtitle}>Welcome back to NVS Rice Mall</Text>
       </View>
       <View style={styles.formContainer}>
         <View style={styles.inputContainer}>
@@ -111,25 +117,38 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    padding: theme.spacing.xlarge,
+    paddingVertical: theme.spacing.xlarge * 1.5,
+    paddingHorizontal: theme.spacing.large,
     backgroundColor: theme.colors.primary,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: theme.spacing.large,
     ...theme.shadows.card,
+    elevation: 8,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  title: {
-    fontSize: theme.fonts.size.title,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.card,
-    marginBottom: theme.spacing.small,
+  logo: {
+    marginBottom: theme.spacing.medium,
+    transform: [{ scale: 1.1 }],
   },
   subtitle: {
-    fontSize: theme.fonts.size.medium,
+    fontSize: theme.fonts.size.large,
     color: theme.colors.card,
-    opacity: 0.9,
+    opacity: 0.95,
     textAlign: 'center',
+    fontWeight: '500',
+    fontFamily: theme.fonts.family.medium,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   formContainer: {
     flex: 1,
-    padding: theme.spacing.large,
+    paddingHorizontal: theme.spacing.large,
+    paddingBottom: theme.spacing.large,
   },
   inputContainer: {
     marginBottom: theme.spacing.large,
@@ -138,57 +157,90 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.medium,
-    padding: theme.spacing.medium,
+    borderRadius: theme.borderRadius.large,
+    paddingHorizontal: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
     ...theme.shadows.card,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.1)',
   },
   input: {
     flex: 1,
     marginLeft: theme.spacing.medium,
-    fontSize: theme.fonts.size.medium,
+    fontSize: theme.fonts.size.large,
     color: theme.colors.text,
     fontFamily: theme.fonts.family.regular,
+    paddingVertical: theme.spacing.small,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: theme.spacing.medium,
+    marginBottom: theme.spacing.large,
+    paddingVertical: theme.spacing.small,
+    paddingHorizontal: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
   },
   forgotPasswordText: {
     color: theme.colors.primary,
-    fontSize: theme.fonts.size.small,
-    fontWeight: theme.fonts.weight.medium,
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.bold,
+    fontFamily: theme.fonts.family.medium,
   },
   loginButtonContainer: {
-    marginBottom: theme.spacing.large,
+    marginVertical: theme.spacing.large,
   },
   loginButton: {
     backgroundColor: theme.colors.primary,
-    padding: theme.spacing.large,
-    borderRadius: theme.borderRadius.medium,
+    paddingVertical: theme.spacing.large,
+    paddingHorizontal: theme.spacing.xlarge,
+    borderRadius: theme.borderRadius.large,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 55,
     ...theme.shadows.card,
+    elevation: 6,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
   loginButtonText: {
     color: theme.colors.card,
     fontSize: theme.fonts.size.large,
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: theme.spacing.medium,
+    marginTop: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.large,
+    borderRadius: theme.borderRadius.large,
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
   },
   registerText: {
     color: theme.colors.textSecondary,
-    fontSize: theme.fonts.size.small,
+    fontSize: theme.fonts.size.medium,
+    fontFamily: theme.fonts.family.regular,
   },
   registerLink: {
     color: theme.colors.primary,
-    fontSize: theme.fonts.size.small,
+    fontSize: theme.fonts.size.medium,
     fontWeight: theme.fonts.weight.bold,
     marginLeft: theme.spacing.small,
+    fontFamily: theme.fonts.family.bold,
+    textDecorationLine: 'underline',
   },
 });
 

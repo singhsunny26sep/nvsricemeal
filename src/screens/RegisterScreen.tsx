@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { theme } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
 
 const RegisterScreen = () => {
   const [name, setName] = useState('');
@@ -35,8 +36,12 @@ const RegisterScreen = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Register</Text>
-        <Text style={styles.subtitle}>Create your Rice Mall account</Text>
+        <Logo
+          size="medium"
+          showText={true}
+          style={styles.logo}
+        />
+        <Text style={styles.subtitle}>Create your NVS Rice Mall account</Text>
       </View>
       <View style={styles.formContainer}>
         <View style={styles.inputContainer}>
@@ -90,8 +95,21 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    padding: theme.spacing.xlarge,
+    paddingVertical: theme.spacing.xlarge * 1.5,
+    paddingHorizontal: theme.spacing.large,
     backgroundColor: theme.colors.primary,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: theme.spacing.large,
+    ...theme.shadows.card,
+    elevation: 8,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  logo: {
+    marginBottom: theme.spacing.medium,
   },
   title: {
     fontSize: theme.fonts.size.title,
@@ -100,36 +118,64 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.small,
   },
   subtitle: {
-    fontSize: theme.fonts.size.medium,
+    fontSize: theme.fonts.size.large,
     color: theme.colors.card,
-    opacity: 0.9,
+    opacity: 0.95,
+    textAlign: 'center',
+    fontWeight: '500',
+    fontFamily: theme.fonts.family.medium,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   formContainer: {
     flex: 1,
-    padding: theme.spacing.large,
+    paddingHorizontal: theme.spacing.large,
+    paddingBottom: theme.spacing.large,
   },
   inputContainer: {
     marginBottom: theme.spacing.large,
   },
   input: {
     backgroundColor: theme.colors.card,
-    padding: theme.spacing.medium,
-    borderRadius: theme.borderRadius.medium,
-    fontSize: theme.fonts.size.medium,
+    paddingHorizontal: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
+    borderRadius: theme.borderRadius.large,
+    fontSize: theme.fonts.size.large,
     color: theme.colors.text,
+    fontFamily: theme.fonts.family.regular,
     ...theme.shadows.card,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.1)',
   },
   registerButton: {
     backgroundColor: theme.colors.primary,
-    padding: theme.spacing.large,
-    borderRadius: theme.borderRadius.medium,
+    paddingVertical: theme.spacing.large,
+    paddingHorizontal: theme.spacing.xlarge,
+    borderRadius: theme.borderRadius.large,
     alignItems: 'center',
-    marginBottom: theme.spacing.medium,
+    justifyContent: 'center',
+    marginBottom: theme.spacing.large,
+    minHeight: 55,
+    ...theme.shadows.card,
+    elevation: 6,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
   registerButtonText: {
     color: theme.colors.card,
     fontSize: theme.fonts.size.large,
     fontWeight: theme.fonts.weight.bold,
+    fontFamily: theme.fonts.family.bold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });
 

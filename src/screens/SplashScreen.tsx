@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, StatusBar, Animated } from 'react-native';
 import { theme } from '../constants/theme';
+import Logo from '../components/Logo';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -36,8 +37,17 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary} />
-      <Animated.Text style={[styles.title, { opacity: titleOpacity }]}>Rice Mall</Animated.Text>
-      <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>Your Premium Rice Store</Animated.Text>
+      <Animated.View style={{ opacity: titleOpacity }}>
+        <Logo
+          size="large"
+          showText={true}
+          variant="circular"
+          style={styles.logo}
+        />
+      </Animated.View>
+      <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>
+        Loading your premium rice experience...
+      </Animated.Text>
     </View>
   );
 };
@@ -63,6 +73,9 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     textAlign: 'center',
     paddingHorizontal: theme.spacing.medium,
+  },
+  logo: {
+    marginBottom: theme.spacing.large,
   },
 });
 

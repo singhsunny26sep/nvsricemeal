@@ -67,14 +67,14 @@ const ProductDetailsScreen: React.FC = () => {
       id: '6',
       name: 'Aged Basmati',
       price: 180,
-      image: 'https://via.placeholder.com/140x140/6D4C41/FFFFFF?text=Aged+Basmati',
+      image: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
       rating: 4.9,
     },
     {
       id: '7',
       name: 'Red Rice',
       price: 160,
-      image: 'https://via.placeholder.com/140x140/D32F2F/FFFFFF?text=Red+Rice',
+      image: 'https://images.unsplash.com/photo-1563379091339-03246963d4b6?w=300&h=300&fit=crop&crop=center',
       rating: 4.6,
     },
   ];

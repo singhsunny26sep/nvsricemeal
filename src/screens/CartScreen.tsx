@@ -29,7 +29,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, onUpdateQuantity, onRemove })
       <Image
         source={{ uri: item.product.image }}
         style={styles.cartImage}
-        defaultSource={{ uri: 'https://via.placeholder.com/80' }}
+        defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=200&h=200&fit=crop&crop=center' }}
       />
       <View style={styles.itemInfo}>
         <Text style={styles.itemName}>{item.product.name}</Text>

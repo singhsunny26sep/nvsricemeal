@@ -17,6 +17,7 @@ import { Product } from '../constants/products';
 import { useCart } from '../context/CartContext';
 import { riceProducts } from '../constants/products';
 import { theme } from '../constants/theme';
+import Logo from '../components/Logo';
 
 const { width } = Dimensions.get('window');
 
@@ -76,7 +77,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
       <Image
         source={{ uri: item.image }}
         style={styles.productImage}
-        defaultSource={{ uri: 'https://via.placeholder.com/150' }}
+        defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center' }}
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
@@ -165,8 +166,11 @@ const HomeScreen: React.FC = () => {
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.container}>
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>Rice Products</Text>
-          <Text style={styles.subtitle}>Premium Quality at Best Prices</Text>
+          <Logo
+            size="medium"
+            showText={true}
+            style={styles.logo}
+          />
           <View style={styles.searchContainer}>
             <Icon name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
@@ -223,9 +227,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerContainer: {
-    padding: theme.spacing.medium,
+    padding: theme.spacing.large,
     backgroundColor: theme.colors.card,
     ...theme.shadows.card,
+    elevation: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(76, 175, 80, 0.1)',
+    position: 'relative',
+  },
+  logo: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.medium,
   },
   header: {
     fontSize: theme.fonts.size.title,
@@ -235,6 +247,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     letterSpacing: 0.5,
     fontFamily: theme.fonts.family.bold,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   subtitle: {
     fontSize: theme.fonts.size.medium,
@@ -242,14 +257,19 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.family.regular,
+    lineHeight: 20,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: theme.borderRadius.large,
     paddingHorizontal: theme.spacing.medium,
-    height: 45,
+    height: 50,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+    ...theme.shadows.card,
+    elevation: 2,
   },
   searchIcon: {
     marginRight: theme.spacing.small,
@@ -259,6 +279,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.medium,
     color: theme.colors.text,
     fontFamily: theme.fonts.family.regular,
+    paddingVertical: 0,
   },
   categoryList: {
     marginTop: theme.spacing.small,
@@ -269,19 +290,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.small,
   },
   categoryButton: {
-    paddingHorizontal: theme.spacing.medium,
-    paddingVertical: theme.spacing.small,
+    paddingHorizontal: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
     marginRight: theme.spacing.medium,
-    borderRadius: theme.borderRadius.medium,
+    borderRadius: theme.borderRadius.large,
     backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+    ...theme.shadows.card,
+    elevation: 2,
   },
   categoryButtonActive: {
     backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    ...theme.shadows.card,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   categoryText: {
-    fontSize: theme.fonts.size.small,
+    fontSize: theme.fonts.size.medium,
     color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.family.regular,
+    fontFamily: theme.fonts.family.medium,
+    fontWeight: '500',
   },
   categoryTextActive: {
     color: theme.colors.card,
@@ -305,8 +338,14 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginTop:20,
     ...theme.shadows.card,
-    elevation: 5,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
+    shadowRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.08)',
+    overflow: 'hidden',
   },
   discountBadge: {
     position: 'absolute',
@@ -342,6 +381,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.medium,
     marginBottom: theme.spacing.small,
     resizeMode: 'cover',
+    borderWidth: 2,
+    borderColor: 'rgba(76, 175, 80, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   productInfo: {
     alignItems: 'center',
@@ -391,12 +437,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.borderRadius.medium,
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.large,
+    borderRadius: theme.borderRadius.large,
     width: '100%',
     justifyContent: 'center',
     ...theme.shadows.card,
+    elevation: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   addButton: {
     width: '100%',
@@ -407,17 +458,25 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.medium,
     marginLeft: theme.spacing.small,
     fontFamily: theme.fonts.family.bold,
+    letterSpacing: 0.5,
   },
   bannerContainer: {
     backgroundColor: theme.colors.primary,
-    padding: theme.spacing.medium,
+    padding: theme.spacing.large,
     marginHorizontal: theme.spacing.medium,
-    marginVertical: theme.spacing.small,
+    marginVertical: theme.spacing.medium,
     borderRadius: theme.borderRadius.large,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     ...theme.shadows.card,
+    elevation: 8,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    position: 'relative',
+    overflow: 'hidden',
   },
   bannerText: {
     fontSize: theme.fonts.size.large,
@@ -425,17 +484,27 @@ const styles = StyleSheet.create({
     fontWeight: theme.fonts.weight.bold,
     flex: 1,
     fontFamily: theme.fonts.family.bold,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   bannerButton: {
-    backgroundColor: theme.colors.card,
-    paddingHorizontal: theme.spacing.medium,
-    paddingVertical: theme.spacing.small,
-    borderRadius: theme.borderRadius.medium,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
+    borderRadius: theme.borderRadius.large,
+    ...theme.shadows.card,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   bannerButtonText: {
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
+    fontSize: theme.fonts.size.medium,
   },
 });
 
