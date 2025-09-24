@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
@@ -16,17 +19,36 @@ interface Order {
   status: 'delivered' | 'processing' | 'shipped' | 'cancelled';
   total: number;
   items: string[];
+  hasReview?: boolean;
+  review?: {
+    rating: number;
+    comment: string;
+    date: string;
+  };
+}
+
+interface Review {
+  rating: number;
+  comment: string;
 }
 
 const OrderHistoryScreen: React.FC = () => {
-  // Mock order data
-  const orders: Order[] = [
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [reviewData, setReviewData] = useState<Review>({ rating: 5, comment: '' });
+  const [orders, setOrders] = useState<Order[]>([
     {
       id: 'ORD001',
       date: '2024-01-15',
       status: 'delivered',
       total: 450,
       items: ['Basmati Rice 5kg', 'Brown Rice 2kg'],
+      hasReview: true,
+      review: {
+        rating: 5,
+        comment: 'Excellent quality rice! Very satisfied with the purchase.',
+        date: '2024-01-16',
+      },
     },
     {
       id: 'ORD002',
@@ -42,7 +64,14 @@ const OrderHistoryScreen: React.FC = () => {
       total: 280,
       items: ['Jasmine Rice 3kg', 'Parboiled Rice 5kg'],
     },
-  ];
+    {
+      id: 'ORD004',
+      date: '2024-01-01',
+      status: 'delivered',
+      total: 380,
+      items: ['Thai Jasmine Rice 5kg', 'Organic Brown Rice 2kg'],
+    },
+  ]);
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -74,6 +103,57 @@ const OrderHistoryScreen: React.FC = () => {
     }
   };
 
+  const handleReviewPress = (order: Order) => {
+    setSelectedOrder(order);
+    setReviewData({ rating: 5, comment: '' });
+    setReviewModalVisible(true);
+  };
+
+  const handleSubmitReview = () => {
+    if (!selectedOrder) return;
+
+    const updatedOrders = orders.map(order => {
+      if (order.id === selectedOrder.id) {
+        return {
+          ...order,
+          hasReview: true,
+          review: {
+            rating: reviewData.rating,
+            comment: reviewData.comment,
+            date: new Date().toISOString().split('T')[0],
+          },
+        };
+      }
+      return order;
+    });
+
+    setOrders(updatedOrders);
+    setReviewModalVisible(false);
+    setSelectedOrder(null);
+
+    Alert.alert('Success', 'Thank you for your review!');
+  };
+
+  const renderStars = (rating: number, interactive: boolean = false) => {
+    return (
+      <View style={styles.starsContainer}>
+        {Array.from({ length: 5 }, (_, i) => (
+          <TouchableOpacity
+            key={i}
+            onPress={() => interactive && setReviewData({ ...reviewData, rating: i + 1 })}
+            disabled={!interactive}
+          >
+            <Icon
+              name={i < rating ? 'star' : 'star-border'}
+              size={interactive ? 32 : 20}
+              color={theme.colors.primary}
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
   const renderOrder = ({ item }: { item: Order }) => (
     <View style={styles.orderCard}>
       <View style={styles.orderHeader}>
@@ -96,12 +176,36 @@ const OrderHistoryScreen: React.FC = () => {
         ))}
       </View>
 
+      {/* Review Section */}
+      {item.hasReview && item.review && (
+        <View style={styles.reviewSection}>
+          <View style={styles.reviewHeader}>
+            <Icon name="star" size={16} color={theme.colors.primary} />
+            <Text style={styles.reviewLabel}>Your Review</Text>
+            <Text style={styles.reviewDate}>({item.review.date})</Text>
+          </View>
+          {renderStars(item.review.rating)}
+          <Text style={styles.reviewComment}>{item.review.comment}</Text>
+        </View>
+      )}
+
       <View style={styles.orderFooter}>
         <Text style={styles.totalText}>Total: ₹{item.total}</Text>
-        <TouchableOpacity style={styles.viewDetailsButton}>
-          <Text style={styles.viewDetailsText}>View Details</Text>
-          <Icon name="arrow-forward" size={16} color={theme.colors.primary} />
-        </TouchableOpacity>
+        <View style={styles.footerButtons}>
+          <TouchableOpacity style={styles.viewDetailsButton}>
+            <Text style={styles.viewDetailsText}>View Details</Text>
+            <Icon name="arrow-forward" size={16} color={theme.colors.primary} />
+          </TouchableOpacity>
+          {item.status === 'delivered' && !item.hasReview && (
+            <TouchableOpacity
+              style={styles.reviewButton}
+              onPress={() => handleReviewPress(item)}
+            >
+              <Icon name="star-border" size={16} color={theme.colors.primary} />
+              <Text style={styles.reviewButtonText}>Write Review</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -128,6 +232,69 @@ const OrderHistoryScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Review Modal */}
+      <Modal
+        visible={reviewModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setReviewModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Write Review</Text>
+              <TouchableOpacity
+                onPress={() => setReviewModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Icon name="close" size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedOrder && (
+              <View style={styles.modalBody}>
+                <Text style={styles.modalSubtitle}>
+                  How would you rate your order #{selectedOrder.id}?
+                </Text>
+
+                <View style={styles.ratingSection}>
+                  <Text style={styles.ratingLabel}>Rating:</Text>
+                  {renderStars(reviewData.rating, true)}
+                </View>
+
+                <View style={styles.commentSection}>
+                  <Text style={styles.commentLabel}>Comment:</Text>
+                  <TextInput
+                    style={styles.commentInput}
+                    multiline
+                    numberOfLines={4}
+                    value={reviewData.comment}
+                    onChangeText={(text) => setReviewData({ ...reviewData, comment: text })}
+                    placeholder="Share your experience with this order..."
+                    placeholderTextColor={theme.colors.textSecondary}
+                  />
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => setReviewModalVisible(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.submitButton}
+                    onPress={handleSubmitReview}
+                  >
+                    <Text style={styles.submitButtonText}>Submit Review</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -262,6 +429,175 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: theme.spacing.small,
     fontFamily: theme.fonts.family.regular,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    marginVertical: theme.spacing.small,
+  },
+  reviewSection: {
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    padding: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.medium,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.primary,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.small,
+  },
+  reviewLabel: {
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.small,
+    fontFamily: theme.fonts.family.bold,
+  },
+  reviewDate: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.small,
+    fontFamily: theme.fonts.family.regular,
+  },
+  reviewComment: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.text,
+    lineHeight: 20,
+    fontFamily: theme.fonts.family.regular,
+  },
+  footerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.medium,
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  reviewButtonText: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.small,
+    fontWeight: theme.fonts.weight.bold,
+    fontFamily: theme.fonts.family.bold,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.large,
+    padding: 0,
+    margin: theme.spacing.medium,
+    width: '90%',
+    maxHeight: '80%',
+    ...theme.shadows.card,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.large,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalTitle: {
+    fontSize: theme.fonts.size.large,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.family.bold,
+  },
+  closeButton: {
+    padding: theme.spacing.small,
+  },
+  modalBody: {
+    padding: theme.spacing.large,
+  },
+  modalSubtitle: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: theme.spacing.large,
+    fontFamily: theme.fonts.family.regular,
+  },
+  ratingSection: {
+    marginBottom: theme.spacing.large,
+  },
+  ratingLabel: {
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.medium,
+    fontFamily: theme.fonts.family.bold,
+  },
+  commentSection: {
+    marginBottom: theme.spacing.large,
+  },
+  commentLabel: {
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.small,
+    fontFamily: theme.fonts.family.bold,
+  },
+  commentInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.medium,
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.family.regular,
+    textAlignVertical: 'top',
+    minHeight: 100,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: theme.spacing.medium,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.large,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.textSecondary,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.bold,
+    fontFamily: theme.fonts.family.bold,
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.large,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
+    ...theme.shadows.card,
+    elevation: 3,
+  },
+  submitButtonText: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.card,
+    fontWeight: theme.fonts.weight.bold,
+    fontFamily: theme.fonts.family.bold,
   },
 });
 

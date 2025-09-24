@@ -28,7 +28,7 @@ interface ProductItemProps {
   isFavorite: boolean;
 }
 
-const categories = ['All', 'Premium', 'Organic', 'Daily'];
+const categories = ['All','Sona Masoori Rice', 'Parboiled Rice', 'Sona Masoori Steam Rice', 'Sona Masoori Raw Rice', 'RNR Steam Rice', 'RNR Rice', 'RAW Rice', 'Gira RAW Rice', 'Gira Steam Rice', 'Bowled Rice', 'Broken Rice', 'Broken Steam Rice', 'Broken RAW Rice','Basmati Rice', 'Jasmine Rice', 'Italia Dosa Rice', 'HMT Steam Rice'];
 
 type Category = typeof categories[number];
 
@@ -80,8 +80,8 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
         defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center' }}
       />
       <View style={styles.productInfo}>
-        <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productDescription}>{item.description}</Text>
+        <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.productDescription} numberOfLines={2}>{item.description}</Text>
         <View style={styles.ratingContainer}>
           <View style={styles.stars}>
             {Array.from({ length: 5 }, (_, i) => (
@@ -122,12 +122,17 @@ const HomeScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = React.useState<Category>('All');
   const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
 
+  // Simplified and corrected category filtering logic
   const filteredProducts = riceProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' ||
-      (selectedCategory === 'Premium' && ['Basmati Rice', 'Jasmine Rice'].includes(product.name)) ||
-      (selectedCategory === 'Organic' && product.name === 'Brown Rice') ||
-      (selectedCategory === 'Daily' && ['Sona Masoori Rice', 'Parboiled Rice'].includes(product.name));
+    
+    if (selectedCategory === 'All') {
+      return matchesSearch;
+    }
+    
+    // Direct name matching for all categories
+    const matchesCategory = product.name === selectedCategory;
+    
     return matchesSearch && matchesCategory;
   });
 
@@ -141,10 +146,6 @@ const HomeScreen: React.FC = () => {
     setFavorites(newFavorites);
   };
 
-  const handleShopNow = () => {
-    navigation.navigate('RiceCategory' as never);
-  };
-
   const renderCategory = ({ item }: { item: Category }) => (
     <TouchableOpacity
       style={[
@@ -153,10 +154,13 @@ const HomeScreen: React.FC = () => {
       ]}
       onPress={() => setSelectedCategory(item)}
     >
-      <Text style={[
-        styles.categoryText,
-        selectedCategory === item && styles.categoryTextActive,
-      ]}>
+      <Text 
+        style={[
+          styles.categoryText,
+          selectedCategory === item && styles.categoryTextActive,
+        ]}
+        numberOfLines={1}
+      >
         {item}
       </Text>
     </TouchableOpacity>
@@ -182,21 +186,19 @@ const HomeScreen: React.FC = () => {
             />
           </View>
         </View>
-        <FlatList
-          horizontal
-          data={categories}
-          renderItem={renderCategory}
-          keyExtractor={(item) => item}
-          style={styles.categoryList}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryContainer}
-        />
-        <View style={styles.bannerContainer}>
-          <Text style={styles.bannerText}>🛍️ Discover Our Premium Rice Collection</Text>
-          <TouchableOpacity style={styles.bannerButton} onPress={handleShopNow}>
-            <Text style={styles.bannerButtonText}>Shop Now</Text>
-          </TouchableOpacity>
+        
+        <View style={styles.categorySection}>
+          <FlatList
+            horizontal
+            data={categories}
+            renderItem={renderCategory}
+            keyExtractor={(item) => item}
+            style={styles.categoryList}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryContainer}
+          />
         </View>
+
         <FlatList
           data={filteredProducts}
           renderItem={({ item }) => (
@@ -212,6 +214,13 @@ const HomeScreen: React.FC = () => {
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           columnWrapperStyle={styles.row}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
+              <Text style={styles.emptyText}>No products found</Text>
+              <Text style={styles.emptySubtext}>Try a different search or category</Text>
+            </View>
+          }
         />
       </View>
     </SafeAreaView>
@@ -229,35 +238,16 @@ const styles = StyleSheet.create({
   headerContainer: {
     padding: theme.spacing.large,
     backgroundColor: theme.colors.card,
-    ...theme.shadows.card,
-    elevation: 4,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(76, 175, 80, 0.1)',
-    position: 'relative',
   },
   logo: {
     alignItems: 'center',
     marginBottom: theme.spacing.medium,
   },
-  header: {
-    fontSize: theme.fonts.size.title,
-    fontWeight: theme.fonts.weight.bold,
-    textAlign: 'center',
-    marginBottom: theme.spacing.small,
-    color: theme.colors.text,
-    letterSpacing: 0.5,
-    fontFamily: theme.fonts.family.bold,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  subtitle: {
-    fontSize: theme.fonts.size.medium,
-    textAlign: 'center',
-    marginBottom: theme.spacing.medium,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.family.regular,
-    lineHeight: 20,
+  categorySection: {
+    backgroundColor: theme.colors.card,
+    paddingVertical: theme.spacing.small,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -268,8 +258,11 @@ const styles = StyleSheet.create({
     height: 50,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.2)',
-    ...theme.shadows.card,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   searchIcon: {
     marginRight: theme.spacing.small,
@@ -282,28 +275,31 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   categoryList: {
-    marginTop: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-    maxHeight: 40,
+    maxHeight: 55,
   },
   categoryContainer: {
     paddingHorizontal: theme.spacing.small,
   },
   categoryButton: {
-    paddingHorizontal: theme.spacing.large,
-    paddingVertical: theme.spacing.medium,
-    marginRight: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    marginRight: theme.spacing.small,
     borderRadius: theme.borderRadius.large,
     backgroundColor: theme.colors.background,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.2)',
-    ...theme.shadows.card,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryButtonActive: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
-    ...theme.shadows.card,
     elevation: 4,
     shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 2 },
@@ -311,22 +307,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   categoryText: {
-    fontSize: theme.fonts.size.medium,
+    fontSize: theme.fonts.size.small,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.family.medium,
-    fontWeight: '500',
+    textAlign: 'center',
   },
   categoryTextActive: {
     color: theme.colors.card,
-    fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
   },
   listContainer: {
     paddingHorizontal: theme.spacing.small,
     paddingBottom: theme.spacing.large,
+    flexGrow: 1,
   },
   row: {
     justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.small,
   },
   productCard: {
     backgroundColor: theme.colors.card,
@@ -336,16 +333,14 @@ const styles = StyleSheet.create({
     width: (width - theme.spacing.medium * 3) / 2,
     alignItems: 'center',
     position: 'relative',
-    marginTop:20,
-    ...theme.shadows.card,
-    elevation: 8,
+    marginTop: theme.spacing.medium,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.08)',
-    overflow: 'hidden',
   },
   discountBadge: {
     position: 'absolute',
@@ -359,9 +354,8 @@ const styles = StyleSheet.create({
   },
   discountText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: theme.fonts.weight.bold,
-    fontFamily: theme.fonts.family.bold,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   favoriteButton: {
     position: 'absolute',
@@ -376,40 +370,31 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   productImage: {
-    width: 140,
-    height: 140,
+    width: 120,
+    height: 120,
     borderRadius: theme.borderRadius.medium,
     marginBottom: theme.spacing.small,
     resizeMode: 'cover',
-    borderWidth: 2,
-    borderColor: 'rgba(76, 175, 80, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   productInfo: {
     alignItems: 'center',
     width: '100%',
   },
   productName: {
-    fontSize: theme.fonts.size.large,
-    fontWeight: theme.fonts.weight.bold,
+    fontSize: theme.fonts.size.medium,
+    fontWeight: 'bold',
     color: theme.colors.text,
-    marginBottom: theme.spacing.small,
+    marginBottom: 4,
     textAlign: 'center',
-    fontFamily: theme.fonts.family.bold,
+    width: '100%',
   },
   productDescription: {
     fontSize: theme.fonts.size.small,
     color: theme.colors.textSecondary,
-    lineHeight: 16,
     marginBottom: theme.spacing.small,
     textAlign: 'center',
-    flexShrink: 1,
-    fontFamily: theme.fonts.family.regular,
-    maxHeight: 40,
+    width: '100%',
+    height: 32,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -418,93 +403,53 @@ const styles = StyleSheet.create({
   },
   stars: {
     flexDirection: 'row',
-    marginRight: theme.spacing.small,
+    marginRight: 4,
   },
   ratingText: {
     fontSize: theme.fonts.size.small,
     color: theme.colors.textSecondary,
-    marginLeft: theme.spacing.small,
-    fontFamily: theme.fonts.family.regular,
   },
   productPrice: {
-    fontSize: theme.fonts.size.xlarge,
-    fontWeight: theme.fonts.weight.bold,
+    fontSize: theme.fonts.size.large,
+    fontWeight: 'bold',
     color: theme.colors.primary,
     marginBottom: theme.spacing.medium,
-    fontFamily: theme.fonts.family.bold,
+  },
+  addButton: {
+    width: '100%',
   },
   addButtonTouchable: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.large,
-    borderRadius: theme.borderRadius.large,
+    paddingVertical: theme.spacing.small,
+    paddingHorizontal: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
     width: '100%',
     justifyContent: 'center',
-    ...theme.shadows.card,
-    elevation: 4,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-  },
-  addButton: {
-    width: '100%',
   },
   addButtonText: {
-    color: theme.colors.card,
-    fontWeight: theme.fonts.weight.bold,
-    fontSize: theme.fonts.size.medium,
-    marginLeft: theme.spacing.small,
-    fontFamily: theme.fonts.family.bold,
-    letterSpacing: 0.5,
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: theme.fonts.size.small,
+    marginLeft: 4,
   },
-  bannerContainer: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.large,
-    marginHorizontal: theme.spacing.medium,
-    marginVertical: theme.spacing.medium,
-    borderRadius: theme.borderRadius.large,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    ...theme.shadows.card,
-    elevation: 8,
-    shadowColor: '#4CAF50',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  bannerText: {
-    fontSize: theme.fonts.size.large,
-    color: theme.colors.card,
-    fontWeight: theme.fonts.weight.bold,
+  emptyContainer: {
     flex: 1,
-    fontFamily: theme.fonts.family.bold,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 100,
   },
-  bannerButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingHorizontal: theme.spacing.large,
-    paddingVertical: theme.spacing.medium,
-    borderRadius: theme.borderRadius.large,
-    ...theme.shadows.card,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+  emptyText: {
+    fontSize: theme.fonts.size.large,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.medium,
+    fontWeight: 'bold',
   },
-  bannerButtonText: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.bold,
-    fontFamily: theme.fonts.family.bold,
+  emptySubtext: {
     fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.small,
   },
 });
 
