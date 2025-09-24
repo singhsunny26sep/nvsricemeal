@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,11 @@ import {
   Dimensions,
   TextInput,
   SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import { Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import Video from 'react-native-video';
 import { useNavigation } from '@react-navigation/native';
 import { Product } from '../constants/products';
 import { useCart } from '../context/CartContext';
@@ -52,6 +54,8 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
 
   const handleAddToCart = () => {
     onAddToCart(item);
+    // Navigate to cart screen for payment
+    navigation.getParent()?.navigate('Cart');
   };
 
   const toggleFavorite = () => {
@@ -121,6 +125,11 @@ const HomeScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<Category>('All');
   const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
+  const [videoPlaying, setVideoPlaying] = useState(true);
+  const [videoMuted, setVideoMuted] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const videoRef = useRef<any>(null);
+  const scrollViewRef = useRef<any>(null);
 
   // Simplified and corrected category filtering logic
   const filteredProducts = riceProducts.filter(product => {
@@ -168,13 +177,9 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <View style={styles.container}>
+      <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
-          <Logo
-            size="medium"
-            showText={true}
-            style={styles.logo}
-          />
+        <Image style={styles.imageBox} resizeMode='contain' source={(require("../assets/img/logo.png"))}/>
           <View style={styles.searchContainer}>
             <Icon name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
@@ -184,6 +189,33 @@ const HomeScreen: React.FC = () => {
               onChangeText={setSearchQuery}
               placeholderTextColor={theme.colors.textSecondary}
             />
+          </View>
+          <View style={styles.add}>
+            <Video
+              ref={videoRef}
+              source={{
+                uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+              }}
+              style={styles.videoPlayer}
+              controls={true}
+              resizeMode="cover"
+              paused={!videoPlaying}
+              repeat={true}
+              volume={0.5}
+              muted={false}
+              playInBackground={false}
+              playWhenInactive={false}
+              onLoadStart={() => console.log('Video loading started')}
+              onLoad={() => console.log('Video loaded successfully')}
+              onError={(error) => console.log('Video error:', error)}
+            />
+            <View style={styles.videoOverlay}>
+             
+
+             
+
+              
+            </View>
           </View>
         </View>
         
@@ -222,7 +254,8 @@ const HomeScreen: React.FC = () => {
             </View>
           }
         />
-      </View>
+      </ScrollView>
+   
     </SafeAreaView>
   );
 };
@@ -273,6 +306,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontFamily: theme.fonts.family.regular,
     paddingVertical: 0,
+
   },
   categoryList: {
     maxHeight: 55,
@@ -451,6 +485,104 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.small,
   },
+  imageBox:{
+    height:100,
+    width:200,
+    alignSelf:"center",
+  },
+  add:{
+    height:150,
+    width:"100%",
+    borderWidth:1,
+    borderColor:"green",
+    alignSelf:"center",
+    marginTop:10,
+    borderRadius:5,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#000',
+  },
+  videoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoPlayButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  videoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 5,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  videoSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  videoControls: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  controlButton: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoInfo: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  shopNowButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  shopNowText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  }
 });
 
 export default HomeScreen;

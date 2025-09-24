@@ -80,10 +80,25 @@ const ProductDetailsScreen: React.FC = () => {
   ];
 
   const handleAddToCart = () => {
+    // Add items to cart
     for (let i = 0; i < quantity; i++) {
       addToCart(product);
     }
-    Alert.alert('Success', `${quantity} ${product.name} added to cart!`);
+
+    // Show brief success message and navigate to cart
+    Alert.alert(
+      'Success! 🎉',
+      `${quantity} ${product.name} added to cart!\n\nRedirecting to payment...`,
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Navigate to Cart tab for payment
+            navigation.getParent()?.navigate('Cart');
+          }
+        }
+      ]
+    );
   };
 
   const handleQuantityChange = (change: number) => {

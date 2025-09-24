@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 import { RiceCategory, Product } from '../constants/products';
 import { riceCategories } from '../constants/products';
 import { useCart } from '../context/CartContext';
@@ -27,6 +28,7 @@ interface CategoryCardProps {
 interface ProductItemProps {
   item: Product;
   onAddToCart: (product: Product) => void;
+  navigation: any;
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({ category, onPress }) => {
@@ -75,7 +77,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onPress }) => {
   );
 };
 
-const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart }) => {
+const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, navigation }) => {
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -94,6 +96,8 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart }) => {
 
   const handleAddToCart = () => {
     onAddToCart(item);
+    // Navigate to cart screen for payment
+    navigation.getParent()?.navigate('Cart');
   };
 
   return (
@@ -130,6 +134,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart }) => {
 
 const RiceCategoryScreen: React.FC = () => {
   const { addToCart } = useCart();
+  const navigation = useNavigation();
   const [selectedCategory, setSelectedCategory] = useState<RiceCategory | null>(null);
 
   const handleCategoryPress = (category: RiceCategory) => {
@@ -145,7 +150,7 @@ const RiceCategoryScreen: React.FC = () => {
   );
 
   const renderProduct = ({ item }: { item: Product }) => (
-    <ProductItem item={item} onAddToCart={addToCart} />
+    <ProductItem item={item} onAddToCart={addToCart} navigation={navigation} />
   );
 
   if (selectedCategory) {

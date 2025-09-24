@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
@@ -52,11 +53,12 @@ const LoginScreen = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Logo
+        {/* <Logo
           size="medium"
           showText={true}
           style={styles.logo}
-        />
+        /> */}
+        <Image resizeMode='contain'   style={styles.logo} source={require("../assets/img/logo.png")}/>
         <Text style={styles.subtitle}>Welcome back to NVS Rice Mall</Text>
       </View>
       <View style={styles.formContainer}>
@@ -132,7 +134,8 @@ const styles = StyleSheet.create({
   },
   logo: {
     marginBottom: theme.spacing.medium,
-    transform: [{ scale: 1.1 }],
+   height:100,
+   borderRadius:24
   },
   subtitle: {
     fontSize: theme.fonts.size.large,
