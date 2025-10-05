@@ -154,9 +154,8 @@ const CartScreen: React.FC = () => {
     return sum + discountAmount;
   }, 0);
   const totalAfterDiscount = subtotal - totalDiscount;
-  const tax = Math.round(totalAfterDiscount * 0.18); // 18% GST
   const giftCharges = isGift ? 25 : 0;
-  const finalTotal = totalAfterDiscount + cart.deliveryCharges + tax - cart.couponDiscount + giftCharges;
+  const finalTotal = totalAfterDiscount + cart.deliveryCharges - cart.couponDiscount + giftCharges;
 
   const handleApplyCoupon = () => {
     if (couponInput.toUpperCase() === 'SAVE10') {
@@ -505,10 +504,6 @@ Your order will be processed within 24 hours.
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Delivery Charges</Text>
               <Text style={styles.priceValue}>₹{cart.deliveryCharges}</Text>
-            </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Tax (GST 18%)</Text>
-              <Text style={styles.priceValue}>₹{tax}</Text>
             </View>
             {cart.couponDiscount > 0 && (
               <View style={styles.priceRow}>

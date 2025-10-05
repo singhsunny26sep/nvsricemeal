@@ -120,7 +120,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
 };
 
 const HomeScreen: React.FC = () => {
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<Category>('All');
@@ -179,7 +179,20 @@ const HomeScreen: React.FC = () => {
     <SafeAreaView style={styles.safeContainer}>
       <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
-        <Image style={styles.imageBox} resizeMode='contain' source={(require("../assets/img/logo.png"))}/>
+          <View style={styles.headerTop}>
+            <Image style={styles.imageBox} resizeMode='contain' source={(require("../assets/img/logo.png"))}/>
+            <TouchableOpacity
+              style={styles.cartIconContainer}
+              onPress={() => navigation.getParent()?.navigate('CartScreen')}
+            >
+              <Icon name="shopping-cart" size={24} color={theme.colors.primary} />
+              {cart.items.length > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cart.items.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
           <View style={styles.searchContainer}>
             <Icon name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
@@ -210,11 +223,10 @@ const HomeScreen: React.FC = () => {
               onError={(error) => console.log('Video error:', error)}
             />
             <View style={styles.videoOverlay}>
-             
 
-             
 
-              
+
+
             </View>
           </View>
         </View>
@@ -273,6 +285,33 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.card,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.medium,
+  },
+  cartIconContainer: {
+    position: 'relative',
+    padding: theme.spacing.small,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   logo: {
     alignItems: 'center',
@@ -375,6 +414,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.08)',
+    
   },
   discountBadge: {
     position: 'absolute',

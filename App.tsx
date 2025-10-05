@@ -28,6 +28,7 @@ import TermsConditionsScreen from './src/screens/TermsConditionsScreen';
 import HelpSupportScreen from './src/screens/HelpSupportScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
 import CartScreen from './src/screens/CartScreen';
+import ExploreScreen from './src/screens/ExploreScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import {
   CartProvider,
@@ -151,24 +152,19 @@ function MainTabs() {
           let IconComponent;
 
           if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
+            iconName = focused ? 'home' : 'home';
             IconComponent = (
               <View style={styles.iconContainer}>
                 <Icon name={iconName} size={focused ? 26 : 22} color={color} />
                 {focused && <View style={styles.activeIndicator} />}
               </View>
             );
-          } else if (route.name === 'Cart') {
-            iconName = focused ? 'shopping-cart' : 'shopping-cart-outline';
+          } else if (route.name === 'Explore') {
+            iconName = focused ? 'explore' : 'explore';
             IconComponent = (
               <View style={styles.iconContainer}>
                 <Icon name={iconName} size={focused ? 26 : 22} color={color} />
                 {focused && <View style={styles.activeIndicator} />}
-                {totalItems > 0 && (
-                  <View style={styles.badgeContainer}>
-                    <Text style={styles.badgeText}>{totalItems > 99 ? '99+' : totalItems}</Text>
-                  </View>
-                )}
               </View>
             );
           } else if (route.name === 'Profile') {
@@ -230,11 +226,19 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="Explore"
+        component={ExploreScreen}
+        options={{
+          title: 'Explore',
+          tabBarLabel: 'Explore',
+        }}
+      />
+       <Tab.Screen
         name="Cart"
         component={CartScreen}
         options={{
-          title: 'Cart',
-          tabBarLabel: 'Cart',
+          title: 'cart',
+          tabBarLabel: 'cart',
         }}
       />
       <Tab.Screen
