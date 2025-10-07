@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,13 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../constants/theme';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelector from '../components/LanguageSelector';
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { strings } = useLanguage();
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
 
   // Hardcoded user info for demo
   const user = {
@@ -48,6 +52,10 @@ const ProfileScreen: React.FC = () => {
 
   const handleNotifications = () => {
     navigation.navigate('Notifications' as never);
+  };
+
+  const handleLanguageSelection = () => {
+    setShowLanguageSelector(true);
   };
 
   return (
@@ -145,10 +153,10 @@ const ProfileScreen: React.FC = () => {
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleLanguageSelection}>
           <View style={styles.menuItemLeft}>
             <Icon name="language" size={24} color={theme.colors.primary} />
-            <Text style={styles.menuItemText}>Language</Text>
+            <Text style={styles.menuItemText}>{strings?.profile?.language || 'ಭಾಷೆ'}</Text>
           </View>
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
@@ -156,8 +164,13 @@ const ProfileScreen: React.FC = () => {
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Icon name="logout" size={20} color={theme.colors.card} />
-        <Text style={styles.logoutButtonText}>Logout</Text>
+        <Text style={styles.logoutButtonText}>{strings?.profile?.logout || 'ಲಾಗ್‌ಔಟ್'}</Text>
       </TouchableOpacity>
+
+      <LanguageSelector
+        visible={showLanguageSelector}
+        onClose={() => setShowLanguageSelector(false)}
+      />
     </ScrollView>
   );
 };

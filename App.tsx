@@ -37,6 +37,10 @@ import {
   AuthProvider,
   useAuth,
 } from './src/context/AuthContext';
+import {
+  LanguageProvider,
+  useLanguage,
+} from './src/context/LanguageContext';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -101,6 +105,10 @@ function HomeStackNavigator() {
         name="ProductDetails"
         component={ProductDetailsScreen}
       />
+        <HomeStack.Screen
+        name="CartScreen"
+        component={CartScreen}
+      />
     </HomeStack.Navigator>
   );
 }
@@ -136,12 +144,14 @@ function ProfileStackNavigator() {
         name="Notifications"
         component={NotificationScreen}
       />
+         
     </ProfileStack.Navigator>
   );
 }
 
 function MainTabs() {
   const { cart } = useCart();
+  const { strings } = useLanguage();
   const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -221,32 +231,32 @@ function MainTabs() {
         name="Home"
         component={HomeStackNavigator}
         options={{
-          title: 'Products',
-          tabBarLabel: 'Products',
+          title: strings?.navigation?.products || 'ಉತ್ಪನ್ನಗಳು',
+          tabBarLabel: strings?.navigation?.products || 'ಉತ್ಪನ್ನಗಳು',
         }}
       />
       <Tab.Screen
         name="Explore"
         component={ExploreScreen}
         options={{
-          title: 'Explore',
-          tabBarLabel: 'Explore',
+          title: strings?.navigation?.explore || 'ಅನ್ವೇಷಿಸಿ',
+          tabBarLabel: strings?.navigation?.explore || 'ಅನ್ವೇಷಿಸಿ',
         }}
       />
        <Tab.Screen
         name="Cart"
         component={CartScreen}
         options={{
-          title: 'cart',
-          tabBarLabel: 'cart',
+          title: strings?.navigation?.cart || 'ಕಾರ್ಟ್',
+          tabBarLabel: strings?.navigation?.cart || 'ಕಾರ್ಟ್',
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileStackNavigator}
         options={{
-          title: 'Profile',
-          tabBarLabel: 'Profile',
+          title: strings?.navigation?.profile || 'ಪ್ರೊಫೈಲ್',
+          tabBarLabel: strings?.navigation?.profile || 'ಪ್ರೊಫೈಲ್',
         }}
       />
     </Tab.Navigator>
@@ -263,9 +273,9 @@ function AuthScreens() {
 
   if (!auth.isAuthenticated) {
     return currentScreen === 'login' ? (
-      <LoginScreen />
+      <LoginScreen onSwitchToRegister={() => setCurrentScreen('register')} />
     ) : (
-      <RegisterScreen />
+      <RegisterScreen onSwitchToLogin={() => setCurrentScreen('login')} />
     );
   }
 
@@ -276,13 +286,15 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <CartProvider>
-            <NavigationContainer>
-              <AuthScreens />
-            </NavigationContainer>
-          </CartProvider>
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <CartProvider>
+              <NavigationContainer>
+                <AuthScreens />
+              </NavigationContainer>
+            </CartProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

@@ -20,6 +20,7 @@ import { useCart } from '../context/CartContext';
 import { riceProducts } from '../constants/products';
 import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -30,12 +31,31 @@ interface ProductItemProps {
   isFavorite: boolean;
 }
 
-const categories = ['All','Sona Masoori Rice', 'Parboiled Rice', 'Sona Masoori Steam Rice', 'Sona Masoori Raw Rice', 'RNR Steam Rice', 'RNR Rice', 'RAW Rice', 'Gira RAW Rice', 'Gira Steam Rice', 'Bowled Rice', 'Broken Rice', 'Broken Steam Rice', 'Broken RAW Rice','Basmati Rice', 'Jasmine Rice', 'Italia Dosa Rice', 'HMT Steam Rice'];
-
-type Category = typeof categories[number];
+const getCategories = (strings: any) => [
+  strings?.home?.all || 'All',
+  strings?.home?.categories?.sonaMasooriRice || 'Sona Masoori Rice',
+  strings?.home?.categories?.parboiledRice || 'Parboiled Rice',
+  strings?.home?.categories?.sonaMasooriSteamRice || 'Sona Masoori Steam Rice',
+  strings?.home?.categories?.sonaMasooriRawRice || 'Sona Masoori Raw Rice',
+  strings?.home?.categories?.rnrSteamRice || 'RNR Steam Rice',
+  strings?.home?.categories?.rnrRice || 'RNR Rice',
+  strings?.home?.categories?.rawRice || 'RAW Rice',
+  strings?.home?.categories?.giraRawRice || 'Gira RAW Rice',
+  strings?.home?.categories?.giraSteamRice || 'Gira Steam Rice',
+  strings?.home?.categories?.bowledRice || 'Bowled Rice',
+  strings?.home?.categories?.brokenRice || 'Broken Rice',
+  strings?.home?.categories?.brokenSteamRice || 'Broken Steam Rice',
+  strings?.home?.categories?.brokenRawRice || 'Broken RAW Rice',
+  strings?.home?.categories?.basmatiRice || 'Basmati Rice',
+  strings?.home?.categories?.jasmineRice || 'Jasmine Rice',
+  strings?.home?.categories?.italiaDosaRice || 'Italia Dosa Rice',
+  strings?.home?.categories?.hmtSteamRice || 'HMT Steam Rice'
+];
+type Category = string;
 
 const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite, isFavorite }) => {
   const navigation = useNavigation();
+  const { strings } = useLanguage();
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -55,7 +75,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
   const handleAddToCart = () => {
     onAddToCart(item);
     // Navigate to cart screen for payment
-    navigation.getParent()?.navigate('Cart');
+    navigation.getParent()?.getParent()?.navigate('CartScreen');
   };
 
   const toggleFavorite = () => {
@@ -72,7 +92,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
     <TouchableOpacity style={styles.productCard} onPress={handleProductPress} activeOpacity={0.9}>
       {showDiscount && (
         <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>{item.discount}% OFF</Text>
+          <Text style={styles.discountText}>{item.discount}{strings?.home?.discountOff || '% ರಿಯಾಯಿತಿ'}</Text>
         </View>
       )}
       <TouchableOpacity style={styles.favoriteButton} onPress={toggleFavorite}>
@@ -111,7 +131,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
             activeOpacity={0.8}
           >
             <Icon name="shopping-cart" size={18} color="white" />
-            <Text style={styles.addButtonText}>Add to Cart</Text>
+            <Text style={styles.addButtonText}>{strings?.home?.addToCart || 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ'}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -121,7 +141,8 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
 
 const HomeScreen: React.FC = () => {
   const { addToCart, cart } = useCart();
-  const navigation = useNavigation();
+  const { strings } = useLanguage();
+  const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<Category>('All');
   const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
@@ -134,14 +155,14 @@ const HomeScreen: React.FC = () => {
   // Simplified and corrected category filtering logic
   const filteredProducts = riceProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     if (selectedCategory === 'All') {
       return matchesSearch;
     }
-    
+
     // Direct name matching for all categories
     const matchesCategory = product.name === selectedCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
 
@@ -163,7 +184,7 @@ const HomeScreen: React.FC = () => {
       ]}
       onPress={() => setSelectedCategory(item)}
     >
-      <Text 
+      <Text
         style={[
           styles.categoryText,
           selectedCategory === item && styles.categoryTextActive,
@@ -180,10 +201,10 @@ const HomeScreen: React.FC = () => {
       <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
-            <Image style={styles.imageBox} resizeMode='contain' source={(require("../assets/img/logo.png"))}/>
+            <Image style={styles.imageBox} resizeMode='contain' source={(require("../assets/img/logo.png"))} />
             <TouchableOpacity
               style={styles.cartIconContainer}
-              onPress={() => navigation.getParent()?.navigate('CartScreen')}
+              onPress={() => navigation.navigate('CartScreen')}
             >
               <Icon name="shopping-cart" size={24} color={theme.colors.primary} />
               {cart.items.length > 0 && (
@@ -197,7 +218,7 @@ const HomeScreen: React.FC = () => {
             <Icon name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search products..."
+              placeholder={strings?.home?.searchPlaceholder || 'ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ...'}
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor={theme.colors.textSecondary}
@@ -230,11 +251,11 @@ const HomeScreen: React.FC = () => {
             </View>
           </View>
         </View>
-        
+
         <View style={styles.categorySection}>
           <FlatList
             horizontal
-            data={categories}
+            data={getCategories(strings)}
             renderItem={renderCategory}
             keyExtractor={(item) => item}
             style={styles.categoryList}
@@ -261,13 +282,13 @@ const HomeScreen: React.FC = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
-              <Text style={styles.emptyText}>No products found</Text>
-              <Text style={styles.emptySubtext}>Try a different search or category</Text>
+              <Text style={styles.emptyText}>{strings?.home?.noProductsFound || 'ಯಾವುದೇ ಉತ್ಪನ್ನಗಳು ಕಂಡುಬಂದಿಲ್ಲ'}</Text>
+              <Text style={styles.emptySubtext}>{strings?.home?.tryDifferentSearch || 'ವಿಭಿನ್ನ ಹುಡುಕಾಟ ಅಥವಾ ವರ್ಗವನ್ನು ಪ್ರಯತ್ನಿಸಿ'}</Text>
             </View>
           }
         />
       </ScrollView>
-   
+
     </SafeAreaView>
   );
 };
@@ -289,7 +310,7 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    // alignItems: 'center',
     marginBottom: theme.spacing.medium,
   },
   cartIconContainer: {
@@ -414,7 +435,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.08)',
-    
+
   },
   discountBadge: {
     position: 'absolute',
@@ -525,19 +546,19 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.small,
   },
-  imageBox:{
-    height:100,
-    width:200,
-    alignSelf:"center",
+  imageBox: {
+    height: 150,
+    width: 200,
+    // alignSelf: "center",
   },
-  add:{
-    height:150,
-    width:"100%",
-    borderWidth:1,
-    borderColor:"green",
-    alignSelf:"center",
-    marginTop:10,
-    borderRadius:5,
+  add: {
+    height: 150,
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "green",
+    alignSelf: "center",
+    marginTop: 10,
+    borderRadius: 5,
     overflow: 'hidden',
     position: 'relative',
   },

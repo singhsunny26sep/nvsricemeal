@@ -16,6 +16,7 @@ import { Product } from '../constants/products';
 import { useCart } from '../context/CartContext';
 import { riceProducts } from '../constants/products';
 import { theme } from '../constants/theme';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -29,7 +30,7 @@ const ExploreItem: React.FC<ExploreItemProps> = ({ item, onAddToCart }) => {
 
   const handleAddToCart = () => {
     onAddToCart(item);
-    navigation.getParent()?.navigate('CartScreen');
+    navigation.getParent()?.navigate('Cart');
   };
 
   const handleProductPress = () => {
@@ -78,6 +79,7 @@ const ExploreItem: React.FC<ExploreItemProps> = ({ item, onAddToCart }) => {
 
 const ExploreScreen: React.FC = () => {
   const { addToCart, cart } = useCart();
+  const { strings } = useLanguage();
   const navigation = useNavigation();
   const [selectedFilter, setSelectedFilter] = useState<'featured' | 'popular' | 'new'>('featured');
 
@@ -96,9 +98,9 @@ const ExploreScreen: React.FC = () => {
   };
 
   const filters = [
-    { key: 'featured', label: 'Featured', icon: 'star' },
-    { key: 'popular', label: 'Popular', icon: 'trending-up' },
-    { key: 'new', label: 'New Arrivals', icon: 'new-releases' },
+    { key: 'featured', label: strings?.home?.categories?.sonaMasooriRice || 'Featured', icon: 'star' },
+    { key: 'popular', label: strings?.home?.categories?.parboiledRice || 'Popular', icon: 'trending-up' },
+    { key: 'new', label: strings?.home?.categories?.sonaMasooriSteamRice || 'New Arrivals', icon: 'new-releases' },
   ];
 
   const renderFilter = ({ item }: { item: typeof filters[0] }) => (
@@ -135,12 +137,12 @@ const ExploreScreen: React.FC = () => {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.headerLeft}>
-              <Text style={styles.headerTitle}>Explore</Text>
-              <Text style={styles.headerSubtitle}>Discover amazing rice varieties</Text>
+              <Text style={styles.headerTitle}>{strings?.navigation?.explore || 'Explore'}</Text>
+              <Text style={styles.headerSubtitle}>{strings?.home?.welcome || 'Discover amazing rice varieties'}</Text>
             </View>
             <TouchableOpacity
               style={styles.cartIconContainer}
-              onPress={() => navigation.getParent()?.navigate('CartScreen')}
+              onPress={() => navigation.getParent()?.navigate('Cart')}
             >
               <Icon name="shopping-cart" size={24} color={theme.colors.primary} />
               {cart.items.length > 0 && (
@@ -176,8 +178,8 @@ const ExploreScreen: React.FC = () => {
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
-                <Text style={styles.emptyText}>No products found</Text>
-                <Text style={styles.emptySubtext}>Try selecting a different filter</Text>
+                <Text style={styles.emptyText}>{strings?.home?.noProductsFound || 'No products found'}</Text>
+                <Text style={styles.emptySubtext}>{strings?.home?.tryDifferentSearch || 'Try selecting a different filter'}</Text>
               </View>
             }
           />

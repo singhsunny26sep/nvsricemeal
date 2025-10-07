@@ -10,22 +10,30 @@ import {
 } from 'react-native';
 import { theme } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import Logo from '../components/Logo';
+import LanguageSelector from '../components/LanguageSelector';
 
-const RegisterScreen = () => {
+interface RegisterScreenProps {
+  onSwitchToLogin?: () => void;
+}
+
+const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const { login } = useAuth();
+  const { strings } = useLanguage();
 
   const handleRegister = () => {
     if (name === '' || email === '' || phone === '' || password === '') {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert(strings?.common?.error || 'Error', strings?.login?.fillAllFields || 'Please fill in all fields.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters.');
+      Alert.alert(strings?.common?.error || 'Error', 'Password must be at least 6 characters.');
       return;
     }
     // Demo register - in real app, call API
@@ -41,13 +49,13 @@ const RegisterScreen = () => {
           showText={true}
           style={styles.logo}
         />
-        <Text style={styles.subtitle}>Create your NVS Rice Mall account</Text>
+        <Text style={styles.subtitle}>{strings?.login?.welcomeBack || 'Create your NVS Rice  Mart account'}</Text>
       </View>
       <View style={styles.formContainer}>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
+            placeholder={strings?.profile?.name || 'Full Name'}
             value={name}
             onChangeText={setName}
           />
@@ -55,7 +63,7 @@ const RegisterScreen = () => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={strings?.profile?.email || 'Email'}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -65,7 +73,7 @@ const RegisterScreen = () => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Phone Number"
+            placeholder={strings?.profile?.phone || 'Phone Number'}
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
@@ -74,16 +82,35 @@ const RegisterScreen = () => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={strings?.login?.password || 'Password'}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
         </View>
         <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-          <Text style={styles.registerButtonText}>Register</Text>
+          <Text style={styles.registerButtonText}>{strings?.login?.register || 'Register'}</Text>
+        </TouchableOpacity>
+
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginText}>{strings?.login?.noAccount || "ಖಾತೆ ಇದೆಯೇ?"} </Text>
+          <TouchableOpacity onPress={onSwitchToLogin}>
+            <Text style={styles.loginLink}>{strings?.login?.login || 'ಲಾಗಿನ್'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.languageButton}
+          onPress={() => setShowLanguageSelector(true)}
+        >
+          <Text style={styles.languageButtonText}>{strings?.profile?.language || 'Change Language'}</Text>
         </TouchableOpacity>
       </View>
+
+      <LanguageSelector
+        visible={showLanguageSelector}
+        onClose={() => setShowLanguageSelector(false)}
+      />
     </ScrollView>
   );
 };
@@ -176,6 +203,48 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.family.bold,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  languageButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.large,
+    borderRadius: theme.borderRadius.large,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: theme.spacing.medium,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  languageButtonText: {
+    color: theme.colors.primary,
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.medium,
+    fontFamily: theme.fonts.family.medium,
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.large,
+    borderRadius: theme.borderRadius.large,
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  loginText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fonts.size.medium,
+    fontFamily: theme.fonts.family.regular,
+  },
+  loginLink: {
+    color: theme.colors.primary,
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.bold,
+    marginLeft: theme.spacing.small,
+    fontFamily: theme.fonts.family.bold,
+    textDecorationLine: 'underline',
   },
 });
 
