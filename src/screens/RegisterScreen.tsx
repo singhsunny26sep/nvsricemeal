@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { theme } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { apiService } from '../utils/apiService';
 import Logo from '../components/Logo';
 import LanguageSelector from '../components/LanguageSelector';
 
@@ -24,21 +26,55 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { strings } = useLanguage();
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (name === '' || email === '' || phone === '' || password === '') {
-      Alert.alert(strings?.common?.error || 'Error', strings?.login?.fillAllFields || 'Please fill in all fields.');
+      Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.login?.fillAllFields || 'ದಯವಿಟ್ಟು ಎಲ್ಲಾ ಫೀಲ್ಡ್‌ಗಳನ್ನು ಭರ್ತಿ ಮಾಡಿ.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert(strings?.common?.error || 'Error', 'Password must be at least 6 characters.');
+      Alert.alert(strings?.common?.error || 'ದೋಷ', 'ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳಿರಬೇಕು.');
       return;
     }
-    // Demo register - in real app, call API
-    const user = { name, email, phone };
-    login(user);
+
+    setIsLoading(true);
+    try {
+      const response = await apiService.register({
+        name,
+        email,
+        password,
+        role: 'user', // Default role as per your API example
+      });
+
+      if (response.success && response.data) {
+        // Registration successful, login the user
+        const { user, token } = response.data;
+        login({
+          ...user,
+          token,
+        });
+
+        Alert.alert(
+          strings?.login?.success || 'ಯಶಸ್ಸು',
+          strings?.login?.registrationSuccess || 'ನೋಂದಣಿ ಯಶಸ್ವಿಯಾಗಿದೆ!'
+        );
+      } else {
+        Alert.alert(
+          strings?.common?.error || 'ದೋಷ',
+          response.error || 'ನೋಂದಣಿ ವಿಫಲವಾಗಿದೆ'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        strings?.common?.error || 'ದೋಷ',
+        'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -88,8 +124,16 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
             secureTextEntry
           />
         </View>
-        <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-          <Text style={styles.registerButtonText}>{strings?.login?.register || 'Register'}</Text>
+        <TouchableOpacity
+          style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+          onPress={handleRegister}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.card} />
+          ) : (
+            <Text style={styles.registerButtonText}>{strings?.login?.register || 'Register'}</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.loginContainer}>
@@ -195,6 +239,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
+  },
+  registerButtonDisabled: {
+    backgroundColor: theme.colors.textSecondary,
+    opacity: 0.6,
   },
   registerButtonText: {
     color: theme.colors.card,

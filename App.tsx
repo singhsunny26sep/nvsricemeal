@@ -186,7 +186,6 @@ function MainTabs() {
               </View>
             );
           }
-
           return IconComponent;
         },
         tabBarActiveTintColor: theme.colors.primary,

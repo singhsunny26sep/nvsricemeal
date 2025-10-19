@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,9 @@ import {
   TextInput,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
-import { Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Video from 'react-native-video';
 import { useNavigation } from '@react-navigation/native';
@@ -53,10 +54,83 @@ const getCategories = (strings: any) => [
 ];
 type Category = string;
 
+// Skeleton Components
+const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: number }> = ({
+  width,
+  height,
+  borderRadius = 8
+}) => {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [animatedValue]);
+
+  const backgroundColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#E1E9EE', '#F2F8FC'],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width,
+          height,
+          borderRadius,
+          backgroundColor,
+        },
+      ]}
+    />
+  );
+};
+
+const ProductCardSkeleton: React.FC = () => (
+  <View style={styles.productCard}>
+    <SkeletonLoader width={120} height={120} borderRadius={12} />
+    <View style={styles.productInfo}>
+      <SkeletonLoader width={100} height={16} />
+      <SkeletonLoader width={110} height={14} />
+      <SkeletonLoader width={80} height={14} />
+      <SkeletonLoader width={90} height={20} />
+      <SkeletonLoader width={140} height={32} borderRadius={16} />
+    </View>
+  </View>
+);
+
+const CategorySkeleton: React.FC = () => (
+  <SkeletonLoader width={100} height={35} borderRadius={20} />
+);
+
+const HeaderSkeleton: React.FC = () => (
+  <View style={styles.headerSkeleton}>
+    <View style={styles.headerTopSkeleton}>
+      <SkeletonLoader width={100} height={50} />
+      <SkeletonLoader width={40} height={40} borderRadius={20} />
+    </View>
+    <SkeletonLoader width={Dimensions.get('window').width - 32} height={50} borderRadius={25} />
+  </View>
+);
+
 const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite, isFavorite }) => {
   const navigation = useNavigation();
   const { strings } = useLanguage();
-  const scaleValue = React.useRef(new Animated.Value(1)).current;
+  const scaleValue = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     Animated.spring(scaleValue, {
@@ -143,14 +217,24 @@ const HomeScreen: React.FC = () => {
   const { addToCart, cart } = useCart();
   const { strings } = useLanguage();
   const navigation = useNavigation<any>();
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [selectedCategory, setSelectedCategory] = React.useState<Category>('All');
-  const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<Category>('All');
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [videoPlaying, setVideoPlaying] = useState(true);
   const [videoMuted, setVideoMuted] = useState(false);
   const [showControls, setShowControls] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const videoRef = useRef<any>(null);
   const scrollViewRef = useRef<any>(null);
+
+  // Simulate loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000); // 2 seconds loading time
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Simplified and corrected category filtering logic
   const filteredProducts = riceProducts.filter(product => {
@@ -195,6 +279,39 @@ const HomeScreen: React.FC = () => {
       </Text>
     </TouchableOpacity>
   );
+
+  // Show loading skeleton
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeContainer}>
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+          <HeaderSkeleton />
+
+          <View style={styles.categorySection}>
+            <FlatList
+              horizontal
+              data={Array.from({ length: 8 })}
+              renderItem={() => <CategorySkeleton />}
+              keyExtractor={(_, index) => `category-skeleton-${index}`}
+              style={styles.categoryList}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryContainer}
+            />
+          </View>
+
+          <FlatList
+            data={Array.from({ length: 6 })}
+            renderItem={() => <ProductCardSkeleton />}
+            keyExtractor={(_, index) => `product-skeleton-${index}`}
+            numColumns={2}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            columnWrapperStyle={styles.row}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeContainer}>
@@ -263,7 +380,6 @@ const HomeScreen: React.FC = () => {
             contentContainerStyle={styles.categoryContainer}
           />
         </View>
-
         <FlatList
           data={filteredProducts}
           renderItem={({ item }) => (
@@ -310,12 +426,19 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    // alignItems: 'center',
+    alignItems: 'center',
     marginBottom: theme.spacing.medium,
+    elevation:4,
+    backgroundColor:"white",
+    borderRadius:14,
+    padding:2,
+    // borderWidth:1,
+    // borderStyle:"dotted"
   },
   cartIconContainer: {
     position: 'relative',
     padding: theme.spacing.small,
+    
   },
   cartBadge: {
     position: 'absolute',
@@ -547,8 +670,8 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.small,
   },
   imageBox: {
-    height: 150,
-    width: 200,
+    height: 100,
+    width: 100,
     // alignSelf: "center",
   },
   add: {
@@ -643,7 +766,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
-  }
+  },
+  // Skeleton Styles
+  headerSkeleton: {
+    padding: theme.spacing.large,
+    backgroundColor: theme.colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  headerTopSkeleton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.medium,
+  },
 });
 
 export default HomeScreen;

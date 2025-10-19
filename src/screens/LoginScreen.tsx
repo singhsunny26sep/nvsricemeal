@@ -10,11 +10,13 @@ import {
   Animated,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { apiService } from '../utils/apiService';
 import Logo from '../components/Logo';
 
 interface LoginScreenProps {
@@ -22,70 +24,77 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'mobile'>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [showOTPVerification, setShowOTPVerification] = useState(false);
-  const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { strings } = useLanguage();
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
-  const handleSendOTP = () => {
+  const handleLogin = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[6-9]\d{9}$/;
 
     if (loginMethod === 'email') {
-      if (email === '') {
-        Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.login?.fillAllFields || 'ದಯವಿಟ್ಟು ಇಮೇಲ್ ವಿಳಾಸ ನಮೂದಿಸಿ.');
+      if (email === '' || password === '') {
+        Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.login?.fillAllFields || 'ದಯವಿಟ್ಟು ಇಮೇಲ್ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ನಮೂದಿಸಿ.');
         return;
       }
       if (!emailRegex.test(email)) {
         Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.common?.invalidEmail || 'ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಇಮೇಲ್ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ.');
         return;
       }
+      if (password.length < 6) {
+        Alert.alert(strings?.common?.error || 'ದೋಷ', 'ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳಿರಬೇಕು.');
+        return;
+      }
 
-      // Demo OTP sending to email - in real app, call API to send OTP to email
-      Alert.alert(
-        strings?.login?.otpSent || 'OTP ಕಳುಹಿಸಲಾಗಿದೆ',
-        `${strings?.login?.otpSubtitle || 'ಗೆ ಕಳುಹಿಸಲಾದ 6 ಅಂಕಿಗಳ ಕೋಡ್ ನಮೂದಿಸಿ'} ${email}`,
-        [{ text: 'OK', onPress: () => setShowOTPVerification(true) }]
-      );
+      setIsLoading(true);
+      try {
+        const response = await apiService.login({
+          type: loginMethod,
+          email: loginMethod === 'email' ? email : undefined,
+          mobile: loginMethod === 'phone' ? phone : undefined,
+          password,
+          fcmToken: 'dkcdkmdedmeidcwd', // This would typically come from FCM device registration
+        });
+
+        if (response.success && response.data) {
+          // Login successful
+          const { user, token } = response.data;
+          login({
+            ...user,
+            token,
+          });
+
+          Alert.alert(
+            strings?.login?.success || 'ಯಶಸ್ಸು',
+            strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
+          );
+        } else {
+          Alert.alert(
+            strings?.common?.error || 'ದೋಷ',
+            response.error || 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ'
+          );
+        }
+      } catch (error) {
+        Alert.alert(
+          strings?.common?.error || 'ದೋಷ',
+          'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
+        );
+      } finally {
+        setIsLoading(false);
+      }
     } else {
-      if (phone === '') {
-        Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.login?.fillAllFields || 'ದಯವಿಟ್ಟು ಫೋನ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.');
-        return;
-      }
-      if (!phoneRegex.test(phone)) {
-        Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.common?.invalidPhone || 'ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ 10 ಅಂಕಿಗಳ ಫೋನ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.');
-        return;
-      }
-
-      // Demo OTP sending to phone - in real app, call API to send OTP to phone
+      // Mobile login - you can implement mobile login logic here if needed
       Alert.alert(
-        strings?.login?.otpSent || 'OTP ಕಳುಹಿಸಲಾಗಿದೆ',
-        `${strings?.login?.otpSubtitle || 'ಗೆ ಕಳುಹಿಸಲಾದ 6 ಅಂಕಿಗಳ ಕೋಡ್ ನಮೂದಿಸಿ'} +91 ${phone}`,
-        [{ text: 'OK', onPress: () => setShowOTPVerification(true) }]
+        strings?.common?.error || 'ದೋಷ',
+        'ಮೊಬೈಲ್ ಲಾಗಿನ್ ಇನ್ನೂ ಅನುಷ್ಠಾನಗೊಳಿಸಲಾಗಿಲ್ಲ'
       );
     }
   };
 
-  const handleVerifyOTP = () => {
-    if (otp === '' || otp.length !== 6) {
-      Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.login?.invalidOTP || 'ದಯವಿಟ್ಟು 6 ಅಂಕಿಗಳ OTP ನಮೂದಿಸಿ.');
-      return;
-    }
-
-    // Demo OTP verification - in real app, call API to verify OTP
-    const user = {
-      name: 'Demo User',
-      email: 'demo@example.com',
-      phone: phone
-    };
-    login(user);
-    setShowOTPVerification(false);
-    setOtp('');
-  };
 
   // Both email and phone now use OTP, so handleEmailLogin is replaced by handleSendOTP
 
@@ -141,13 +150,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
           <TouchableOpacity
             style={[
               styles.loginMethodButton,
-              loginMethod === 'phone' && styles.loginMethodButtonActive
+              loginMethod === 'mobile' && styles.loginMethodButtonActive
             ]}
-            onPress={() => setLoginMethod('phone')}
+            onPress={() => setLoginMethod('mobile')}
           >
             <Text style={[
               styles.loginMethodText,
-              loginMethod === 'phone' && styles.loginMethodTextActive
+              loginMethod === 'mobile' && styles.loginMethodTextActive
             ]}>
               {strings?.profile?.phone || 'Phone'}
             </Text>
@@ -167,27 +176,49 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
               placeholder={
                 loginMethod === 'email'
                   ? (strings?.login?.email || 'ಇಮೇಲ್')
-                  : (strings?.profile?.phone || 'ಫೋನ್ ಸಂಖ್ಯೆ')
+                  : (strings?.profile?.phone || 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ')
               }
               value={loginMethod === 'email' ? email : phone}
               onChangeText={loginMethod === 'email' ? setEmail : setPhone}
               keyboardType={loginMethod === 'email' ? 'email-address' : 'phone-pad'}
               autoCapitalize={loginMethod === 'email' ? 'none' : 'words'}
-              maxLength={loginMethod === 'phone' ? 10 : undefined}
+              maxLength={loginMethod === 'mobile' ? 10 : undefined}
             />
           </View>
         </View>
+
+        {/* Password Input - Only show for email login */}
+        {loginMethod === 'email' && (
+          <View style={styles.inputContainer}>
+            <View style={styles.iconInput}>
+              <Icon name="lock" size={20} color={theme.colors.textSecondary} />
+              <TextInput
+                style={styles.input}
+                placeholder={strings?.login?.password || 'ಪಾಸ್‌ವರ್ಡ್'}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+        )}
         <Animated.View style={[styles.loginButtonContainer, { transform: [{ scale: scaleValue }] }]}>
           <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleSendOTP}
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>
-              {strings?.login?.sendOTP || 'Send OTP'}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={theme.colors.card} />
+            ) : (
+              <Text style={styles.loginButtonText}>
+                {strings?.login?.login || 'ಲಾಗಿನ್'}
+              </Text>
+            )}
           </TouchableOpacity>
         </Animated.View>
         <View style={styles.registerContainer}>
@@ -198,54 +229,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         </View>
       </View>
 
-      {/* OTP Verification Modal */}
-      {showOTPVerification && (
-        <View style={styles.otpModal}>
-          <View style={styles.otpContainer}>
-            <Text style={styles.otpTitle}>{strings?.login?.enterOTP || 'Enter OTP'}</Text>
-            <Text style={styles.otpSubtitle}>
-              {strings?.login?.otpSubtitle || 'Enter the 6-digit code sent to'}{' '}
-              {loginMethod === 'email' ? email : `+91 ${phone}`}
-            </Text>
-
-            <View style={styles.otpInputContainer}>
-              <TextInput
-                style={styles.otpInput}
-                placeholder="000000"
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="numeric"
-                maxLength={6}
-                textAlign="center"
-              />
-            </View>
-
-            <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
-              <Text style={styles.verifyButtonText}>{strings?.login?.verifyOTP || 'Verify OTP'}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.resendButton}
-              onPress={() => Alert.alert(
-                strings?.login?.otpSent || 'OTP ಕಳುಹಿಸಲಾಗಿದೆ',
-                `${strings?.login?.otpSubtitle || 'ಗೆ ಕಳುಹಿಸಲಾದ 6 ಅಂಕಿಗಳ ಕೋಡ್ ನಮೂದಿಸಿ'} ${loginMethod === 'email' ? email : '+91 ' + phone}`
-              )}
-            >
-              <Text style={styles.resendButtonText}>{strings?.login?.resendOTP || 'Resend OTP'}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setShowOTPVerification(false);
-                setOtp('');
-              }}
-            >
-              <Text style={styles.closeButtonText}>{strings?.common?.cancel || 'Cancel'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      {/* OTP Modal removed - using email/password login */}
     </ScrollView>
   );
 };
@@ -349,6 +333,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
+  },
+  loginButtonDisabled: {
+    backgroundColor: theme.colors.textSecondary,
+    opacity: 0.6,
   },
   loginButtonText: {
     color: theme.colors.card,
@@ -475,6 +463,10 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
     minWidth: 150,
     alignItems: 'center',
+  },
+  verifyButtonDisabled: {
+    backgroundColor: theme.colors.textSecondary,
+    opacity: 0.6,
   },
   verifyButtonText: {
     color: theme.colors.card,

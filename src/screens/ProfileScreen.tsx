@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,31 +7,80 @@ import {
   Image,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../constants/theme';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { apiService } from '../utils/apiService';
 import LanguageSelector from '../components/LanguageSelector';
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation();
   const { strings } = useLanguage();
+  const { auth, logout } = useAuth();
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Hardcoded user info for demo
-  const user = {
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+91 9876543210',
-    address: '123 Main St, Mumbai, India',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
-    bio: 'Premium Rice Enthusiast',
+  // Fetch user profile data
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    if (!auth.user?.token) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiService.getUserProfile(auth.user.token);
+      if (response.success && response.data) {
+        setUserProfile(response.data);
+      } else {
+        Alert.alert(
+          strings?.common?.error || 'Error',
+          response.error || 'Failed to load profile'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        strings?.common?.error || 'Error',
+        'Network error occurred while loading profile'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Use auth user data as fallback if API fails
+  const user = userProfile || auth.user || {
+    name: 'User',
+    email: '',
+    phone: '',
   };
 
   const handleLogout = () => {
-    // Demo logout logic
-    Alert.alert('Logout', 'Logged out successfully!');
+    Alert.alert(
+      strings?.profile?.logout || 'Logout',
+      strings?.profile?.logoutConfirm || 'Are you sure you want to logout?',
+      [
+        {
+          text: strings?.common?.cancel || 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: strings?.profile?.logout || 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+          },
+        },
+      ]
+    );
   };
 
   const handleOrdersPress = () => {
@@ -58,12 +107,26 @@ const ProfileScreen: React.FC = () => {
     setShowLanguageSelector(true);
   };
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Image source={{ uri: user.avatar }} style={styles.avatar} />
+        <Image
+          source={{
+            uri: userProfile?.avatar || user.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face'
+          }}
+          style={styles.avatar}
+        />
         <Text style={styles.name}>{user.name}</Text>
-        <Text style={styles.bio}>{user.bio}</Text>
+        <Text style={styles.bio}>{userProfile?.bio || user.bio || 'Premium Rice Enthusiast'}</Text>
       </View>
       
       <View style={styles.infoCard}>
@@ -76,21 +139,21 @@ const ProfileScreen: React.FC = () => {
             <Icon name="email" size={18} color={theme.colors.textSecondary} />
             <Text style={styles.label}>Email</Text>
           </View>
-          <Text style={styles.value}>{user.email}</Text>
+          <Text style={styles.value}>{user.email || 'Not available'}</Text>
         </View>
         <View style={styles.infoItem}>
           <View style={styles.labelContainer}>
             <Icon name="phone" size={18} color={theme.colors.textSecondary} />
             <Text style={styles.label}>Phone</Text>
           </View>
-          <Text style={styles.value}>{user.phone}</Text>
+          <Text style={styles.value}>{user.phone || 'Not available'}</Text>
         </View>
         <View style={styles.infoItem}>
           <View style={styles.labelContainer}>
             <Icon name="location-on" size={18} color={theme.colors.textSecondary} />
             <Text style={styles.label}>Address</Text>
           </View>
-          <Text style={styles.value}>{user.address}</Text>
+          <Text style={styles.value}>{userProfile?.address || 'Not available'}</Text>
         </View>
       </View>
 
@@ -179,6 +242,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: theme.spacing.medium,
+    fontSize: theme.fonts.size.large,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.family.regular,
   },
   header: {
     backgroundColor: theme.colors.card,

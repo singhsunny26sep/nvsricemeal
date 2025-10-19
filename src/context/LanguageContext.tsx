@@ -16,7 +16,7 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const [currentLanguage, setCurrentLanguage] = useState<string>('kn');
+  const [currentLanguage, setCurrentLanguage] = useState<string>('en');
   const [isRTL, setIsRTL] = useState<boolean>(false);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     // Update strings when language changes
     strings.setLanguage(currentLanguage);
 
-    // Set RTL for Kannada (default is now Kannada)
+    // Set RTL for Kannada (default is now English, but RTL for Kannada)
     setIsRTL(currentLanguage === 'kn');
 
     // Save language preference
@@ -41,13 +41,13 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'kn')) {
         setCurrentLanguage(savedLanguage);
       } else {
-        // Default to Kannada if no preference is saved
-        setCurrentLanguage('kn');
+        // Default to English if no preference is saved
+        setCurrentLanguage('en');
       }
     } catch (error) {
       console.error('Error loading language preference:', error);
-      // Default to Kannada on error as well
-      setCurrentLanguage('kn');
+      // Default to English on error as well
+      setCurrentLanguage('en');
     }
   };
 

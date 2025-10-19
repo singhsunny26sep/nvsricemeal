@@ -1,13 +1,13 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URL for API calls
-  BASE_URL: 'https://api.yourapp.com',
+  BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
 
   // Development URL (for local development)
-  DEV_BASE_URL: 'http://localhost:3000',
+  DEV_BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
 
   // Production URL
-  PROD_BASE_URL: 'https://api.yourapp.com',
+  PROD_BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
 
   // Image base URL
   IMAGE_BASE_URL: 'https://your-cdn.com/images',
@@ -17,8 +17,16 @@ export const API_CONFIG = {
     PRODUCTS: '/api/products',
     CATEGORIES: '/api/categories',
     ORDERS: '/api/orders',
-    USER: '/api/user',
-    AUTH: '/api/auth',
+    USER: {
+      PROFILE: '/users/get',
+      UPDATE: '/users/update',
+    },
+    AUTH: {
+      REGISTER: '/auth/register',
+      LOGIN: '/auth/loginOrSignin-with-email',
+      SEND_OTP: '/auth/send-otp',
+      VERIFY_OTP: '/auth/verify-otp',
+    },
   },
 
   // API Keys (if needed)
@@ -62,6 +70,10 @@ export const API_URLS = {
   PRODUCTS: buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS),
   CATEGORIES: buildUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
   ORDERS: buildUrl(API_CONFIG.ENDPOINTS.ORDERS),
-  USER: buildUrl(API_CONFIG.ENDPOINTS.USER),
-  AUTH: buildUrl(API_CONFIG.ENDPOINTS.AUTH),
+  USER_PROFILE: buildUrl(API_CONFIG.ENDPOINTS.USER.PROFILE),
+  USER_UPDATE: buildUrl(API_CONFIG.ENDPOINTS.USER.UPDATE),
+  REGISTER: buildUrl(API_CONFIG.ENDPOINTS.AUTH.REGISTER),
+  LOGIN: buildUrl(API_CONFIG.ENDPOINTS.AUTH.LOGIN),
+  SEND_OTP: buildUrl(API_CONFIG.ENDPOINTS.AUTH.SEND_OTP),
+  VERIFY_OTP: buildUrl(API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP),
 };
