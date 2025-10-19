@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
+import { PDFGenerator } from '../utils/pdfGenerator';
 
 interface Order {
   id: string;
@@ -134,6 +135,44 @@ const OrderHistoryScreen: React.FC = () => {
     Alert.alert('Success', 'Thank you for your review!');
   };
 
+  const handleDownloadPDF = async (order: Order) => {
+    try {
+      Alert.alert(
+        'Generating PDF',
+        'Please wait while we generate your invoice...',
+        [{ text: 'OK' }]
+      );
+
+      // Mock customer info - in real app, get from user context or API
+      const customerInfo = {
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        phone: '9876543210',
+        address: '123 Main Street, City, State - 123456',
+      };
+
+      const pdfPath = await PDFGenerator.generateOrderHistoryPDF(order, customerInfo);
+
+      Alert.alert(
+        'PDF Generated',
+        `Invoice saved successfully!\n\nPath: ${pdfPath}`,
+        [
+          { text: 'OK' },
+          {
+            text: 'Share',
+            onPress: () => PDFGenerator.sharePDF(pdfPath, order.id)
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      Alert.alert(
+        'Error',
+        'Failed to generate PDF. Please try again.'
+      );
+    }
+  };
+
   const renderStars = (rating: number, interactive: boolean = false) => {
     return (
       <View style={styles.starsContainer}>
@@ -195,6 +234,13 @@ const OrderHistoryScreen: React.FC = () => {
           <TouchableOpacity style={styles.viewDetailsButton}>
             <Text style={styles.viewDetailsText}>View Details</Text>
             <Icon name="arrow-forward" size={16} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.pdfButton}
+            onPress={() => handleDownloadPDF(item)}
+          >
+            <Icon name="picture-as-pdf" size={16} color={theme.colors.primary} />
+            <Text style={styles.pdfButtonText}>Download PDF</Text>
           </TouchableOpacity>
           {item.status === 'delivered' && !item.hasReview && (
             <TouchableOpacity
@@ -470,6 +516,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.medium,
+    flexWrap: 'wrap',
   },
   reviewButton: {
     flexDirection: 'row',
@@ -482,6 +529,23 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   reviewButtonText: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.small,
+    fontWeight: theme.fonts.weight.bold,
+    fontFamily: theme.fonts.family.bold,
+  },
+  pdfButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  pdfButtonText: {
     fontSize: theme.fonts.size.small,
     color: theme.colors.primary,
     marginLeft: theme.spacing.small,

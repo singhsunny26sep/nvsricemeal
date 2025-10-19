@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RazorpayCheckout from 'react-native-razorpay';
 
@@ -82,6 +83,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, onUpdateQuantity, onRemove })
 
 const CartScreen: React.FC = () => {
   const { cart, removeFromCart, updateQuantity, applyCoupon, setPincode, clearCart } = useCart();
+  const { auth } = useAuth();
   const { strings } = useLanguage();
 
   const [couponInput, setCouponInput] = useState('');
@@ -128,6 +130,8 @@ const CartScreen: React.FC = () => {
       Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit pincode.');
     }
   };
+
+
 
   // Success Wave Animation
   const startSuccessAnimation = () => {
@@ -268,6 +272,7 @@ const CartScreen: React.FC = () => {
   );
 
   return (
+    <ScrollView style={{marginBottom:64}}>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -425,6 +430,7 @@ const CartScreen: React.FC = () => {
         </Animated.View>
       )}
     </View>
+    </ScrollView>
   );
 };
 

@@ -243,14 +243,7 @@ function MainTabs() {
           tabBarLabel: strings?.navigation?.explore || 'ಅನ್ವೇಷಿಸಿ',
         }}
       />
-       <Tab.Screen
-        name="Cart"
-        component={CartScreen}
-        options={{
-          title: strings?.navigation?.cart || 'ಕಾರ್ಟ್',
-          tabBarLabel: strings?.navigation?.cart || 'ಕಾರ್ಟ್',
-        }}
-      />
+      
       <Tab.Screen
         name="Profile"
         component={ProfileStackNavigator}

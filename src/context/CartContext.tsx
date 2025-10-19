@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, ReactNode, useEffect } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../constants/products';
 
-interface CartItem {
+export interface CartItem {
   product: Product;
   quantity: number;
   addedAt: Date;
