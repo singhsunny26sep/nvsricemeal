@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,13 +29,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [otp, setOtp] = useState('');
   const { login } = useAuth();
   const { strings } = useLanguage();
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
   const handleLogin = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     if (loginMethod === 'email') {
       if (email === '' || password === '') {
         Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.login?.fillAllFields || 'ದಯವಿಟ್ಟು ಇಮೇಲ್ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ನಮೂದಿಸಿ.');
@@ -52,15 +53,56 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
 
       setIsLoading(true);
       try {
-        const response = await apiService.login({
-          type: loginMethod,
-          email: loginMethod === 'email' ? email : undefined,
-          mobile: loginMethod === 'phone' ? phone : undefined,
-          password,
-          fcmToken: 'dkcdkmdedmeidcwd', // This would typically come from FCM device registration
-        });
+        let response;
+        if (loginMethod === 'email') {
+          response = await apiService.login({
+            type: 'email',
+            email,
+            password,
+            fcmToken: 'dkcdkmdedmeidcwd', // This would typically come from FCM device registration
+          });
+        } else {
+          // Mobile login - Direct login with mobile number
+          if (phone === '') {
+            Alert.alert(strings?.common?.error || 'ದೋಷ', 'ದಯವಿಟ್ಟು ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.');
+            return;
+          }
+          // Direct mobile login (OTP will be sent by server)
+          setIsLoading(true);
+          try {
+            const response = await apiService.loginWithMobile({
+              mobile: phone
+            });
 
-        if (response.success && response.data) {
+            if (response && response.success && response.data) {
+              const { user, token } = response.data;
+              login({
+                ...user,
+                token,
+              });
+
+              Alert.alert(
+                strings?.login?.success || 'ಯಶಸ್ಸು',
+                strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
+              );
+            } else {
+              Alert.alert(
+                strings?.common?.error || 'ದೋಷ',
+                (response?.error) || 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ'
+              );
+            }
+          } catch (error) {
+            Alert.alert(
+              strings?.common?.error || 'ದೋಷ',
+              'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
+            );
+          } finally {
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        if (response && response.success && response.data) {
           // Login successful
           const { user, token } = response.data;
           login({
@@ -75,7 +117,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         } else {
           Alert.alert(
             strings?.common?.error || 'ದೋಷ',
-            response.error || 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ'
+            (response?.error) || 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ'
           );
         }
       } catch (error) {
@@ -87,16 +129,106 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         setIsLoading(false);
       }
     } else {
-      // Mobile login - you can implement mobile login logic here if needed
-      Alert.alert(
-        strings?.common?.error || 'ದೋಷ',
-        'ಮೊಬೈಲ್ ಲಾಗಿನ್ ಇನ್ನೂ ಅನುಷ್ಠಾನಗೊಳಿಸಲಾಗಿಲ್ಲ'
-      );
+      // Mobile login validation
+      if (phone === '') {
+        Alert.alert(strings?.common?.error || 'ದೋಷ', 'ದಯವಿಟ್ಟು ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.');
+        return;
+      }
+      // Mobile validation is handled in the try block below
     }
   };
 
 
-  // Both email and phone now use OTP, so handleEmailLogin is replaced by handleSendOTP
+  // Send OTP for mobile login
+  const handleSendOTP = async () => {
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(phone)) {
+      Alert.alert(
+        strings?.common?.error || 'ದೋಷ',
+        'ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ 10 ಅಂಕಿಯ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ.'
+      );
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await apiService.sendOTP({
+        phone: phone,
+        type: 'phone',
+      });
+
+      console.log('Send OTP API Response:', response);
+
+      if (response.success) {
+        setShowOTPInput(true);
+        Alert.alert(
+          strings?.login?.success || 'ಯಶಸ್ಸು',
+          'OTP ಕಳುಹಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ ಬಂದ OTP ನಮೂದಿಸಿ.'
+        );
+      } else {
+        Alert.alert(
+          strings?.common?.error || 'ದೋಷ',
+          response.error || 'OTP ಕಳುಹಿಸುವಲ್ಲಿ ವಿಫಲವಾಗಿದೆ'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        strings?.common?.error || 'ದೋಷ',
+        'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Verify mobile OTP
+  const handleVerifyMobileOTP = async () => {
+    if (otp.length !== 6) {
+      Alert.alert(
+        strings?.common?.error || 'ದೋಷ',
+        'ದಯವಿಟ್ಟು 6 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiService.verifyMobileOTP({
+        mobile: phone,
+        otp: otp,
+      });
+
+      console.log('Verify Mobile OTP API Response:', response);
+
+      if (response.success && response.data) {
+        const { user, token } = response.data;
+        login({
+          ...user,
+          token,
+        });
+
+        Alert.alert(
+          strings?.login?.success || 'ಯಶಸ್ಸು',
+          strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
+        );
+
+        // Reset state
+        setShowOTPInput(false);
+        setOtp('');
+      } else {
+        Alert.alert(
+          strings?.common?.error || 'ದೋಷ',
+          response.error || 'OTP ತಪ್ಪಾಗಿದೆ'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        strings?.common?.error || 'ದೋಷ',
+        'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePressIn = () => {
     Animated.spring(scaleValue, {
@@ -118,6 +250,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
       strings?.login?.featureComingSoon || 'ಹೆಚ್ಚುವರಿ ವೈಶಿಷ್ಟ್ಯ ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ!'
     );
   };
+
+
 
   return (
     <ScrollView style={styles.container}>
@@ -206,7 +340,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         <Animated.View style={[styles.loginButtonContainer, { transform: [{ scale: scaleValue }] }]}>
           <TouchableOpacity
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
+            onPress={loginMethod === 'mobile' ? (showOTPInput ? handleVerifyMobileOTP : handleSendOTP) : handleLogin}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
             activeOpacity={0.8}
@@ -216,7 +350,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
               <ActivityIndicator size="small" color={theme.colors.card} />
             ) : (
               <Text style={styles.loginButtonText}>
-                {strings?.login?.login || 'ಲಾಗಿನ್'}
+                {loginMethod === 'mobile'
+                  ? (showOTPInput ? (strings?.login?.verifyOTP || 'OTP ಪರಿಶೀಲಿಸಿ') : (strings?.login?.sendOTP || 'OTP ಕಳುಹಿಸಿ'))
+                  : (strings?.login?.login || 'ಲಾಗಿನ್')
+                }
               </Text>
             )}
           </TouchableOpacity>
@@ -229,7 +366,54 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         </View>
       </View>
 
-      {/* OTP Modal removed - using email/password login */}
+     {/* OTP Input Modal for Mobile Login */}
+     {showOTPInput && (
+       <View style={styles.otpModal}>
+         <View style={styles.otpContainer}>
+           <Text style={styles.otpTitle}>OTP ಪರಿಶೀಲನೆ</Text>
+           <Text style={styles.otpSubtitle}>
+             ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ ಕಳುಹಿಸಿದ 6 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ{'\n'}{phone}
+           </Text>
+
+           <View style={styles.otpInputContainer}>
+             <TextInput
+               style={styles.otpInput}
+               placeholder="000000"
+               value={otp}
+               onChangeText={setOtp}
+               keyboardType="numeric"
+               maxLength={6}
+               autoFocus
+             />
+           </View>
+
+           <TouchableOpacity
+             style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
+             onPress={handleVerifyMobileOTP}
+             disabled={isLoading}
+           >
+             {isLoading ? (
+               <ActivityIndicator size="small" color={theme.colors.card} />
+             ) : (
+               <Text style={styles.verifyButtonText}>
+                 {strings?.login?.verifyOTP || 'OTP ಪರಿಶೀಲಿಸಿ'}
+               </Text>
+             )}
+           </TouchableOpacity>
+
+           <TouchableOpacity
+             style={styles.closeButton}
+             onPress={() => {
+               setShowOTPInput(false);
+               setOtp('');
+             }}
+           >
+             <Text style={styles.closeButtonText}>ರದ್ದುಗೊಳಿಸಿ</Text>
+           </TouchableOpacity>
+         </View>
+       </View>
+     )}
+
     </ScrollView>
   );
 };
@@ -473,19 +657,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.large,
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
-  },
-  resendButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-    marginBottom: theme.spacing.medium,
-  },
-  resendButtonText: {
-    color: theme.colors.primary,
-    fontSize: theme.fonts.size.medium,
-    fontWeight: theme.fonts.weight.medium,
-    fontFamily: theme.fonts.family.medium,
-    textDecorationLine: 'underline',
   },
   closeButton: {
     backgroundColor: 'transparent',

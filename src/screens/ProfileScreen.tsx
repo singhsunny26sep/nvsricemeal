@@ -29,24 +29,31 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => {
     fetchUserProfile();
   }, []);
-
   const fetchUserProfile = async () => {
     if (!auth.user?.token) {
+      console.log('No token found in auth.user');
       setIsLoading(false);
       return;
     }
 
+    console.log('Fetching profile...');
+
     try {
-      const response = await apiService.getUserProfile(auth.user.token);
+      const response = await apiService.getUserProfile();
+      console.log('Profile API response:', response);
+
       if (response.success && response.data) {
+        console.log('Profile data received:', response.data);
         setUserProfile(response.data);
       } else {
+        console.error('Profile API failed:', response.error);
         Alert.alert(
           strings?.common?.error || 'Error',
           response.error || 'Failed to load profile'
         );
       }
     } catch (error) {
+      console.error('Profile API error:', error);
       Alert.alert(
         strings?.common?.error || 'Error',
         'Network error occurred while loading profile'
@@ -62,6 +69,15 @@ const ProfileScreen: React.FC = () => {
     email: '',
     phone: '',
   };
+
+  // Debug logging
+  console.log('ProfileScreen Debug:', {
+    isLoading,
+    hasToken: !!auth.user?.token,
+    userProfile,
+    authUser: auth.user,
+    finalUser: user
+  });
 
   const handleLogout = () => {
     Alert.alert(
@@ -107,6 +123,11 @@ const ProfileScreen: React.FC = () => {
     setShowLanguageSelector(true);
   };
 
+  const handleRefresh = () => {
+    setIsLoading(true);
+    fetchUserProfile();
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -119,6 +140,11 @@ const ProfileScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+            <Icon name="refresh" size={20} color={theme.colors.card} />
+          </TouchableOpacity>
+        </View>
         <Image
           source={{
             uri: userProfile?.avatar || user.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face'
@@ -263,6 +289,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(76, 175, 80, 0.1)',
     position: 'relative',
+  },
+  headerTop: {
+    position: 'absolute',
+    top: theme.spacing.medium,
+    right: theme.spacing.medium,
+    zIndex: 1,
+  },
+  refreshButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.card,
+    elevation: 3,
   },
   avatar: {
     width: 120,

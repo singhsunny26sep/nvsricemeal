@@ -24,8 +24,11 @@ export const API_CONFIG = {
     AUTH: {
       REGISTER: '/auth/register',
       LOGIN: '/auth/loginOrSignin-with-email',
-      SEND_OTP: '/auth/send-otp',
+      LOGIN_MOBILE: '/auth/loginOrSignin-with-mobile',
+      SEND_OTP: '/auth/loginOrSignin-with-mobile',
       VERIFY_OTP: '/auth/verify-otp',
+      VERIFY_OTP_MOBILE: '/auth/verify-otp-mobile',
+      LOGOUT: '/auth/logout',
     },
   },
 
@@ -74,6 +77,9 @@ export const API_URLS = {
   USER_UPDATE: buildUrl(API_CONFIG.ENDPOINTS.USER.UPDATE),
   REGISTER: buildUrl(API_CONFIG.ENDPOINTS.AUTH.REGISTER),
   LOGIN: buildUrl(API_CONFIG.ENDPOINTS.AUTH.LOGIN),
+  LOGIN_MOBILE: buildUrl(API_CONFIG.ENDPOINTS.AUTH.LOGIN_MOBILE),
   SEND_OTP: buildUrl(API_CONFIG.ENDPOINTS.AUTH.SEND_OTP),
   VERIFY_OTP: buildUrl(API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP),
+  VERIFY_OTP_MOBILE: buildUrl(API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP_MOBILE),
+  LOGOUT: buildUrl(API_CONFIG.ENDPOINTS.AUTH.LOGOUT),
 };
