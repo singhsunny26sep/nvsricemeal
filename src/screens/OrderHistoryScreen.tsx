@@ -153,16 +153,13 @@ const OrderHistoryScreen: React.FC = () => {
 
       const pdfPath = await PDFGenerator.generateOrderHistoryPDF(order, customerInfo);
 
+      // Directly share the PDF
+      await PDFGenerator.sharePDF(pdfPath, order.id);
+
       Alert.alert(
         'PDF Generated',
-        `Invoice saved successfully!\n\nPath: ${pdfPath}`,
-        [
-          { text: 'OK' },
-          {
-            text: 'Share',
-            onPress: () => PDFGenerator.sharePDF(pdfPath, order.id)
-          }
-        ]
+        `Invoice generated and shared successfully!\n\nPath: ${pdfPath}`,
+        [{ text: 'OK' }]
       );
     } catch (error) {
       console.error('Error generating PDF:', error);

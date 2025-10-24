@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "845827767579",
+    "project_id": "nvs-rice-mart",
+    "storage_bucket": "nvs-rice-mart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:845827767579:android:96d07e60af57cc1e1227be",
+        "android_client_info": {
+          "package_name": "com.nvsricemall"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCt3XFLEGe-rad7UHYYZ1meAi7MrShyS8I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

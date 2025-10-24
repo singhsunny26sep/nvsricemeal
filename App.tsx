@@ -105,7 +105,7 @@ function HomeStackNavigator() {
         name="ProductDetails"
         component={ProductDetailsScreen}
       />
-        <HomeStack.Screen
+      <HomeStack.Screen
         name="CartScreen"
         component={CartScreen}
       />
@@ -144,7 +144,7 @@ function ProfileStackNavigator() {
         name="Notifications"
         component={NotificationScreen}
       />
-         
+
     </ProfileStack.Navigator>
   );
 }
@@ -242,7 +242,7 @@ function MainTabs() {
           tabBarLabel: strings?.navigation?.explore || 'ಅನ್ವೇಷಿಸಿ',
         }}
       />
-      
+
       <Tab.Screen
         name="Profile"
         component={ProfileStackNavigator}
@@ -260,7 +260,7 @@ function AuthScreens() {
   const [currentScreen, setCurrentScreen] = useState<'login' | 'register'>('login');
 
   if (auth.loading) {
-    return <SplashScreen onFinish={() => {}} />;
+    return <SplashScreen onFinish={() => { }} />;
   }
 
   if (!auth.isAuthenticated) {
