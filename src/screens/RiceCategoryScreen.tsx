@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,13 @@ import {
 } from 'react-native';
 import { Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { RiceCategory, Product } from '../constants/products';
 import { riceCategories } from '../constants/products';
 import { useCart } from '../context/CartContext';
 import { theme } from '../constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, buildUrl, TEST_TOKEN } from '../constants/config';
 
 const { width } = Dimensions.get('window');
 
@@ -135,7 +137,59 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, navigation
 const RiceCategoryScreen: React.FC = () => {
   const { addToCart } = useCart();
   const navigation = useNavigation();
+  const route = useRoute();
   const [selectedCategory, setSelectedCategory] = useState<RiceCategory | null>(null);
+  const [categoryProducts, setCategoryProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Get categoryId and categoryName from route params
+  const categoryId = (route.params as any)?.categoryId;
+  const categoryName = (route.params as any)?.categoryName;
+
+  console.log('RiceCategoryScreen - categoryId:', categoryId, 'categoryName:', categoryName);
+
+  // Fetch products for the selected category
+  useEffect(() => {
+    if (categoryId) {
+      fetchCategoryProducts(categoryId);
+    }
+  }, [categoryId]);
+
+  const fetchCategoryProducts = async (catId: string) => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem('userToken') || TEST_TOKEN;
+      const productsUrl = buildUrl('/products/getAll'); // Adjust endpoint as needed
+
+      console.log('Fetching products for category:', catId);
+
+      const response = await fetch(productsUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Category products response:', data);
+
+        // Filter products by category or subcategory
+        if (data.success && data.data?.data) {
+          const filteredProducts = data.data.data.filter((product: any) =>
+            product.category === catId || product.subCategory === catId
+          );
+          setCategoryProducts(filteredProducts);
+          console.log('Filtered products for category:', filteredProducts.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching category products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCategoryPress = (category: RiceCategory) => {
     setSelectedCategory(category);
@@ -152,6 +206,65 @@ const RiceCategoryScreen: React.FC = () => {
   const renderProduct = ({ item }: { item: Product }) => (
     <ProductItem item={item} onAddToCart={addToCart} navigation={navigation} />
   );
+
+  // Show category products if categoryId is provided
+  if (categoryId) {
+    return (
+      <SafeAreaView style={styles.safeContainer}>
+        <View style={styles.container}>
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.header}>{categoryName || 'Category Products'}</Text>
+            <Text style={styles.subtitle}>Explore products in this category</Text>
+          </View>
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text>Loading products...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={categoryProducts}
+              renderItem={({ item }) => (
+                <ProductItem
+                  item={{
+                    id: item._id,
+                    name: item.name,
+                    description: item.description,
+                    price: item.price,
+                    image: item.image,
+                    rating: item.rating || 4.0,
+                    reviewCount: item.reviewCount || 0,
+                    category: item.category,
+                    inStock: item.inStock,
+                    weight: item.weight || '1kg',
+                    brand: item.brand || 'NVS Rice'
+                  } as Product}
+                  onAddToCart={addToCart}
+                  navigation={navigation}
+                />
+              )}
+              keyExtractor={(item) => item._id}
+              numColumns={2}
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
+              columnWrapperStyle={styles.row}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text>No products found in this category</Text>
+                </View>
+              }
+            />
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (selectedCategory) {
     return (
@@ -559,6 +672,18 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.small,
     marginLeft: theme.spacing.small,
     fontFamily: theme.fonts.family.bold,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 100,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 100,
   },
 });
 

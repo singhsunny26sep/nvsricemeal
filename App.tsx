@@ -104,6 +104,10 @@ function HomeStackNavigator() {
         component={ProductDetailsScreen}
       />
       <HomeStack.Screen
+        name="ProductDetailsScreen"
+        component={ProductDetailsScreen}
+      />
+      <HomeStack.Screen
         name="CartScreen"
         component={CartScreen}
       />

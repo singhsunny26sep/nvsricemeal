@@ -27,13 +27,68 @@ interface ExploreItemProps {
   onAddToCart: (product: Product) => void;
 }
 
+interface SubCategory {
+  _id: string;
+  name: string;
+  description: string;
+  image: string;
+  categoryId: string;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SubCategoriesResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+    data: SubCategory[];
+  };
+}
+
+interface ProductResponse {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  rating: number;
+  reviewCount: number;
+  category: string;
+  subCategory: string;
+  inStock: boolean;
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ProductsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+    data: ProductResponse[];
+  };
+}
+
 const ExploreItem: React.FC<ExploreItemProps> = ({ item, onAddToCart }) => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
 
   const handleAddToCart = () => {
     onAddToCart(item);
     navigation.getParent()?.navigate('Cart');
   };
+
 
   const handleProductPress = () => {
     (navigation as any).navigate('ProductDetails', { product: item });
@@ -66,6 +121,9 @@ const ExploreItem: React.FC<ExploreItemProps> = ({ item, onAddToCart }) => {
         </View>
         <View style={styles.explorePriceRow}>
           <Text style={styles.explorePrice}>₹{item.price}</Text>
+          {item.originalPrice && item.originalPrice > item.price && (
+            <Text style={styles.exploreOriginalPrice}>₹{item.originalPrice}</Text>
+          )}
           <TouchableOpacity
             style={styles.exploreAddButton}
             onPress={handleAddToCart}
@@ -84,96 +142,168 @@ const ExploreScreen: React.FC = () => {
   const { strings } = useLanguage();
   const navigation = useNavigation();
   const [selectedFilter, setSelectedFilter] = useState<'featured' | 'popular' | 'new'>('featured');
-  const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch subcategories and products on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setProductsLoading(true);
-        setError(null);
+  // Get authentication token
+  const getAuthToken = async (): Promise<string> => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      return token || TEST_TOKEN;
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return TEST_TOKEN;
+    }
+  };
 
-        // Fetch subcategories
-        const subCategoriesUrl = buildUrl(API_CONFIG.ENDPOINTS.SUBCATEGORIES_API.GET_ALL);
-        const token = await AsyncStorage.getItem('userToken');
-        const subCategoriesHeaders: any = {
+  // Fetch subcategories
+  const fetchSubCategories = async (token: string) => {
+    try {
+      const subCategoriesUrl = buildUrl(API_CONFIG.ENDPOINTS.SUBCATEGORIES_API.GET_ALL);
+      console.log('Fetching subcategories from:', subCategoriesUrl);
+
+      const response = await fetch(subCategoriesUrl, {
+        method: 'GET',
+        headers: {
           'Content-Type': 'application/json',
-        };
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-        if (token) {
-          subCategoriesHeaders['Authorization'] = `Bearer ${token}`;
+      if (response.ok) {
+        const data: SubCategoriesResponse = await response.json();
+        console.log('Subcategories API Response:', data);
+
+        if (data.success && data.data && Array.isArray(data.data.data)) {
+          setSubCategories(data.data.data);
+          console.log('Subcategories set successfully:', data.data.data.length);
         } else {
-          subCategoriesHeaders['Authorization'] = `Bearer ${TEST_TOKEN}`;
+          console.warn('Unexpected subcategories response structure:', data);
+          setSubCategories([]);
         }
-
-        const subCategoriesResponse = await fetch(subCategoriesUrl, {
-          method: 'GET',
-          headers: subCategoriesHeaders,
-        });
-
-        if (subCategoriesResponse.ok) {
-          const subCategoriesData = await subCategoriesResponse.json();
-          console.log('Subcategories fetched:', subCategoriesData);
-          // API returns data in nested structure: { data: { data: [...] } }
-          setSubCategories(subCategoriesData.data?.data || []);
-        } else {
-          console.error('Failed to fetch subcategories:', subCategoriesResponse.statusText);
-        }
-
-        // Fetch products
-        const productsUrl = buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS);
-        const productsHeaders: any = {
-          'Content-Type': 'application/json',
-        };
-
-        if (token) {
-          productsHeaders['Authorization'] = `Bearer ${token}`;
-        } else {
-          productsHeaders['Authorization'] = `Bearer ${TEST_TOKEN}`;
-        }
-
-        const productsResponse = await fetch(productsUrl, {
-          method: 'GET',
-          headers: productsHeaders,
-        });
-
-        if (productsResponse.ok) {
-          const productsData = await productsResponse.json();
-          console.log('Products fetched:', productsData);
-          setProducts(productsData);
-        } else {
-          console.error('Failed to fetch products:', productsResponse.statusText);
-          setError('Failed to fetch products');
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Network error occurred');
-      } finally {
-        setLoading(false);
-        setProductsLoading(false);
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to fetch subcategories:', response.status, response.statusText, errorText);
+        setError(`Failed to load subcategories: ${response.status}`);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+      setError('Network error while loading subcategories');
+    }
+  };
 
+  // Fetch products
+  const fetchProducts = async (token: string) => {
+    try {
+      // Build products API URL - adjust the endpoint as per your API
+      const productsUrl = buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS_API?.GET_ALL || '/products/getAll');
+      console.log('Fetching products from:', productsUrl);
+
+      const response = await fetch(productsUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data: ProductsResponse = await response.json();
+        console.log('Products API Response:', data);
+
+        if (data.success && data.data && Array.isArray(data.data.data)) {
+          // Transform API response to match Product interface
+          const transformedProducts: Product[] = data.data.data.map((product: ProductResponse) => ({
+            id: product._id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            originalPrice: product.originalPrice,
+            image: product.image,
+            rating: product.rating || 4.0, // Default rating if not provided
+            reviewCount: product.reviewCount || 0,
+            category: product.category,
+            inStock: product.inStock,
+            quantity: 1
+          }));
+
+          // setProducts(transformedProducts);
+          console.log('Products set successfully:', transformedProducts.length);
+        } else {
+          console.warn('Unexpected products response structure:', data);
+          // Fallback to sample data if API structure is unexpected
+
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to fetch products:', response.status, response.statusText, errorText);
+        console.log('Falling back to sample products due to API error');
+        // Fallback to sample data
+
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      console.log('Falling back to sample products due to network error');
+      // Fallback to sample data
+
+    }
+  };
+
+  // Sample products fallback
+
+  // Fetch all data
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setProductsLoading(true);
+      setError(null);
+
+      const token = await getAuthToken();
+      console.log('Using token for API calls');
+
+      // Fetch subcategories and products in parallel
+      await Promise.all([
+        fetchSubCategories(token),
+        fetchProducts(token)
+      ]);
+
+    } catch (error) {
+      console.error('Error in fetchData:', error);
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+      setProductsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
   // Filter products based on selection
   const getFilteredProducts = () => {
-    switch (selectedFilter) {
-      case 'featured':
-        return products.filter(product => product.rating >= 4.5);
-      case 'popular':
-        return products.filter(product => product.reviewCount > 50);
-      case 'new':
-        return products.slice(0, 8); // Show first 8 as "new"
-      default:
-        return products;
+    const filteredProducts = products.filter(product => {
+      switch (selectedFilter) {
+        case 'featured':
+          return product.rating >= 4.5;
+        case 'popular':
+          return product.reviewCount > 50;
+        case 'new':
+          return true; // Show all as "new" for now
+        default:
+          return true;
+      }
+    });
+
+    // For new arrivals, show first 8 products
+    if (selectedFilter === 'new') {
+      return filteredProducts.slice(0, 8);
     }
+
+    return filteredProducts;
   };
 
   const filters = [
@@ -210,6 +340,34 @@ const ExploreScreen: React.FC = () => {
     <ExploreItem item={item} onAddToCart={addToCart} />
   );
 
+  const renderSubCategory = ({ item }: { item: SubCategory }) => (
+    <TouchableOpacity
+      onPress={() => {
+        console.log('Navigating to category products for:', item.name);
+        // Navigate to a category products screen or filter products by category
+        // For now, we'll navigate to Home with category filter
+        navigation.getParent()?.navigate('Home', {
+          screen: 'RiceCategory',
+          params: { categoryId: item._id, categoryName: item.name }
+        });
+      }}
+      style={styles.subCategoryCard}
+      activeOpacity={0.8}
+    >
+      <Image
+        source={{ uri: item.image }}
+        style={styles.subCategoryImage}
+        defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=100&h=100&fit=crop&crop=center' }}
+      />
+      <Text style={styles.subCategoryName} numberOfLines={2}>{item.name}</Text>
+      {item.description && (
+        <Text style={styles.subCategoryDescription} numberOfLines={1}>
+          {item.description}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.safeContainer}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -231,97 +389,87 @@ const ExploreScreen: React.FC = () => {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* Filters Section */}
+          <View style={styles.filterSection}>
+            <FlatList
+              horizontal
+              data={filters}
+              renderItem={renderFilter}
+              keyExtractor={(item) => item.key}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterContainer}
+            />
+          </View>
         </View>
+
         <View style={styles.exploreSection}>
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={styles.loadingText}>Loading subcategories...</Text>
+              <Text style={styles.loadingText}>Loading...</Text>
             </View>
           ) : (
             <>
-              <View style={styles.subCategoriesSection}>
-                <Text style={styles.sectionTitle}>Sub Categories</Text>
-                <FlatList
-                  horizontal
-                  data={subCategories}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.subCategoryCard}>
-                      <Text style={styles.subCategoryName}>{item.name || item.title}</Text>
-                    </TouchableOpacity>
-                  )}
-                  keyExtractor={(item, index) => item._id || index.toString()}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.subCategoriesList}
-                />
-              </View>
-
-              {productsLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={theme.colors.primary} />
-                  <Text style={styles.loadingText}>Loading products...</Text>
+              {/* SubCategories Section */}
+              {subCategories.length > 0 && (
+                <View style={styles.subCategoriesSection}>
+                  <Text style={styles.sectionTitle}>Rice Categories</Text>
+                  <Text style={styles.sectionSubtitle}>Explore different varieties of premium rice</Text>
+                  <FlatList
+                    horizontal
+                    data={subCategories}
+                    renderItem={renderSubCategory}
+                    keyExtractor={(item) => item._id}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.subCategoriesList}
+                  />
                 </View>
-              ) : error ? (
-                <View style={styles.errorContainer}>
-                  <Icon name="error-outline" size={60} color={theme.colors.error || '#ff4444'} />
-                  <Text style={styles.errorText}>{error}</Text>
-                  <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={async () => {
-                      setProductsLoading(true);
-                      setError(null);
-                      try {
-                        const token = await AsyncStorage.getItem('userToken');
-                        const productsUrl = buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS);
-                        const productsHeaders: any = {
-                          'Content-Type': 'application/json',
-                        };
-
-                        if (token) {
-                          productsHeaders['Authorization'] = `Bearer ${token}`;
-                        } else {
-                          productsHeaders['Authorization'] = `Bearer ${TEST_TOKEN}`;
-                        }
-
-                        const response = await fetch(productsUrl, {
-                          method: 'GET',
-                          headers: productsHeaders,
-                        });
-
-                        if (response.ok) {
-                          const productsData = await response.json();
-                          setProducts(productsData);
-                        } else {
-                          setError('Failed to fetch products');
-                        }
-                      } catch (err) {
-                        setError('Network error occurred');
-                      } finally {
-                        setProductsLoading(false);
-                      }
-                    }}
-                  >
-                    <Text style={styles.retryText}>Retry</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <FlatList
-                  data={getFilteredProducts()}
-                  renderItem={renderProduct}
-                  keyExtractor={(item) => item.id}
-                  numColumns={2}
-                  contentContainerStyle={styles.exploreList}
-                  showsVerticalScrollIndicator={false}
-                  columnWrapperStyle={styles.exploreRow}
-                  ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                      <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
-                      <Text style={styles.emptyText}>{strings?.home?.noProductsFound || 'No products found'}</Text>
-                      <Text style={styles.emptySubtext}>{strings?.home?.tryDifferentSearch || 'Try selecting a different filter'}</Text>
-                    </View>
-                  }
-                />
               )}
+
+              {/* Products Section */}
+              <View style={styles.productsSection}>
+                <Text style={styles.sectionTitle}>
+                  {selectedFilter === 'featured' && 'Featured Products'}
+                  {selectedFilter === 'popular' && 'Popular Products'}
+                  {selectedFilter === 'new' && 'New Arrivals'}
+                </Text>
+
+                {productsLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                    <Text style={styles.loadingText}>Loading products...</Text>
+                  </View>
+                ) : error ? (
+                  <View style={styles.errorContainer}>
+                    <Icon name="error-outline" size={60} color={theme.colors.error || '#ff4444'} />
+                    <Text style={styles.errorText}>{error}</Text>
+                    <TouchableOpacity
+                      style={styles.retryButton}
+                      onPress={fetchData}
+                    >
+                      <Text style={styles.retryText}>Retry</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={getFilteredProducts()}
+                    renderItem={renderProduct}
+                    keyExtractor={(item) => item.id}
+                    numColumns={2}
+                    scrollEnabled={false}
+                    contentContainerStyle={styles.exploreList}
+                    columnWrapperStyle={styles.exploreRow}
+                    ListEmptyComponent={
+                      <View style={styles.emptyContainer}>
+                        <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
+                        <Text style={styles.emptyText}>No products found</Text>
+                        <Text style={styles.emptySubtext}>Try selecting a different filter</Text>
+                      </View>
+                    }
+                  />
+                )}
+              </View>
             </>
           )}
         </View>
@@ -393,9 +541,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(76, 175, 80, 0.1)',
   },
-  filterList: {
-    maxHeight: 70,
-  },
   filterContainer: {
     paddingHorizontal: theme.spacing.medium,
   },
@@ -439,23 +584,88 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: theme.spacing.medium,
   },
+  subCategoriesSection: {
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.large,
+    backgroundColor: theme.colors.card,
+    marginBottom: theme.spacing.medium,
+    borderRadius: theme.borderRadius.large,
+    marginHorizontal: theme.spacing.medium,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  productsSection: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.medium,
+  },
+  sectionTitle: {
+    fontSize: theme.fonts.size.large,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.small,
+    fontFamily: theme.fonts.family.bold,
+  },
+  sectionSubtitle: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.medium,
+    fontFamily: theme.fonts.family.regular,
+  },
+  subCategoriesList: {
+    paddingRight: theme.spacing.medium,
+  },
+  subCategoryCard: {
+    backgroundColor: theme.colors.card,
+    padding: theme.spacing.medium,
+    borderRadius: theme.borderRadius.large,
+    marginRight: theme.spacing.medium,
+    width: 120,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  subCategoryImage: {
+    width: 70,
+    height: 70,
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.small,
+    borderWidth: 2,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  subCategoryName: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.family.medium,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  subCategoryDescription: {
+    fontSize: 10,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.family.regular,
+    textAlign: 'center',
+  },
   exploreList: {
-    paddingHorizontal: theme.spacing.small,
     paddingBottom: theme.spacing.large,
   },
   exploreRow: {
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.small,
+    marginBottom: theme.spacing.medium,
   },
   exploreCard: {
     backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius.large,
     padding: theme.spacing.medium,
-    marginBottom: theme.spacing.medium,
     width: (width - theme.spacing.medium * 3) / 2,
     alignItems: 'center',
-    position: 'relative',
-    marginTop: theme.spacing.medium,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -515,7 +725,12 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.medium,
     fontWeight: 'bold',
     color: theme.colors.primary,
-    marginBottom: theme.spacing.small,
+  },
+  exploreOriginalPrice: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.textSecondary,
+    textDecorationLine: 'line-through',
+    marginLeft: 4,
   },
   exploreAddButton: {
     backgroundColor: theme.colors.primary,
@@ -551,36 +766,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.medium,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.medium,
-  },
-  subCategoriesSection: {
-    paddingHorizontal: theme.spacing.medium,
-    paddingVertical: theme.spacing.medium,
-    backgroundColor: theme.colors.card,
-    marginBottom: theme.spacing.medium,
-  },
-  sectionTitle: {
-    fontSize: theme.fonts.size.large,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.medium,
-    fontFamily: theme.fonts.family.bold,
-  },
-  subCategoriesList: {
-    paddingRight: theme.spacing.medium,
-  },
-  subCategoryCard: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.medium,
-    paddingVertical: theme.spacing.small,
-    borderRadius: theme.borderRadius.large,
-    marginRight: theme.spacing.medium,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  subCategoryName: {
-    fontSize: theme.fonts.size.small,
-    color: 'white',
-    fontFamily: theme.fonts.family.medium,
   },
   errorContainer: {
     flex: 1,

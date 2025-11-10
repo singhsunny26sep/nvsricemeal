@@ -33,6 +33,11 @@ const ProductDetailsScreen: React.FC = () => {
   const { addToCart } = useCart();
   const { product } = route.params as { product: Product };
 
+  // Extract _id from product for API calls
+  const productId = (product as any)._id || product.id;
+  console.log('ProductDetails - Product ID:', productId);
+  console.log('ProductDetails - Full product:', product);
+
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');

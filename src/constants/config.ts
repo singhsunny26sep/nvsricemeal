@@ -14,7 +14,7 @@ export const API_CONFIG = {
 
   // API Endpoints
   ENDPOINTS: {
-    PRODUCTS: '/api/products',
+    PRODUCTS: '/subCategories/getAll',
     CATEGORIES: '/api/categories',
     ORDERS: '/api/orders',
     USER: {
@@ -31,7 +31,7 @@ export const API_CONFIG = {
       LOGOUT: '/auth/logout',
     },
     CATEGORIES_API: {
-      GET_ALL: '/categories/get',
+      GET_ALL: '/categories/getAll',
     },
     SUBCATEGORIES_API: {
       GET_ALL: '/subCategories/getAll',
@@ -83,4 +83,5 @@ export const API_URLS = {
 };
 
 // Test token for development (replace with actual token from login)
-export const TEST_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDIzYWFjNjAwNTgwZTlkZGQ3MmVmMSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzYxNzU3MDEzLCJleHAiOjE3NjIzNjE4MTN9.EZMETNb29PfsNXSdy87RTcn7LhhTVlVFEJzQro10LaQ';
+// This should be removed in production and only use tokens from API responses
+export const TEST_TOKEN = '';

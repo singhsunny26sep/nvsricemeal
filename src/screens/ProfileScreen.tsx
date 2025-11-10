@@ -42,7 +42,17 @@ const ProfileScreen: React.FC = () => {
 
       if (response.success && response.data) {
         console.log('Profile data received:', response.data);
+        console.log('Profile data type:', typeof response.data);
+        console.log('Profile data keys:', Object.keys(response.data));
         setUserProfile(response.data);
+      } else if (response.success && (response.data as any)?.data) {
+        // Handle nested data structure from API
+        console.log('Profile data received (nested):', (response.data as any).data);
+        setUserProfile((response.data as any).data);
+      } else if (response.success && (response.data as any)?.data?.data) {
+        // Handle deeply nested data structure from API
+        console.log('Profile data received (deeply nested):', (response.data as any).data.data);
+        setUserProfile((response.data as any).data.data);
       } else {
         console.error('Profile API failed:', response.error);
         console.log('Full response object:', JSON.stringify(response, null, 2));
