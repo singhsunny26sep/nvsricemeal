@@ -41,11 +41,9 @@ import {
   LanguageProvider,
   useLanguage,
 } from './src/context/LanguageContext';
-
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const ProfileStack = createStackNavigator();
-
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from './src/constants/theme';
 

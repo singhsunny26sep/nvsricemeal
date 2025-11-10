@@ -1,4 +1,5 @@
-import { API_CONFIG, buildUrl } from '../constants/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, buildUrl, TEST_TOKEN } from '../constants/config';
 
 // Types for API responses
 interface ApiResponse<T = any> {
@@ -48,6 +49,9 @@ interface User {
   email: string;
   phone?: string;
   token?: string;
+  avatar?: string;
+  bio?: string;
+  address?: string;
 }
 
 interface OTPSessionData {
@@ -231,7 +235,7 @@ class ApiService {
   }
 
   // Send OTP to email or phone
-  async sendOTP(request: LoginRequest): Promise<ApiResponse<{ otpSent: boolean; otpData?: any; isFirst?: boolean }>> {
+  async sendOTP(request: LoginRequest): Promise<ApiResponse<{ data: { otpData: any; isFirst: boolean } }>> {
     const endpoint = API_CONFIG.ENDPOINTS.AUTH.SEND_OTP;
     const url = buildUrl(endpoint);
 
@@ -249,7 +253,7 @@ class ApiService {
 
     console.log('Converted request for API:', apiRequest);
 
-    const response = await this.request<{ otpSent: boolean; otpData?: any; isFirst?: boolean }>(endpoint, {
+    const response = await this.request<{ otpData: any; isFirst: boolean }>(endpoint, {
       method: 'POST',
       body: JSON.stringify(apiRequest),
     });
@@ -259,44 +263,38 @@ class ApiService {
     console.log('🔍 Response data type:', typeof response.data);
     console.log('🔍 Response data keys:', response.data ? Object.keys(response.data) : 'No data');
 
-    if (response.data && response.data.otpData) {
-      console.log('🔍 otpData type:', typeof response.data.otpData);
-      console.log('🔍 otpData keys:', Object.keys(response.data.otpData));
-      console.log('🔍 otpData.Details exists:', 'Details' in response.data.otpData);
-      console.log('🔍 otpData.Details value:', response.data.otpData.Details);
+    if (response.data && response.data.data && response.data.data.otpData) {
+      console.log('🔍 otpData type:', typeof response.data.data.otpData);
+      console.log('🔍 otpData keys:', Object.keys(response.data.data.otpData));
+      console.log('🔍 otpData.Details exists:', 'Details' in response.data.data.otpData);
+      console.log('🔍 otpData.Details value:', response.data.data.otpData.Details);
     }
-
     console.log('🔍 Full response data:', JSON.stringify(response.data, null, 2));
-
-    if (response.success && response.data) {
+    if (response.success && response.data && response.data.data) {
       console.log('✅ Response successful, extracting session data...');
-
-      // Extract sessionId from the confirmed response structure
-      const sessionId = response.data.otpData?.Details;
-
+      // Extract sessionId from the response structure
+      const sessionId = response?.data?.data?.otpData?.Details;
       console.log('🔍 Extracted sessionId:', sessionId);
       console.log('🔍 Mobile from request:', apiRequest.mobile || apiRequest.phone);
-
       if (sessionId) {
         const sessionData: OTPSessionData = {
           sessionId: sessionId,
           mobile: apiRequest.mobile || apiRequest.phone || '',
-          otpData: response.data.otpData,
-          isFirst: response.data.isFirst || false
+          otpData: response.data.data.otpData,
+          isFirst: response.data.data.isFirst || false
         };
-
         console.log('💾 About to store session:', sessionData);
         this.storeOTPSession(sessionData);
         console.log('✅ SESSION STORED SUCCESSFULLY');
-
         // Verify storage worked
         const storedSession = this.getOTPSession();
         console.log('🔍 Verification - Retrieved session:', storedSession);
       } else {
         console.log('❌ No sessionId found in otpData.Details');
         console.log('Available paths:', {
-          'otpData.Details': response.data.otpData?.Details,
-          'otpData exists': !!response.data.otpData,
+          'data.data.otpData.Details': response.data?.data?.otpData?.Details,
+          'data.data.otpData exists': !!response.data?.data?.otpData,
+          'data.data exists': !!response.data?.data,
           'data exists': !!response.data
         });
       }
@@ -323,26 +321,26 @@ class ApiService {
   async verifyMobileOTP(request: {
     mobile?: string;
     otp: string;
+    sessionId?: string;
     fcmToken?: string;
     currentScreen?: string;
     role?: string;
-  }): Promise<ApiResponse<{ user: User; token: string }>> {
+  }): Promise<ApiResponse<any>> {
     const endpoint = API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP_MOBILE;
-
-    // Get stored session data
-    const sessionData = this.getOTPSession();
 
     console.log('=== VERIFY MOBILE OTP DEBUG ===');
     console.log('Input request:', request);
-    console.log('Stored session:', sessionData);
-    console.log('Session ID from storage:', sessionData?.sessionId);
 
-    // Use mobile from session if not provided in request
-    const mobileNumber = request.mobile || sessionData?.mobile || '';
+    // Use sessionId from request, fallback to stored session if not provided
+    const sessionId = request.sessionId || this.getOTPSession()?.sessionId || '';
+    console.log('🔍 Session ID used for verification:', sessionId);
+
+    // Use mobile from request
+    const mobileNumber = request.mobile || '';
 
     // Prepare the complete request body as per API specification
     const verifyRequest = {
-      sessionId: sessionData?.sessionId || '',
+      sessionId: sessionId,
       mobile: mobileNumber,
       otp: request.otp,
       fcmToken: request.fcmToken || '',
@@ -352,6 +350,7 @@ class ApiService {
     };
 
     console.log('Final verify request:', verifyRequest);
+    console.log('Request body being sent to API:', JSON.stringify(verifyRequest, null, 2));
 
     const response = await this.request<{ user: User; token: string }>(endpoint, {
       method: 'PUT',
@@ -363,14 +362,14 @@ class ApiService {
 
     // Store token in AsyncStorage if verification is successful
     if (response.success && response.data?.token) {
-      const AsyncStorage = require('@react-native-async-storage/async-storage');
       await AsyncStorage.setItem('userToken', response.data.token);
-      console.log('✅ Token stored in AsyncStorage after verification');
+      console.log('✅ Token stored in AsyncStorage after verification:', response.data.token.substring(0, 20) + '...');
     }
 
     // Clear session data after successful verification
     if (response.success) {
       this.clearOTPSession();
+      console.log('✅ OTP session cleared after successful verification');
     }
 
     return response;
@@ -381,9 +380,8 @@ class ApiService {
     const endpoint = API_CONFIG.ENDPOINTS.USER.PROFILE;
     console.log('Profile API URL:', buildUrl(endpoint));
 
-    // Get token from AsyncStorage
-    const AsyncStorage = require('@react-native-async-storage/async-storage');
     const token = await AsyncStorage.getItem('userToken');
+    console.log('Token retrieved from AsyncStorage:', token ? 'Token exists' : 'No token');
 
     if (!token) {
       console.log('No token found in AsyncStorage');
@@ -395,13 +393,36 @@ class ApiService {
 
     console.log('Using token from AsyncStorage:', token.substring(0, 20) + '...');
 
-    return this.request<User>(endpoint, {
+    const response = await this.request<any>(endpoint, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
     });
+
+    // Transform the API response to match our User interface
+    if (response.success && response.data) {
+      const apiData = response.data;
+      const transformedUser: User = {
+        id: apiData._id || apiData.id,
+        name: apiData.name || '',
+        email: apiData.email || '',
+        phone: apiData.mobile || apiData.phone,
+        avatar: apiData.image || apiData.avatar,
+        bio: apiData.bio || '',
+        address: apiData.address || '',
+      };
+
+      console.log('Transformed user data:', transformedUser);
+
+      return {
+        success: true,
+        data: transformedUser,
+      };
+    }
+
+    return response;
   }
 
   // Logout
@@ -409,8 +430,9 @@ class ApiService {
     const endpoint = API_CONFIG.ENDPOINTS.AUTH.LOGOUT;
 
     // Get token from AsyncStorage
-    const AsyncStorage = require('@react-native-async-storage/async-storage');
     const token = await AsyncStorage.getItem('userToken');
+    console.log('Token retrieved from AsyncStorage:', token ? 'Token exists' : 'No token');
+
 
     if (!token) {
       console.log('No token found in AsyncStorage for logout');
@@ -429,6 +451,141 @@ class ApiService {
         'Authorization': `Bearer ${token}`,
       },
     });
+  }
+
+  // Get all categories
+  async getCategories(): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.CATEGORIES_API.GET_ALL;
+
+    // Get token from AsyncStorage
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      console.log('Token retrieved from AsyncStorage:', token ? 'Token exists' : 'No token');
+
+      if (!token) {
+        console.log('No token found in AsyncStorage for getCategories');
+        // Use test token for development
+        console.log('Using test token for development...');
+        return this.request<any>(endpoint, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${TEST_TOKEN}`,
+          },
+        });
+      }
+
+      console.log('Getting categories with token from AsyncStorage');
+
+      return this.request<any>(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    } catch (error) {
+      console.error('Error accessing AsyncStorage:', error);
+      // Use test token as fallback
+      console.log('Using test token due to storage error...');
+      return this.request<any>(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${TEST_TOKEN}`,
+        },
+      });
+    }
+  }
+
+  // Get all subcategories
+  async getSubCategories(): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.SUBCATEGORIES_API.GET_ALL;
+
+    // Get token from AsyncStorage
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      console.log('Token retrieved from AsyncStorage:', token ? 'Token exists' : 'No token');
+
+      if (!token) {
+        console.log('No token found in AsyncStorage for getSubCategories');
+        // Use test token for development
+        console.log('Using test token for development...');
+        return this.request<any>(endpoint, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${TEST_TOKEN}`,
+          },
+        });
+      }
+
+      console.log('Getting subcategories with token from AsyncStorage');
+
+      return this.request<any>(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    } catch (error) {
+      console.error('Error accessing AsyncStorage:', error);
+      // Use test token as fallback
+      console.log('Using test token due to storage error...');
+      return this.request<any>(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${TEST_TOKEN}`,
+        },
+      });
+    }
+  }
+
+  // Get all products
+  async getProducts(): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.PRODUCTS;
+
+    // Get token from AsyncStorage
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      console.log('Token retrieved from AsyncStorage:', token ? 'Token exists' : 'No token');
+
+      if (!token) {
+        console.log('No token found in AsyncStorage for getProducts');
+        // Use test token for development
+        console.log('Using test token for development...');
+        return this.request<any>(endpoint, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${TEST_TOKEN}`,
+          },
+        });
+      }
+
+      console.log('Getting products with token from AsyncStorage');
+
+      return this.request<any>(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+    } catch (error) {
+      console.error('Error accessing AsyncStorage:', error);
+      // Use test token as fallback
+      console.log('Using test token due to storage error...');
+      return this.request<any>(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${TEST_TOKEN}`,
+        },
+      });
+    }
   }
 }
 

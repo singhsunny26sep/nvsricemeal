@@ -30,14 +30,15 @@ export const API_CONFIG = {
       VERIFY_OTP_MOBILE: '/auth/verify-otp-mobile',
       LOGOUT: '/auth/logout',
     },
+    CATEGORIES_API: {
+      GET_ALL: '/categories/get',
+    },
+    SUBCATEGORIES_API: {
+      GET_ALL: '/subCategories/getAll',
+    },
   },
 
-  // API Keys (if needed)
-  API_KEYS: {
-    // Add your API keys here
-    // GOOGLE_MAPS: 'your_google_maps_key',
-    // STRIPE_PUBLISHABLE_KEY: 'your_stripe_key',
-  },
+  
 
   // Request timeout in milliseconds
   REQUEST_TIMEOUT: 30000,
@@ -51,12 +52,7 @@ export const API_CONFIG = {
 
 // Environment detection
 export const getBaseUrl = (): string => {
-  // You can modify this logic based on your environment detection needs
-  // For React Native, you might want to use __DEV__ global variable
-  // or check the app configuration
 
-  // For now, defaulting to development URL
-  // You can modify this based on your build configuration
   const isProduction = false; // Change this based on your build
 
   return isProduction ? API_CONFIG.PROD_BASE_URL : API_CONFIG.DEV_BASE_URL;
@@ -82,4 +78,9 @@ export const API_URLS = {
   VERIFY_OTP: buildUrl(API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP),
   VERIFY_OTP_MOBILE: buildUrl(API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP_MOBILE),
   LOGOUT: buildUrl(API_CONFIG.ENDPOINTS.AUTH.LOGOUT),
+  CATEGORIES_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.CATEGORIES_API.GET_ALL),
+  SUBCATEGORIES_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.SUBCATEGORIES_API.GET_ALL),
 };
+
+// Test token for development (replace with actual token from login)
+export const TEST_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDIzYWFjNjAwNTgwZTlkZGQ3MmVmMSIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzYxNzU3MDEzLCJleHAiOjE3NjIzNjE4MTN9.EZMETNb29PfsNXSdy87RTcn7LhhTVlVFEJzQro10LaQ';

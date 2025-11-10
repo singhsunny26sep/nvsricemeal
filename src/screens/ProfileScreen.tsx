@@ -29,24 +29,23 @@ const ProfileScreen: React.FC = () => {
   useEffect(() => {
     fetchUserProfile();
   }, []);
-  const fetchUserProfile = async () => {
-    if (!auth.user?.token) {
-      console.log('No token found in auth.user');
-      setIsLoading(false);
-      return;
-    }
 
+  const fetchUserProfile = async () => {
     console.log('Fetching profile...');
 
     try {
       const response = await apiService.getUserProfile();
       console.log('Profile API response:', response);
+      console.log('Response success:', response.success);
+      console.log('Response data:', response.data);
+      console.log('Response error:', response.error);
 
       if (response.success && response.data) {
         console.log('Profile data received:', response.data);
         setUserProfile(response.data);
       } else {
         console.error('Profile API failed:', response.error);
+        console.log('Full response object:', JSON.stringify(response, null, 2));
         Alert.alert(
           strings?.common?.error || 'Error',
           response.error || 'Failed to load profile'
@@ -54,6 +53,7 @@ const ProfileScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Profile API error:', error);
+      console.log('Error details:', error);
       Alert.alert(
         strings?.common?.error || 'Error',
         'Network error occurred while loading profile'

@@ -22,7 +22,6 @@ import Logo from '../components/Logo';
 interface LoginScreenProps {
   onSwitchToRegister?: () => void;
 }
-
 const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
   const [loginMethod, setLoginMethod] = useState<'email' | 'mobile'>('email');
   const [email, setEmail] = useState('');
@@ -31,6 +30,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [otp, setOtp] = useState('');
+  const [sessionId, setSessionId] = useState('');
   const { login } = useAuth();
   const { strings } = useLanguage();
   const scaleValue = React.useRef(new Animated.Value(1)).current;
@@ -159,6 +159,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
       console.log('Send OTP API Response:', response);
 
       if (response.success) {
+        // Store sessionId from response data
+        if (response.data?.data?.otpData?.Details) {
+          setSessionId(response.data.data.otpData.Details);
+          console.log('Session ID stored:', response.data.data.otpData.Details);
+        }
         setShowOTPInput(true);
         Alert.alert(
           strings?.login?.success || 'ಯಶಸ್ಸು',
@@ -214,6 +219,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         // Reset state
         setShowOTPInput(false);
         setOtp('');
+        setSessionId('');
       } else {
         Alert.alert(
           strings?.common?.error || 'ದೋಷ',
@@ -406,6 +412,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
              onPress={() => {
                setShowOTPInput(false);
                setOtp('');
+               setSessionId('');
              }}
            >
              <Text style={styles.closeButtonText}>ರದ್ದುಗೊಳಿಸಿ</Text>

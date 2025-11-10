@@ -22,6 +22,7 @@ import { riceProducts } from '../constants/products';
 import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
 import { useLanguage } from '../context/LanguageContext';
+import { apiService } from '../utils/apiService';
 
 const { width } = Dimensions.get('window');
 
@@ -31,29 +32,7 @@ interface ProductItemProps {
   onFavorite: (productId: string) => void;
   isFavorite: boolean;
 }
-
-const getCategories = (strings: any) => [
-  strings?.home?.all || 'All',
-  strings?.home?.categories?.sonaMasooriRice || 'Sona Masoori Rice',
-  strings?.home?.categories?.parboiledRice || 'Parboiled Rice',
-  strings?.home?.categories?.sonaMasooriSteamRice || 'Sona Masoori Steam Rice',
-  strings?.home?.categories?.sonaMasooriRawRice || 'Sona Masoori Raw Rice',
-  strings?.home?.categories?.rnrSteamRice || 'RNR Steam Rice',
-  strings?.home?.categories?.rnrRice || 'RNR Rice',
-  strings?.home?.categories?.rawRice || 'RAW Rice',
-  strings?.home?.categories?.giraRawRice || 'Gira RAW Rice',
-  strings?.home?.categories?.giraSteamRice || 'Gira Steam Rice',
-  strings?.home?.categories?.bowledRice || 'Bowled Rice',
-  strings?.home?.categories?.brokenRice || 'Broken Rice',
-  strings?.home?.categories?.brokenSteamRice || 'Broken Steam Rice',
-  strings?.home?.categories?.brokenRawRice || 'Broken RAW Rice',
-  strings?.home?.categories?.basmatiRice || 'Basmati Rice',
-  strings?.home?.categories?.jasmineRice || 'Jasmine Rice',
-  strings?.home?.categories?.italiaDosaRice || 'Italia Dosa Rice',
-  strings?.home?.categories?.hmtSteamRice || 'HMT Steam Rice'
-];
 type Category = string;
-
 // Skeleton Components
 const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: number }> = ({
   width,
@@ -224,16 +203,45 @@ const HomeScreen: React.FC = () => {
   const [videoMuted, setVideoMuted] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
   const videoRef = useRef<any>(null);
   const scrollViewRef = useRef<any>(null);
 
-  // Simulate loading state
+  // Fetch categories from API
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000); // 2 seconds loading time
+    const fetchCategories = async () => {
+      try {
+        console.log('=== FETCHING CATEGORIES FROM API ===');
+        const response = await apiService.getCategories();
+        console.log('Categories API Response:', response);
+        console.log('Response success:', response.success);
+        console.log('Response data:', response.data);
 
-    return () => clearTimeout(timer);
+        if (response.success && response.data?.data?.data) {
+          console.log('Processing categories data...');
+          // The response structure is: response.data.data.data (array of categories)
+          const categoryNames = response.data.data.data.map((category: any) => {
+            console.log('Processing category:', category);
+            return category.name;
+          });
+          console.log('Extracted category names:', categoryNames);
+          setCategories(['All', ...categoryNames]);
+          console.log('Final categories set:', ['All', ...categoryNames]);
+        } else {
+          console.log('API call failed or no data, using fallback');
+          // Fallback to empty array if API fails
+          setCategories(['All']);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Fallback to empty array
+        setCategories(['All']);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   // Simplified and corrected category filtering logic
@@ -372,7 +380,7 @@ const HomeScreen: React.FC = () => {
         <View style={styles.categorySection}>
           <FlatList
             horizontal
-            data={getCategories(strings)}
+            data={categories}
             renderItem={renderCategory}
             keyExtractor={(item) => item}
             style={styles.categoryList}
@@ -527,7 +535,8 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.small,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.family.medium,
-    textAlign: 'center',
+    // textAlign: 'center',
+    textTransform: "capitalize",
   },
   categoryTextActive: {
     color: theme.colors.card,

@@ -1,8 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, StatusBar, Animated, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Animated, Image, Dimensions, Alert, Platform } from 'react-native';
 import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import Geolocation from '@react-native-community/geolocation';
+import { PermissionsAndroid } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,6 +24,81 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   const logoPulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Request location permission when app starts
+    const requestLocationPermission = async () => {
+      try {
+        let permissionGranted = false;
+
+        if (Platform.OS === 'android') {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: 'Location Permission',
+              message: 'This app needs access to your location to provide better services.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            }
+          );
+          permissionGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
+        } else {
+          // iOS
+          const result = await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
+          permissionGranted = result === RESULTS.GRANTED;
+        }
+
+        if (permissionGranted) {
+          console.log('Location permission granted');
+          // Get current location and save it
+          Geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              console.log('Current location:', { latitude, longitude });
+
+              // Save location to AsyncStorage
+              const saveLocation = async () => {
+                try {
+                  const AsyncStorage = require('@react-native-async-storage/async-storage');
+                  await AsyncStorage.setItem('userLatitude', latitude.toString());
+                  await AsyncStorage.setItem('userLongitude', longitude.toString());
+                  console.log('Location saved successfully');
+                } catch (error) {
+                  console.error('Error saving location:', error);
+                }
+              };
+
+              saveLocation();
+            },
+            (error) => {
+              console.error('Error getting location:', error);
+              Alert.alert(
+                'Location Error',
+                'Unable to get your current location. Please check your GPS settings.',
+                [{ text: 'OK' }]
+              );
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 10000
+            }
+          );
+        } else {
+          console.log('Location permission denied');
+          Alert.alert(
+            'Location Permission',
+            'Location permission is required for better app experience. You can enable it later in settings.',
+            [{ text: 'OK' }]
+          );
+        }
+      } catch (error) {
+        console.error('Error requesting location permission:', error);
+      }
+    };
+
+    // Request permission immediately
+    requestLocationPermission();
+
     // Start background animation
     Animated.timing(backgroundOpacity, {
       toValue: 1,
