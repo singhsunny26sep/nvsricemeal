@@ -32,16 +32,13 @@ const ProductDetailsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { addToCart } = useCart();
   const { product } = route.params as { product: Product };
-
   // Extract _id from product for API calls
   const productId = (product as any)._id || product.id;
   console.log('ProductDetails - Product ID:', productId);
   console.log('ProductDetails - Full product:', product);
-
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
-
   // Mock reviews data
   const reviews: Review[] = [
     {
@@ -164,7 +161,6 @@ const ProductDetailsScreen: React.FC = () => {
       <Text style={styles.reviewDate}>{item.date}</Text>
     </View>
   );
-
   const renderRelatedProduct = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.relatedProduct}>
       <Image source={{ uri: item.image }} style={styles.relatedProductImage} />
@@ -175,9 +171,7 @@ const ProductDetailsScreen: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-
   const images = product.images || [product.image];
-
   return (
     <ScrollView style={styles.container}>
       {/* Image Gallery */}
@@ -235,9 +229,7 @@ const ProductDetailsScreen: React.FC = () => {
             {product.inStock ? 'In Stock' : 'Out of Stock'}
           </Text>
         </View>
-
         <Text style={styles.description}>{product.description}</Text>
-
         {/* Quantity Selector */}
         <View style={styles.quantitySection}>
           <Text style={styles.quantityLabel}>Quantity:</Text>

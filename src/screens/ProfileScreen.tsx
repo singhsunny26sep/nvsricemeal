@@ -401,7 +401,8 @@ const styles = StyleSheet.create({
     padding: theme.spacing.large,
     borderRadius: theme.borderRadius.large,
     alignItems: 'center',
-    
+    justifyContent: 'center',
+    flexDirection: 'row',
     marginHorizontal: theme.spacing.medium,
     marginBottom: 100,
     ...theme.shadows.card,
@@ -417,6 +418,7 @@ const styles = StyleSheet.create({
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
     letterSpacing: 0.5,
+    marginLeft: theme.spacing.small,
   },
   menuSection: {
     marginHorizontal: theme.spacing.medium,
