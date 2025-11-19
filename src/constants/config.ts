@@ -36,6 +36,9 @@ export const API_CONFIG = {
     SUBCATEGORIES_API: {
       GET_ALL: '/subCategories/getAll',
     },
+    PRODUCTS_API: {
+      GET_ALL: '/products/getAll',
+    },
   },
 
   
@@ -80,6 +83,7 @@ export const API_URLS = {
   LOGOUT: buildUrl(API_CONFIG.ENDPOINTS.AUTH.LOGOUT),
   CATEGORIES_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.CATEGORIES_API.GET_ALL),
   SUBCATEGORIES_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.SUBCATEGORIES_API.GET_ALL),
+  PRODUCTS_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL),
 };
 
 // Test token for development (replace with actual token from login)

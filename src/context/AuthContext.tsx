@@ -93,27 +93,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Call API logout first
       const logoutResponse = await apiService.logout();
       if (logoutResponse.success) {
         console.log('API logout successful');
       } else {
         console.error('API logout failed:', logoutResponse.error);
-        // Continue with local logout even if API fails
       }
-
-      // Clear local storage
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('userToken');
-      dispatch({ type: 'LOGOUT' });
-      console.log('Local logout completed');
     } catch (error) {
-      console.error('Error logging out', error);
-      // Still clear local data even if API call fails
+      console.error('Error logging out from API', error);
+    } finally {
       try {
         await AsyncStorage.removeItem('user');
         await AsyncStorage.removeItem('userToken');
         dispatch({ type: 'LOGOUT' });
+        console.log('Local logout completed');
       } catch (storageError) {
         console.error('Error clearing local storage', storageError);
       }

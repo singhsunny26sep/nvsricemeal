@@ -18,7 +18,6 @@ import Video from 'react-native-video';
 import { useNavigation } from '@react-navigation/native';
 import { Product } from '../constants/products';
 import { useCart } from '../context/CartContext';
-import { riceProducts } from '../constants/products';
 import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
 import { useLanguage } from '../context/LanguageContext';
@@ -32,7 +31,15 @@ interface ProductItemProps {
   onFavorite: (productId: string) => void;
   isFavorite: boolean;
 }
-type Category = string;
+interface Category {
+  id: string;
+  name: string;
+}
+interface SubCategory {
+  _id: string;
+  name: string;
+  category: string;
+}
 // Skeleton Components
 const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: number }> = ({
   width,
@@ -40,7 +47,6 @@ const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: n
   borderRadius = 8
 }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
@@ -59,12 +65,10 @@ const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: n
     animation.start();
     return () => animation.stop();
   }, [animatedValue]);
-
   const backgroundColor = animatedValue.interpolate({
     inputRange: [0, 1],
     outputRange: ['#E1E9EE', '#F2F8FC'],
   });
-
   return (
     <Animated.View
       style={[
@@ -127,7 +131,6 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
 
   const handleAddToCart = () => {
     onAddToCart(item);
-    // Navigate to cart screen for payment
     navigation.getParent()?.getParent()?.navigate('CartScreen');
   };
 
@@ -197,13 +200,15 @@ const HomeScreen: React.FC = () => {
   const { strings } = useLanguage();
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category>('All');
+  const [selectedCategory, setSelectedCategory] = useState<Category>({ id: 'all', name: 'All' });
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [videoPlaying, setVideoPlaying] = useState(true);
   const [videoMuted, setVideoMuted] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
   const videoRef = useRef<any>(null);
   const scrollViewRef = useRef<any>(null);
 
@@ -219,23 +224,21 @@ const HomeScreen: React.FC = () => {
 
         if (response.success && response.data?.data?.data) {
           console.log('Processing categories data...');
-          // The response structure is: response.data.data.data (array of categories)
-          const categoryNames = response.data.data.data.map((category: any) => {
-            console.log('Processing category:', category);
-            return category.name;
-          });
-          console.log('Extracted category names:', categoryNames);
-          setCategories(['All', ...categoryNames]);
-          console.log('Final categories set:', ['All', ...categoryNames]);
+          // Transform API response to match our Category interface
+          const categoryData = response.data.data.data.map((category: any) => ({
+            id: category._id,
+            name: category.name
+          }));
+          console.log('Extracted categories:', categoryData);
+          setCategories([{ id: 'all', name: 'All' }, ...categoryData]);
+          console.log('Final categories set:', [{ id: 'all', name: 'All' }, ...categoryData]);
         } else {
           console.log('API call failed or no data, using fallback');
-          // Fallback to empty array if API fails
-          setCategories(['All']);
+          setCategories([{ id: 'all', name: 'All' }]);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
-        // Fallback to empty array
-        setCategories(['All']);
+        setCategories([{ id: 'all', name: 'All' }]);
       } finally {
         setIsLoading(false);
       }
@@ -244,18 +247,99 @@ const HomeScreen: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // Simplified and corrected category filtering logic
-  const filteredProducts = riceProducts.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+  // Fetch products when category changes
+  useEffect(() => {
+    const fetchProductsByCategory = async () => {
+      setIsProductsLoading(true);
+      try {
+        if (selectedCategory.id === 'all') {
+          console.log('=== FETCHING ALL PRODUCTS ===');
+          // Fetch all products from API
+          const allProductsResponse = await apiService.getAllProducts();
+          console.log('All Products API Response:', allProductsResponse);
 
-    if (selectedCategory === 'All') {
-      return matchesSearch;
-    }
+          if (allProductsResponse.success && allProductsResponse.data?.data?.data) {
+            // Transform API products to match our Product interface
+            const transformedProducts: Product[] = allProductsResponse.data.data.data.map((apiProduct: any) => ({
+              id: apiProduct._id,
+              name: apiProduct.name,
+              description: apiProduct.description || 'No description available',
+              price: apiProduct.price || 0,
+              image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+              rating: apiProduct.rating || 4.0,
+              reviewCount: apiProduct.reviewCount || 0,
+              discount: apiProduct.discount || 0,
+              category: apiProduct.category || 'General',
+              subCategory: apiProduct.subCategory || ''
+            }));
 
-    // Direct name matching for all categories
-    const matchesCategory = product.name === selectedCategory;
+            console.log('All products loaded:', transformedProducts.length);
+            setProducts(transformedProducts);
+          } else {
+            console.log('No products found from API');
+            setProducts([]);
+          }
+        } else {
+          console.log(`=== FETCHING PRODUCTS FOR CATEGORY: ${selectedCategory.name} (ID: ${selectedCategory.id}) ===`);
 
-    return matchesSearch && matchesCategory;
+          // Fetch subcategories for the selected category
+          const subCategoriesResponse = await apiService.getSubCategoriesByCategory(selectedCategory.id);
+          console.log('SubCategories API Response:', subCategoriesResponse);
+
+          if (subCategoriesResponse.success && subCategoriesResponse.data?.data?.data) {
+            const subCategories: SubCategory[] = subCategoriesResponse.data.data.data;
+            console.log('Found subcategories:', subCategories);
+
+            // Fetch products for each subcategory
+            let allProducts: Product[] = [];
+
+            for (const subCategory of subCategories) {
+              console.log(`Fetching products for subcategory: ${subCategory.name} (ID: ${subCategory._id})`);
+              const productsResponse = await apiService.getProductsBySubCategory(subCategory._id);
+              console.log(`Products response for ${subCategory.name}:`, productsResponse);
+
+              if (productsResponse.success && productsResponse.data?.data?.data) {
+                // Transform API products to match our Product interface
+                const transformedProducts: Product[] = productsResponse.data.data.data.map((apiProduct: any) => ({
+                  id: apiProduct._id,
+                  name: apiProduct.name,
+                  description: apiProduct.description || 'No description available',
+                  price: apiProduct.price || 0,
+                  image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+                  rating: apiProduct.rating || 4.0,
+                  reviewCount: apiProduct.reviewCount || 0,
+                  discount: apiProduct.discount || 0,
+                  category: apiProduct.category || selectedCategory.name,
+                  subCategory: apiProduct.subCategory || subCategory.name
+                }));
+
+                allProducts = [...allProducts, ...transformedProducts];
+              }
+            }
+
+            console.log('Final transformed products:', allProducts);
+            setProducts(allProducts);
+          } else {
+            console.log('No subcategories found for category');
+            setProducts([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching products by category:', error);
+        setProducts([]);
+      } finally {
+        setIsProductsLoading(false);
+      }
+    };
+
+    fetchProductsByCategory();
+  }, [selectedCategory]);
+
+  // Filter products based on search query
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   });
 
   const handleFavorite = (productId: string) => {
@@ -268,27 +352,33 @@ const HomeScreen: React.FC = () => {
     setFavorites(newFavorites);
   };
 
+  const handleCategoryPress = (category: Category) => {
+    setSelectedCategory(category);
+    // Reset search when category changes
+    setSearchQuery('');
+  };
+
   const renderCategory = ({ item }: { item: Category }) => (
     <TouchableOpacity
       style={[
         styles.categoryButton,
-        selectedCategory === item && styles.categoryButtonActive,
+        selectedCategory.id === item.id && styles.categoryButtonActive,
       ]}
-      onPress={() => setSelectedCategory(item)}
+      onPress={() => handleCategoryPress(item)}
     >
       <Text
         style={[
           styles.categoryText,
-          selectedCategory === item && styles.categoryTextActive,
+          selectedCategory.id === item.id && styles.categoryTextActive,
         ]}
         numberOfLines={1}
       >
-        {item}
+        {item.name}
       </Text>
     </TouchableOpacity>
   );
 
-  // Show loading skeleton
+  // Show loading skeleton for initial load
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeContainer}>
@@ -326,7 +416,7 @@ const HomeScreen: React.FC = () => {
       <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
-            <Image style={styles.imageBox} resizeMode='contain' source={(require("../assets/img/logo.png"))} />
+            <Image style={styles.imageBox} resizeMode='contain' source={require("../assets/img/logo.png")} />
             <TouchableOpacity
               style={styles.cartIconContainer}
               onPress={() => navigation.navigate('CartScreen')}
@@ -369,10 +459,7 @@ const HomeScreen: React.FC = () => {
               onError={(error) => console.log('Video error:', error)}
             />
             <View style={styles.videoOverlay}>
-
-
-
-
+              {/* Video overlay content */}
             </View>
           </View>
         </View>
@@ -382,37 +469,49 @@ const HomeScreen: React.FC = () => {
             horizontal
             data={categories}
             renderItem={renderCategory}
-            keyExtractor={(item) => item}
+            keyExtractor={(item) => item.id}
             style={styles.categoryList}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryContainer}
           />
         </View>
-        <FlatList
-          data={filteredProducts}
-          renderItem={({ item }) => (
-            <ProductItem
-              item={item}
-              onAddToCart={addToCart}
-              onFavorite={handleFavorite}
-              isFavorite={favorites.has(item.id)}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          columnWrapperStyle={styles.row}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
-              <Text style={styles.emptyText}>{strings?.home?.noProductsFound || 'ಯಾವುದೇ ಉತ್ಪನ್ನಗಳು ಕಂಡುಬಂದಿಲ್ಲ'}</Text>
-              <Text style={styles.emptySubtext}>{strings?.home?.tryDifferentSearch || 'ವಿಭಿನ್ನ ಹುಡುಕಾಟ ಅಥವಾ ವರ್ಗವನ್ನು ಪ್ರಯತ್ನಿಸಿ'}</Text>
-            </View>
-          }
-        />
-      </ScrollView>
 
+        {isProductsLoading ? (
+          <FlatList
+            data={Array.from({ length: 6 })}
+            renderItem={() => <ProductCardSkeleton />}
+            keyExtractor={(_, index) => `product-loading-${index}`}
+            numColumns={2}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            columnWrapperStyle={styles.row}
+          />
+        ) : (
+          <FlatList
+            data={filteredProducts}
+            renderItem={({ item }) => (
+              <ProductItem
+                item={item}
+                onAddToCart={addToCart}
+                onFavorite={handleFavorite}
+                isFavorite={favorites.has(item.id)}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            columnWrapperStyle={styles.row}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
+                <Text style={styles.emptyText}>{strings?.home?.noProductsFound || 'ಯಾವುದೇ ಉತ್ಪನ್ನಗಳು ಕಂಡುಬಂದಿಲ್ಲ'}</Text>
+                <Text style={styles.emptySubtext}>{strings?.home?.tryDifferentSearch || 'ವಿಭಿನ್ನ ಹುಡುಕಾಟ ಅಥವಾ ವರ್ಗವನ್ನು ಪ್ರಯತ್ನಿಸಿ'}</Text>
+              </View>
+            }
+          />
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -436,17 +535,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.medium,
-    elevation:4,
-    backgroundColor:"white",
-    borderRadius:14,
-    padding:2,
-    // borderWidth:1,
-    // borderStyle:"dotted"
+    elevation: 4,
+    backgroundColor: "white",
+    borderRadius: 14,
+    padding: 2,
   },
   cartIconContainer: {
     position: 'relative',
     padding: theme.spacing.small,
-    
   },
   cartBadge: {
     position: 'absolute',
@@ -497,7 +593,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontFamily: theme.fonts.family.regular,
     paddingVertical: 0,
-
   },
   categoryList: {
     maxHeight: 55,
@@ -535,7 +630,6 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.small,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.family.medium,
-    // textAlign: 'center',
     textTransform: "capitalize",
   },
   categoryTextActive: {
@@ -567,7 +661,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.08)',
-
   },
   discountBadge: {
     position: 'absolute',
@@ -681,7 +774,6 @@ const styles = StyleSheet.create({
   imageBox: {
     height: 100,
     width: 100,
-    // alignSelf: "center",
   },
   add: {
     height: 150,

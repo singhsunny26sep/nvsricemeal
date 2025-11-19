@@ -192,10 +192,8 @@ const ProfileScreen: React.FC = () => {
           <Text style={styles.value}>{userProfile?.address || 'Not available'}</Text>
         </View>
       </View>
-
       <View style={styles.menuSection}>
         <Text style={styles.menuSectionTitle}>Account</Text>
-
         <TouchableOpacity style={styles.menuItem} onPress={handleOrdersPress}>
           <View style={styles.menuItemLeft}>
             <Icon name="shopping-bag" size={24} color={theme.colors.primary} />
@@ -203,7 +201,6 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.menuItem} onPress={handleHelpSupport}>
           <View style={styles.menuItemLeft}>
             <Icon name="help" size={24} color={theme.colors.primary} />
@@ -211,7 +208,6 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.menuItem} onPress={handleNotifications}>
           <View style={styles.menuItemLeft}>
             <Icon name="notifications" size={24} color={theme.colors.primary} />
@@ -220,10 +216,8 @@ const ProfileScreen: React.FC = () => {
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
-
       <View style={styles.menuSection}>
         <Text style={styles.menuSectionTitle}>Legal</Text>
-
         <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
           <View style={styles.menuItemLeft}>
             <Icon name="security" size={24} color={theme.colors.primary} />
@@ -231,7 +225,6 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
-
         <TouchableOpacity style={styles.menuItem} onPress={handleTermsConditions}>
           <View style={styles.menuItemLeft}>
             <Icon name="description" size={24} color={theme.colors.primary} />
@@ -240,18 +233,8 @@ const ProfileScreen: React.FC = () => {
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
-
       <View style={styles.menuSection}>
         <Text style={styles.menuSectionTitle}>Settings</Text>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <View style={styles.menuItemLeft}>
-            <Icon name="notifications" size={24} color={theme.colors.primary} />
-            <Text style={styles.menuItemText}>Notifications</Text>
-          </View>
-          <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.menuItem} onPress={handleLanguageSelection}>
           <View style={styles.menuItemLeft}>
             <Icon name="language" size={24} color={theme.colors.primary} />
@@ -260,12 +243,10 @@ const ProfileScreen: React.FC = () => {
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
-
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Icon name="logout" size={20} color={theme.colors.card} />
         <Text style={styles.logoutButtonText}>{strings?.profile?.logout || 'ಲಾಗ್‌ಔಟ್'}</Text>
       </TouchableOpacity>
-
       <LanguageSelector
         visible={showLanguageSelector}
         onClose={() => setShowLanguageSelector(false)}
@@ -273,7 +254,6 @@ const ProfileScreen: React.FC = () => {
     </ScrollView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -421,8 +401,9 @@ const styles = StyleSheet.create({
     padding: theme.spacing.large,
     borderRadius: theme.borderRadius.large,
     alignItems: 'center',
+    
     marginHorizontal: theme.spacing.medium,
-    marginBottom: theme.spacing.large,
+    marginBottom: 100,
     ...theme.shadows.card,
     elevation: 4,
     shadowColor: theme.colors.error,

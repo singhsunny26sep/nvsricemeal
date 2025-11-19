@@ -486,6 +486,33 @@ class ApiService {
       method: 'GET',
     });
   }
+
+  // Get all products using the correct endpoint
+  async getAllProducts(): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL;
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Get subcategories by category ID
+  async getSubCategoriesByCategory(categoryId: string): Promise<ApiResponse<any>> {
+    const endpoint = `${API_CONFIG.ENDPOINTS.SUBCATEGORIES_API.GET_ALL}?categoryId=${categoryId}`;
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Get products by subcategory ID
+  async getProductsBySubCategory(subCategoryId: string): Promise<ApiResponse<any>> {
+    const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL}?subCategoryId=${subCategoryId}`;
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
 }
 
 // Export singleton instance
