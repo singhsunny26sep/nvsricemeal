@@ -267,7 +267,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
           showText={true}
           style={styles.logo}
         /> */}
-        <Image resizeMode='contain'   style={styles.logo} source={require("../assets/img/logo.png")}/>
+        <Image resizeMode='contain'   style={styles.logo} source={require("../assets/img/logos.jpeg")}/>
         <Text style={styles.subtitle}>{strings?.login?.welcomeBack || 'NVS ಅಕ್ಕಿ ಮಾಲ್‌ಗೆ ಮರಳಿ ಸ್ವಾಗತ'}</Text>
       </View>
       <View style={styles.formContainer}>

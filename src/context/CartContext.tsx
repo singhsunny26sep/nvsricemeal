@@ -21,6 +21,11 @@ interface CartState {
   couponDiscount: number;
   pincode: string;
   isDeliveryAvailable: boolean;
+  userLocation: {
+    coordinates: [number, number];
+    address?: string;
+    name?: string;
+  } | null;
 }
 
 type CartAction =
@@ -32,6 +37,7 @@ type CartAction =
   | { type: 'APPLY_COUPON'; code: string; discount: number }
   | { type: 'REMOVE_COUPON' }
   | { type: 'SET_PINCODE'; pincode: string; isAvailable: boolean }
+  | { type: 'SET_USER_LOCATION'; location: { coordinates: [number, number]; address?: string; name?: string } | null }
   | { type: 'CLEAR_CART' }
   | { type: 'LOAD_CART'; cart: CartState };
 
@@ -107,6 +113,11 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         pincode: action.pincode,
         isDeliveryAvailable: action.isAvailable,
       };
+    case 'SET_USER_LOCATION':
+      return {
+        ...state,
+        userLocation: action.location,
+      };
     case 'CLEAR_CART':
       return {
         ...state,
@@ -132,6 +143,7 @@ const CartContext = createContext<{
   applyCoupon: (code: string, discount: number) => void;
   removeCoupon: () => void;
   setPincode: (pincode: string, isAvailable: boolean) => void;
+  setUserLocation: (location: { coordinates: [number, number]; address?: string; name?: string } | null) => void;
   clearCart: () => void;
 } | undefined>(undefined);
 
@@ -147,6 +159,7 @@ const initialState: CartState = {
   couponDiscount: 0,
   pincode: '',
   isDeliveryAvailable: true,
+  userLocation: null,
 };
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
@@ -221,6 +234,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     dispatch({ type: 'SET_PINCODE', pincode, isAvailable });
   };
 
+  const setUserLocation = (location: { coordinates: [number, number]; address?: string; name?: string } | null) => {
+    dispatch({ type: 'SET_USER_LOCATION', location });
+  };
+
   const clearCart = () => {
     dispatch({ type: 'CLEAR_CART' });
   };
@@ -236,6 +253,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       applyCoupon,
       removeCoupon,
       setPincode,
+      setUserLocation,
       clearCart,
     }}>
       {children}

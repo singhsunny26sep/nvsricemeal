@@ -99,53 +99,54 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
     // Request permission immediately
     requestLocationPermission();
 
-    // Start background animation
-    Animated.timing(backgroundOpacity, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
-
-    // Animate logo with bounce and rotation
-    Animated.sequence([
-      Animated.timing(logoScale, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(logoRotate, {
+    const introAnimations = Animated.parallel([
+      // Background animation
+      Animated.timing(backgroundOpacity, {
         toValue: 1,
         duration: 800,
         useNativeDriver: true,
       }),
-    ]).start();
-
-    // Animate title with slide up
-    setTimeout(() => {
-      Animated.timing(titleOpacity, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }).start();
-    }, 600);
-
-    // Animate subtitle with delay
-    setTimeout(() => {
-      Animated.timing(subtitleOpacity, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }).start();
-    }, 1200);
-
-    // Animate particles
-    setTimeout(() => {
-      Animated.timing(particlesOpacity, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }).start();
-    }, 2000);
+      // Logo animation
+      Animated.sequence([
+        Animated.timing(logoScale, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoRotate, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Title animation
+      Animated.sequence([
+        Animated.delay(600),
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Subtitle animation
+      Animated.sequence([
+        Animated.delay(1200),
+        Animated.timing(subtitleOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Particles animation
+      Animated.sequence([
+        Animated.delay(2000),
+        Animated.timing(particlesOpacity, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]);
 
     // Pulse animation for logo
     const pulseAnimation = Animated.loop(
@@ -162,19 +163,24 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
         }),
       ])
     );
-    pulseAnimation.start();
 
-    // Fade out animation before navigation
-    const fadeOutTimer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(titleOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-        Animated.timing(subtitleOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-        Animated.timing(logoScale, { toValue: 0.8, duration: 500, useNativeDriver: true }),
-        Animated.timing(particlesOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
-      ]).start(() => {
-        onFinish();
-      });
-    }, 4500);
+    let fadeOutTimer: ReturnType<typeof setTimeout>;
+
+    // Start all animations
+    pulseAnimation.start();
+    introAnimations.start(() => {
+      // After intro animations are complete, wait a bit then fade out
+      fadeOutTimer = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(titleOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+          Animated.timing(subtitleOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+          Animated.timing(logoScale, { toValue: 0.8, duration: 500, useNativeDriver: true }),
+          Animated.timing(particlesOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+        ]).start(() => {
+          onFinish(); // Navigate to the next screen
+        });
+      }, 1500); // Wait for 1.5 seconds after animations complete
+    });
 
     return () => {
       clearTimeout(fadeOutTimer);
@@ -248,7 +254,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
           <View style={styles.logoGlow}>
             <Image
               style={styles.logo}
-              source={require("../assets/img/logo.png")}
+              source={require("../assets/img/logos.jpeg")}
               onError={() => console.log('Logo image not found, using Logo component')}
             />
           </View>

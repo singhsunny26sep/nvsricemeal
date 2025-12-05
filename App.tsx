@@ -30,6 +30,7 @@ import NotificationScreen from './src/screens/NotificationScreen';
 import CartScreen from './src/screens/CartScreen';
 import ExploreScreen from './src/screens/ExploreScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+
 import {
   CartProvider,
 } from './src/context/CartContext';
@@ -46,6 +47,7 @@ const HomeStack = createStackNavigator();
 const ProfileStack = createStackNavigator();
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from './src/constants/theme';
+import LocationFillPage from './src/screens/LocationFillPage';
 
 const styles = StyleSheet.create({
   iconContainer: {
@@ -138,6 +140,11 @@ function ProfileStackNavigator() {
         name="TermsConditions"
         component={TermsConditionsScreen}
       />
+       <ProfileStack.Screen
+        name="Location"
+        component={LocationFillPage}
+      />
+ 
       <ProfileStack.Screen
         name="HelpSupport"
         component={HelpSupportScreen}
@@ -177,6 +184,21 @@ function MainTabs() {
               <View style={styles.iconContainer}>
                 <Icon name={iconName} size={focused ? 26 : 22} color={color} />
                 {focused && <View style={styles.activeIndicator} />}
+              </View>
+            );
+          } else if (route.name === 'Cart') {
+            iconName = focused ? 'shopping-cart' : 'shopping-cart';
+            IconComponent = (
+              <View style={styles.iconContainer}>
+                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+                {focused && <View style={styles.activeIndicator} />}
+                {totalItems > 0 && (
+                  <View style={styles.badgeContainer}>
+                    <Text style={styles.badgeText}>
+                      {totalItems > 99 ? '99+' : totalItems}
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           } else if (route.name === 'Profile') {
@@ -244,7 +266,14 @@ function MainTabs() {
           tabBarLabel: strings?.navigation?.explore || 'ಅನ್ವೇಷಿಸಿ',
         }}
       />
-
+      <Tab.Screen
+        name="Cart"
+        component={CartScreen}
+        options={{
+          title: strings?.navigation?.cart || 'ಕಾರ್ಟ್',
+          tabBarLabel: strings?.navigation?.cart || 'ಕಾರ್ಟ್',
+        }}
+      />
       <Tab.Screen
         name="Profile"
         component={ProfileStackNavigator}
@@ -260,9 +289,10 @@ function MainTabs() {
 function AuthScreens() {
   const { auth, login } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<'login' | 'register'>('login');
+  const [isSplashFinished, setIsSplashFinished] = useState(false);
 
-  if (auth.loading) {
-    return <SplashScreen onFinish={() => { }} />;
+  if (auth.loading || !isSplashFinished) {
+    return <SplashScreen onFinish={() => setIsSplashFinished(true)} />;
   }
 
   if (!auth.isAuthenticated) {

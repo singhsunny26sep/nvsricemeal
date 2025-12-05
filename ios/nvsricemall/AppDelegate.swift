@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import GoogleMaps
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -23,6 +24,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     window = UIWindow(frame: UIScreen.main.bounds)
 
+    // Configure Google Maps API Key
+    GMSServices.provideAPIKey("YOUR_GOOGLE_MAPS_API_KEY_HERE")
+    
     factory.startReactNative(
       withModuleName: "nvsricemall",
       in: window,

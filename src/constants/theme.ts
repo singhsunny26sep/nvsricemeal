@@ -10,6 +10,7 @@ export const theme = {
     success: '#4CAF50',
     gold: '#FFD700',
     rice: '#F5DEB3',
+    disabled: '#CCCCCC',
   },
   spacing: {
     small: 8,

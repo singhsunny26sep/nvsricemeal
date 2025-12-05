@@ -116,7 +116,9 @@ const ProfileScreen: React.FC = () => {
   const handlePrivacyPolicy = () => {
     navigation.navigate('PrivacyPolicy' as never);
   };
-
+  const handleSavedLocations = () => {
+    navigation.navigate('SavedLocations' as never);
+  };
   const handleTermsConditions = () => {
     navigation.navigate('TermsConditions' as never);
   };
@@ -229,6 +231,16 @@ const ProfileScreen: React.FC = () => {
           <View style={styles.menuItemLeft}>
             <Icon name="description" size={24} color={theme.colors.primary} />
             <Text style={styles.menuItemText}>Terms & Conditions</Text>
+          </View>
+          <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.menuSection}>
+        <Text style={styles.menuSectionTitle}>Settings</Text>
+        <TouchableOpacity style={styles.menuItem} onPress={handleSavedLocations}>
+          <View style={styles.menuItemLeft}>
+            <Icon name="location-on" size={24} color={theme.colors.primary} />
+            <Text style={styles.menuItemText}>Saved Locations</Text>
           </View>
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>

@@ -98,6 +98,14 @@ class ApiService {
 
     // Get token from AsyncStorage for authenticated requests
     const token = await AsyncStorage.getItem('userToken');
+    
+    console.log('🔑 TOKEN DEBUG: Retrieved token from AsyncStorage');
+    console.log('🔑 TOKEN DEBUG: Token exists:', !!token);
+    console.log('🔑 TOKEN DEBUG: Token length:', token ? token.length : 0);
+    if (token) {
+      console.log('🔑 TOKEN DEBUG: Token preview:', token.substring(0, 20) + '...');
+      console.log('🔑 TOKEN DEBUG: Full token:', token);
+    }
 
     const config: RequestInit = {
       headers: {
@@ -113,7 +121,8 @@ class ApiService {
     console.log('Method:', config.method || 'GET');
     console.log('Headers:', config.headers);
     console.log('Body:', config.body);
-    console.log('Token used:', token ? 'Token exists' : 'No token');
+    console.log('Authorization header set:', !!(config.headers as any)?.['Authorization']);
+    console.log('Token used:', token ? 'Token exists and set in headers' : 'No token');
 
     try {
       const response = await fetch(url, config);
@@ -167,7 +176,11 @@ class ApiService {
     if (response.success && response.data?.token) {
       const AsyncStorage = require('@react-native-async-storage/async-storage');
       await AsyncStorage.setItem('userToken', response.data.token);
-      console.log('✅ Token stored in AsyncStorage after email login');
+      console.log('🔑 EMAIL LOGIN SUCCESS: Token stored in AsyncStorage');
+      console.log('🔑 EMAIL LOGIN: Token value:', response.data.token);
+      console.log('🔑 EMAIL LOGIN: Token length:', response.data.token.length);
+    } else {
+      console.log('❌ EMAIL LOGIN FAILED: No token received');
     }
 
     return response;
@@ -186,7 +199,11 @@ class ApiService {
     if (response.success && response.data?.token) {
       const AsyncStorage = require('@react-native-async-storage/async-storage');
       await AsyncStorage.setItem('userToken', response.data.token);
-      console.log('✅ Token stored in AsyncStorage after login');
+      console.log('🔑 ENHANCED LOGIN SUCCESS: Token stored in AsyncStorage');
+      console.log('🔑 ENHANCED LOGIN: Token value:', response.data.token);
+      console.log('🔑 ENHANCED LOGIN: Token length:', response.data.token.length);
+    } else {
+      console.log('❌ ENHANCED LOGIN FAILED: No token received');
     }
 
     return response;
@@ -214,7 +231,11 @@ class ApiService {
     if (response.success && response.data?.token) {
       const AsyncStorage = require('@react-native-async-storage/async-storage');
       await AsyncStorage.setItem('userToken', response.data.token);
-      console.log('✅ Token stored in AsyncStorage after mobile login');
+      console.log('🔑 MOBILE LOGIN SUCCESS: Token stored in AsyncStorage');
+      console.log('🔑 MOBILE LOGIN: Token value:', response.data.token);
+      console.log('🔑 MOBILE LOGIN: Token length:', response.data.token.length);
+    } else {
+      console.log('❌ MOBILE LOGIN FAILED: No token received');
     }
 
     return response;
@@ -233,7 +254,11 @@ class ApiService {
     if (response.success && response.data?.token) {
       const AsyncStorage = require('@react-native-async-storage/async-storage');
       await AsyncStorage.setItem('userToken', response.data.token);
-      console.log('✅ Token stored in AsyncStorage after registration');
+      console.log('🔑 REGISTER SUCCESS: Token stored in AsyncStorage');
+      console.log('🔑 REGISTER: Token value:', response.data.token);
+      console.log('🔑 REGISTER: Token length:', response.data.token.length);
+    } else {
+      console.log('❌ REGISTER FAILED: No token received');
     }
 
     return response;
@@ -382,17 +407,19 @@ class ApiService {
 
       if (token) {
         await AsyncStorage.setItem('userToken', token);
-        console.log('✅ Token stored in AsyncStorage after verification:', token.substring(0, 20) + '...');
-        console.log('✅ Full token:', token);
+        console.log('🔑 OTP VERIFICATION SUCCESS: Token stored in AsyncStorage');
+        console.log('🔑 OTP VERIFICATION: Token preview:', token.substring(0, 20) + '...');
+        console.log('🔑 OTP VERIFICATION: Full token:', token);
+        console.log('🔑 OTP VERIFICATION: Token length:', token.length);
 
         // Verify token was stored correctly
         const storedToken = await AsyncStorage.getItem('userToken');
-        console.log('🔍 Verification - Token retrieved from AsyncStorage:', storedToken ? 'Token exists' : 'No token');
-        if (storedToken) {
-          console.log('🔍 Stored token matches:', storedToken === token);
-        }
+        console.log('🔑 OTP VERIFICATION: Token verification result');
+        console.log('🔑 OTP VERIFICATION: Stored token exists:', !!storedToken);
+        console.log('🔑 OTP VERIFICATION: Stored token matches:', storedToken === token);
+        console.log('🔑 OTP VERIFICATION: Stored token value:', storedToken);
       } else {
-        console.log('❌ No token found in verification response');
+        console.log('❌ OTP VERIFICATION FAILED: No token found in verification response');
         console.log('Response data structure:', JSON.stringify(response.data, null, 2));
       }
     }
@@ -409,21 +436,29 @@ class ApiService {
   // Get user profile
   async getUserProfile(): Promise<ApiResponse<User>> {
     const endpoint = API_CONFIG.ENDPOINTS.USER.PROFILE;
-    console.log('Profile API URL:', buildUrl(endpoint));
+    console.log('🔑 PROFILE FETCH: Profile API URL:', buildUrl(endpoint));
 
     const response = await this.request<any>(endpoint, {
       method: 'GET',
     });
 
-    console.log('Profile API raw response:', response);
-    console.log('Profile API response success:', response.success);
-    console.log('Profile API response data:', response.data);
+    console.log('🔑 PROFILE FETCH: Profile API response success:', response.success);
+    console.log('🔑 PROFILE FETCH: Token verification - Request succeeded:', response.success);
+    
+    if (response.success) {
+      console.log('🔑 PROFILE FETCH: Token is VALID - User profile retrieved successfully');
+    } else {
+      console.log('🔑 PROFILE FETCH: Token might be INVALID or expired');
+      console.log('🔑 PROFILE FETCH: Response error:', response.error);
+    }
+
+    console.log('🔑 PROFILE FETCH: Profile API response data:', response.data);
 
     // Transform the API response to match our User interface
     if (response.success && response.data) {
       const apiData = response.data;
-      console.log('API data type:', typeof apiData);
-      console.log('API data keys:', Object.keys(apiData));
+      console.log('🔑 PROFILE FETCH: API data type:', typeof apiData);
+      console.log('🔑 PROFILE FETCH: API data keys:', Object.keys(apiData));
 
       // Handle nested data structure
       const actualData = apiData.data || apiData;
@@ -438,8 +473,8 @@ class ApiService {
         address: actualData.address || '',
       };
 
-      console.log('Transformed user data:', transformedUser);
-      console.log('Full API response data:', JSON.stringify(response.data, null, 2));
+      console.log('🔑 PROFILE FETCH: Transformed user data:', transformedUser);
+      console.log('🔑 PROFILE FETCH: Full API response data:', JSON.stringify(response.data, null, 2));
 
       return {
         success: true,
@@ -447,7 +482,7 @@ class ApiService {
       };
     }
 
-    console.log('Profile API failed - returning response as-is');
+    console.log('🔑 PROFILE FETCH: Profile API failed - returning response as-is');
     return response;
   }
 
@@ -508,7 +543,49 @@ class ApiService {
   // Get products by subcategory ID
   async getProductsBySubCategory(subCategoryId: string): Promise<ApiResponse<any>> {
     const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL}?subCategoryId=${subCategoryId}`;
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
 
+  // Get products by category ID
+  async getProductsByCategory(categoryId: string, limit?: number): Promise<ApiResponse<any>> {
+    let endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL}?categoryId=${categoryId}`;
+    if (limit) {
+      endpoint += `&limit=${limit}`;
+    }
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Get related products (products from same category, excluding current product)
+  async getRelatedProducts(productId: string, categoryId: string, limit: number = 5): Promise<ApiResponse<any>> {
+    let endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL}?categoryId=${categoryId}&exclude=${productId}&limit=${limit}`;
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Get product details by ID
+  async getProductById(productId: string): Promise<ApiResponse<any>> {
+    const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_BY_ID}/${productId}`;
+
+    console.log('=== GET PRODUCT BY ID DEBUG ===');
+    console.log('Product ID:', productId);
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Get banners
+  async getBanners(): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.PRODUCTS_Banner.GET_ALL;
+console.log(endpoint,"++++++++++++++++++++++++++")
     return this.request<any>(endpoint, {
       method: 'GET',
     });

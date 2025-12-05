@@ -98,8 +98,10 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, navigation
 
   const handleAddToCart = () => {
     onAddToCart(item);
-    // Navigate to cart screen for payment
-    navigation.getParent()?.navigate('Cart');
+    // Show success message and navigate to cart
+    setTimeout(() => {
+      navigation.getParent()?.navigate('Cart');
+    }, 100);
   };
 
   return (

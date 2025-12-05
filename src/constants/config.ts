@@ -38,6 +38,11 @@ export const API_CONFIG = {
     },
     PRODUCTS_API: {
       GET_ALL: '/products/getAll',
+      GET_BY_ID: '/products/get',
+    },
+
+    PRODUCTS_Banner: {
+      GET_ALL: '/banners/get/6920ad9e62df34d6535ffc58',
     },
   },
 
@@ -84,6 +89,7 @@ export const API_URLS = {
   CATEGORIES_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.CATEGORIES_API.GET_ALL),
   SUBCATEGORIES_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.SUBCATEGORIES_API.GET_ALL),
   PRODUCTS_GET_ALL: buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL),
+  PRODUCT_GET_BY_ID: buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_BY_ID),
 };
 
 // Test token for development (replace with actual token from login)

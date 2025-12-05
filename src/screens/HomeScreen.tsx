@@ -12,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Video from 'react-native-video';
@@ -40,6 +41,7 @@ interface SubCategory {
   name: string;
   category: string;
 }
+
 // Skeleton Components
 const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: number }> = ({
   width,
@@ -131,7 +133,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
 
   const handleAddToCart = () => {
     onAddToCart(item);
-    navigation.getParent()?.getParent()?.navigate('CartScreen');
+    navigation.getParent()?.navigate('Cart');
   };
 
   const toggleFavorite = () => {
@@ -195,6 +197,155 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
   );
 };
 
+// Video Banner Component
+const VideoBanner: React.FC<{ banner: any }> = ({ banner }) => {
+  const [videoState, setVideoState] = useState({
+    playing: true,
+    loading: true,
+    error: false,
+    showControls: false,
+  });
+
+  const videoRef = useRef<Video>(null);
+
+  // Fix Cloudinary URL function
+  const getVideoUrl = (url: string) => {
+    if (!url) return null;
+
+    // Cloudinary URL fix - ensure proper format
+    let videoUrl = url;
+
+    // If it's a Cloudinary URL, make sure it has proper parameters
+    if (videoUrl.includes('cloudinary.com') && videoUrl.includes('/upload/')) {
+      // Add auto format and quality parameters if not present
+      if (!videoUrl.includes('/f_auto') && !videoUrl.includes('/f_mp4')) {
+        const uploadIndex = videoUrl.indexOf('/upload/');
+        if (uploadIndex !== -1) {
+          const beforeUpload = videoUrl.substring(0, uploadIndex + 8); // '/upload/'.length
+          const afterUpload = videoUrl.substring(uploadIndex + 8);
+          videoUrl = `${beforeUpload}f_mp4,q_auto/${afterUpload}`;
+        }
+      }
+    }
+
+    console.log('Video URL:', videoUrl);
+    return videoUrl;
+  };
+
+  const togglePlayPause = () => {
+    setVideoState(prev => ({ ...prev, playing: !prev.playing }));
+  };
+
+  const handleVideoLoad = () => {
+    console.log('Video loaded successfully');
+    setVideoState(prev => ({ ...prev, loading: false, error: false }));
+  };
+
+  const handleVideoError = (error: any) => {
+    console.log('Video error:', error);
+    setVideoState(prev => ({ ...prev, loading: false, error: true, playing: false }));
+  };
+
+  const handleVideoBuffer = (isBuffering: boolean) => {
+    console.log('Video buffering:', isBuffering);
+  };
+
+  const handleVideoEnd = () => {
+    console.log('Video ended');
+    setVideoState(prev => ({ ...prev, playing: false }));
+  };
+
+  const videoUrl = getVideoUrl(banner?.video);
+  console.log(videoUrl, "%%%%%%%%%%%%%%%%%%%%%%%%%")
+
+
+  // If no video URL or error, show image instead
+  if (!videoUrl || videoState.error) {
+    return (
+      <View style={styles.videoContainer}>
+        <Image
+          source={{ uri: banner?.image || 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop' }}
+          style={styles.videoFallbackImage}
+          resizeMode="cover"
+        />
+
+      </View>
+    );
+  }
+  return (
+    <View style={styles.videoContainer}>
+      {/* Video Player */}
+      <Video
+        ref={videoRef}
+        source={{ uri: videoUrl }}
+        style={styles.videoPlayer}
+        resizeMode="cover"
+        paused={!videoState.playing}
+        repeat={true}
+        muted={false}
+        playWhenInactive={false}
+        playInBackground={false}
+        ignoreSilentSwitch={"ignore"}
+        onLoad={handleVideoLoad}
+        onError={handleVideoError}
+        onBuffer={handleVideoBuffer}
+        onEnd={handleVideoEnd}
+        controls={false}
+        bufferConfig={{
+          minBufferMs: 15000,
+          maxBufferMs: 50000,
+          bufferForPlaybackMs: 2500,
+          bufferForPlaybackAfterRebufferMs: 5000,
+        }}
+      />
+
+      {/* Loading Indicator */}
+      {videoState.loading && (
+        <View style={styles.videoLoadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.videoLoadingText}>Loading video...</Text>
+        </View>
+      )}
+
+      {/* Video Overlay with Controls */}
+      <TouchableOpacity
+        style={styles.videoOverlay}
+        activeOpacity={0.8}
+        onPress={togglePlayPause}
+      >
+        {!videoState.playing && !videoState.loading && (
+          <View style={styles.videoPlayButton}>
+            <Icon name="play-arrow" size={40} color="white" />
+          </View>
+        )}
+
+        {/* Video Info */}
+        <View style={styles.videoInfo}>
+          <Text style={styles.videoTitle}>{banner?.name || 'Welcome to Our Store'}</Text>
+          <Text style={styles.videoSubtitle}>{banner?.description || 'Discover amazing products at great prices'}</Text>
+          <TouchableOpacity style={styles.shopNowButton}>
+            <Text style={styles.shopNowText}>Shop Now</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+
+      {/* Video Controls */}
+      <View style={styles.videoControls}>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={togglePlayPause}
+        >
+          <Icon
+            name={videoState.playing ? 'pause' : 'play-arrow'}
+            size={20}
+            color="white"
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 const HomeScreen: React.FC = () => {
   const { addToCart, cart } = useCart();
   const { strings } = useLanguage();
@@ -202,14 +353,11 @@ const HomeScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category>({ id: 'all', name: 'All' });
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [videoPlaying, setVideoPlaying] = useState(true);
-  const [videoMuted, setVideoMuted] = useState(false);
-  const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
-  const videoRef = useRef<any>(null);
+  const [banner, setBanner] = useState<any>(null);
   const scrollViewRef = useRef<any>(null);
 
   // Fetch categories from API
@@ -219,21 +367,14 @@ const HomeScreen: React.FC = () => {
         console.log('=== FETCHING CATEGORIES FROM API ===');
         const response = await apiService.getCategories();
         console.log('Categories API Response:', response);
-        console.log('Response success:', response.success);
-        console.log('Response data:', response.data);
 
         if (response.success && response.data?.data?.data) {
-          console.log('Processing categories data...');
-          // Transform API response to match our Category interface
           const categoryData = response.data.data.data.map((category: any) => ({
             id: category._id,
             name: category.name
           }));
-          console.log('Extracted categories:', categoryData);
           setCategories([{ id: 'all', name: 'All' }, ...categoryData]);
-          console.log('Final categories set:', [{ id: 'all', name: 'All' }, ...categoryData]);
         } else {
-          console.log('API call failed or no data, using fallback');
           setCategories([{ id: 'all', name: 'All' }]);
         }
       } catch (error) {
@@ -246,7 +387,25 @@ const HomeScreen: React.FC = () => {
 
     fetchCategories();
   }, []);
+  useEffect(() => {
+    const fetchBanner = async () => {
+      try {
+        console.log('=== FETCHING BANNER ===');
+        const response = await apiService.getBanners();
+        console.log('Banner API Response:', response);
+        if (response.success && response.data?.data) {
+          setBanner(response.data.data);
+          console.log('Banner data set:', response.data.data);
+        } else {
+          console.log('No banner data found');
+        }
+      } catch (error) {
+        console.error('Error fetching banner:', error);
+      }
+    };
 
+    fetchBanner();
+  }, []);
   // Fetch products when category changes
   useEffect(() => {
     const fetchProductsByCategory = async () => {
@@ -254,12 +413,10 @@ const HomeScreen: React.FC = () => {
       try {
         if (selectedCategory.id === 'all') {
           console.log('=== FETCHING ALL PRODUCTS ===');
-          // Fetch all products from API
           const allProductsResponse = await apiService.getAllProducts();
           console.log('All Products API Response:', allProductsResponse);
 
           if (allProductsResponse.success && allProductsResponse.data?.data?.data) {
-            // Transform API products to match our Product interface
             const transformedProducts: Product[] = allProductsResponse.data.data.data.map((apiProduct: any) => ({
               id: apiProduct._id,
               name: apiProduct.name,
@@ -282,7 +439,6 @@ const HomeScreen: React.FC = () => {
         } else {
           console.log(`=== FETCHING PRODUCTS FOR CATEGORY: ${selectedCategory.name} (ID: ${selectedCategory.id}) ===`);
 
-          // Fetch subcategories for the selected category
           const subCategoriesResponse = await apiService.getSubCategoriesByCategory(selectedCategory.id);
           console.log('SubCategories API Response:', subCategoriesResponse);
 
@@ -290,7 +446,6 @@ const HomeScreen: React.FC = () => {
             const subCategories: SubCategory[] = subCategoriesResponse.data.data.data;
             console.log('Found subcategories:', subCategories);
 
-            // Fetch products for each subcategory
             let allProducts: Product[] = [];
 
             for (const subCategory of subCategories) {
@@ -299,7 +454,6 @@ const HomeScreen: React.FC = () => {
               console.log(`Products response for ${subCategory.name}:`, productsResponse);
 
               if (productsResponse.success && productsResponse.data?.data?.data) {
-                // Transform API products to match our Product interface
                 const transformedProducts: Product[] = productsResponse.data.data.data.map((apiProduct: any) => ({
                   id: apiProduct._id,
                   name: apiProduct.name,
@@ -354,7 +508,6 @@ const HomeScreen: React.FC = () => {
 
   const handleCategoryPress = (category: Category) => {
     setSelectedCategory(category);
-    // Reset search when category changes
     setSearchQuery('');
   };
 
@@ -384,7 +537,6 @@ const HomeScreen: React.FC = () => {
       <SafeAreaView style={styles.safeContainer}>
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           <HeaderSkeleton />
-
           <View style={styles.categorySection}>
             <FlatList
               horizontal
@@ -396,7 +548,6 @@ const HomeScreen: React.FC = () => {
               contentContainerStyle={styles.categoryContainer}
             />
           </View>
-
           <FlatList
             data={Array.from({ length: 6 })}
             renderItem={() => <ProductCardSkeleton />}
@@ -416,7 +567,7 @@ const HomeScreen: React.FC = () => {
       <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
-            <Image style={styles.imageBox} resizeMode='contain' source={require("../assets/img/logo.png")} />
+            <Image style={styles.imageBox} resizeMode='contain' source={require("../assets/img/logos.jpeg")} />
             <TouchableOpacity
               style={styles.cartIconContainer}
               onPress={() => navigation.navigate('CartScreen')}
@@ -439,29 +590,9 @@ const HomeScreen: React.FC = () => {
               placeholderTextColor={theme.colors.textSecondary}
             />
           </View>
-          <View style={styles.add}>
-            <Video
-              ref={videoRef}
-              source={{
-                uri: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
-              }}
-              style={styles.videoPlayer}
-              controls={true}
-              resizeMode="cover"
-              paused={!videoPlaying}
-              repeat={true}
-              volume={0.5}
-              muted={false}
-              playInBackground={false}
-              playWhenInactive={false}
-              onLoadStart={() => console.log('Video loading started')}
-              onLoad={() => console.log('Video loaded successfully')}
-              onError={(error) => console.log('Video error:', error)}
-            />
-            <View style={styles.videoOverlay}>
-              {/* Video overlay content */}
-            </View>
-          </View>
+
+          {/* Video Banner Section */}
+          <VideoBanner banner={banner} />
         </View>
 
         <View style={styles.categorySection}>
@@ -640,6 +771,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.small,
     paddingBottom: theme.spacing.large,
     flexGrow: 1,
+    marginBottom:60
   },
   row: {
     justifyContent: 'space-between',
@@ -775,21 +907,25 @@ const styles = StyleSheet.create({
     height: 100,
     width: 100,
   },
-  add: {
-    height: 150,
+  // Video Styles
+  videoContainer: {
+    height: 200,
     width: "100%",
-    borderWidth: 1,
-    borderColor: "green",
     alignSelf: "center",
     marginTop: 10,
-    borderRadius: 5,
+    borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#000',
   },
   videoPlayer: {
     width: '100%',
     height: '100%',
     backgroundColor: '#000',
+  },
+  videoFallbackImage: {
+    width: '100%',
+    height: '100%',
   },
   videoOverlay: {
     position: 'absolute',
@@ -797,9 +933,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   videoPlayButton: {
     width: 60,
@@ -809,6 +945,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  videoInfo: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
   },
   videoTitle: {
     fontSize: 18,
@@ -828,28 +971,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  videoControls: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  controlButton: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  videoInfo: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-  },
   shopNowButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 20,
@@ -867,6 +988,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  videoControls: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
+  controlButton: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  videoLoadingText: {
+    color: 'white',
+    marginTop: 10,
+    fontSize: 14,
   },
   // Skeleton Styles
   headerSkeleton: {

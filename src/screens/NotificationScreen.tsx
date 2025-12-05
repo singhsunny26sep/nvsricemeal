@@ -38,7 +38,7 @@ const NotificationScreen: React.FC = () => {
       type: 'promotion',
       title: 'Special Offer!',
       message: 'Get 20% off on all Basmati rice varieties. Limited time offer!',
-      time: '1 day ago',
+      time: '1  day left',
       read: false,
       discount: '20%',
     },
