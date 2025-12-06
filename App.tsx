@@ -55,33 +55,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    width: 50,
+    height: 50,
+  },
+  activeIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    width: 55,
+    height: 55,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    borderRadius: 16,
+    transform: [{ scale: 1.05 }],
   },
   activeIndicator: {
-    width: 30,
-    height: 3,
+    width: 6,
+    height: 6,
     backgroundColor: theme.colors.primary,
-    borderRadius: 2,
+    borderRadius: 3,
     marginTop: 4,
     position: 'absolute',
-    bottom: -8,
+    bottom: 2,
   },
   badgeContainer: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: theme.colors.error,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    top: 2,
+    right: 2,
+    backgroundColor: '#FF4757',
+    borderRadius: 12,
+    minWidth: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
     borderWidth: 2,
     borderColor: 'white',
+    shadowColor: '#FF4757',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
   },
   badgeText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
     fontFamily: theme.fonts.family.bold,
   },
@@ -163,6 +180,31 @@ function ProfileStackNavigator() {
   );
 }
 
+const ExploreStack = createStackNavigator();
+
+function ExploreStackNavigator() {
+  return (
+    <ExploreStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ExploreStack.Screen
+        name="ExploreMain"
+        component={ExploreScreen}
+      />
+      <ExploreStack.Screen
+        name="Notifications"
+        component={NotificationScreen}
+      />
+      <ExploreStack.Screen
+        name="ProductDetails"
+        component={ProductDetailsScreen}
+      />
+    </ExploreStack.Navigator>
+  );
+}
+
 function MainTabs() {
   const { cart } = useCart();
   const { strings } = useLanguage();
@@ -174,28 +216,29 @@ function MainTabs() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = '';
           let IconComponent;
+          const containerStyle = focused ? styles.activeIconContainer : styles.iconContainer;
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home';
             IconComponent = (
-              <View style={styles.iconContainer}>
-                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+              <View style={containerStyle}>
+                <Icon name={iconName} size={focused ? 28 : 24} color={color} />
                 {focused && <View style={styles.activeIndicator} />}
               </View>
             );
           } else if (route.name === 'Explore') {
             iconName = focused ? 'explore' : 'explore';
             IconComponent = (
-              <View style={styles.iconContainer}>
-                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+              <View style={containerStyle}>
+                <Icon name={iconName} size={focused ? 28 : 24} color={color} />
                 {focused && <View style={styles.activeIndicator} />}
               </View>
             );
           } else if (route.name === 'Cart') {
             iconName = focused ? 'shopping-cart' : 'shopping-cart';
             IconComponent = (
-              <View style={styles.iconContainer}>
-                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+              <View style={containerStyle}>
+                <Icon name={iconName} size={focused ? 28 : 24} color={color} />
                 {focused && <View style={styles.activeIndicator} />}
                 {totalItems > 0 && (
                   <View style={styles.badgeContainer}>
@@ -209,8 +252,8 @@ function MainTabs() {
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
             IconComponent = (
-              <View style={styles.iconContainer}>
-                <Icon name={iconName} size={focused ? 26 : 22} color={color} />
+              <View style={containerStyle}>
+                <Icon name={iconName} size={focused ? 28 : 24} color={color} />
                 {focused && <View style={styles.activeIndicator} />}
               </View>
             );
@@ -218,40 +261,41 @@ function MainTabs() {
           return IconComponent;
         },
         tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarInactiveTintColor: '#9E9E9E',
         tabBarLabelStyle: {
-          fontSize: theme.fonts.size.small,
+          fontSize: 11,
           fontFamily: theme.fonts.family.medium,
-          marginBottom: 2,
+          marginTop: -2,
+          marginBottom: 8,
         },
         tabBarStyle: {
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 0,
-          borderTopLeftRadius: 25,
-          borderTopRightRadius: 25,
-          height: 80,
-          paddingBottom: 15,
-          paddingTop: 10,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          height: 85,
+          paddingBottom: 12,
+          paddingTop: 8,
           position: 'absolute',
-          elevation: 25,
+          elevation: 30,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -8 },
-          shadowOpacity: 0.25,
-          shadowRadius: 16,
-          left: 15,
-          right: 15,
-          bottom: 15,
-          margin: 0,
-          backdropFilter: 'blur(10px)',
+          shadowOffset: { width: 0, height: -10 },
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
+          left: 12,
+          right: 12,
+          bottom: 12,
           borderWidth: 1,
-          borderColor: 'rgba(76, 175, 80, 0.1)',
+          borderColor: 'rgba(76, 175, 80, 0.08)',
         },
         headerShown: false,
         tabBarIconStyle: {
-          marginBottom: 2,
+          marginTop: 4,
         },
         tabBarItemStyle: {
-          paddingVertical: 5,
+          paddingVertical: 4,
+          borderRadius: 16,
+          marginHorizontal: 4,
         },
       })}
     >
@@ -265,7 +309,7 @@ function MainTabs() {
       />
       <Tab.Screen
         name="Explore"
-        component={ExploreScreen}
+        component={ExploreStackNavigator}
         options={{
           title: strings?.navigation?.explore || 'ಅನ್ವೇಷಿಸಿ',
           tabBarLabel: strings?.navigation?.explore || 'ಅನ್ವೇಷಿಸಿ',

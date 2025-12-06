@@ -15,13 +15,17 @@ import {
 import React, { useState, useEffect } from 'react'
 import Ionicons from "react-native-vector-icons/Ionicons"
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useNavigation } from '@react-navigation/native'
 import { useCart } from '../context/CartContext'
 import { Product } from '../constants/products'
 import SkeletonLoader from '../components/SkeletonLoader'
 import HeaderSkeleton from '../components/HeaderSkeleton'
+import BannerSkeleton from '../components/BannerSkeleton'
+import AttractiveBanner from '../components/AttractiveBanner'
 
 export default function ExploreScreen() {
   const { addToCart } = useCart()
+  const navigation = useNavigation<any>()
   const [products, setProducts] = useState<any>([])
   const [loading, setLoading] = useState<any>(true)
   const [searchQuery, setSearchQuery] = useState<any>('')
@@ -98,7 +102,12 @@ export default function ExploreScreen() {
     setRefreshLoading(true)
     fetchProducts()
   }
-
+  
+  const handleProductPress = (item: any) => {
+    // Navigate to ProductDetails screen (now available in main tabs)
+    (navigation as any).navigate('ProductDetails', { product: item });
+  };
+  
   const toggleFavorite = (productId: any) => {
     setProducts(products.map((product: any) =>
       product.id === productId
@@ -174,6 +183,8 @@ export default function ExploreScreen() {
         }
       ]}
     >
+   <TouchableOpacity onPress={() => handleProductPress(item)}>
+
       <TouchableOpacity
         style={styles.favoriteButton}
         onPress={() => toggleFavorite(item.id)}
@@ -257,6 +268,7 @@ export default function ExploreScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      </TouchableOpacity>
     </Animated.View>
   )
 
@@ -274,6 +286,7 @@ export default function ExploreScreen() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <HeaderSkeleton animatedValue={fadeAnim} />
+        <BannerSkeleton animatedValue={fadeAnim} />
         <SkeletonLoader count={8} />
       </SafeAreaView>
     )
@@ -287,7 +300,10 @@ export default function ExploreScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Discover</Text>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity 
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate('Notifications')}
+          >
             <Ionicons name="notifications-outline" size={24} color="#333" />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
@@ -310,6 +326,15 @@ export default function ExploreScreen() {
           )}
         </View>
       </View>
+      
+      {/* Attractive Banner */}
+      <AttractiveBanner 
+        onBannerPress={(banner) => {
+          console.log('Banner pressed:', banner.title);
+          // Add your navigation logic here
+        }}
+      />
+      
       <FlatList
         data={filteredProducts}
         renderItem={renderProductItem}
