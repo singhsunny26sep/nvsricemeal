@@ -17,6 +17,8 @@ import Ionicons from "react-native-vector-icons/Ionicons"
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useCart } from '../context/CartContext'
 import { Product } from '../constants/products'
+import SkeletonLoader from '../components/SkeletonLoader'
+import HeaderSkeleton from '../components/HeaderSkeleton'
 
 export default function ExploreScreen() {
   const { addToCart } = useCart()
@@ -25,8 +27,9 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState<any>('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [refreshing, setRefreshing] = useState(false)
+  const [refreshLoading, setRefreshLoading] = useState(false)
   const fadeAnim = useState(new Animated.Value(0))[0]
-  const categories = ['All', 'Rice', 'Grocery', 'Basmati', 'Steam']
+
 
   // Fetch products from API
   const fetchProducts = async () => {
@@ -82,6 +85,7 @@ export default function ExploreScreen() {
     } finally {
       setLoading(false)
       setRefreshing(false)
+      setRefreshLoading(false)
     }
   }
 
@@ -91,6 +95,7 @@ export default function ExploreScreen() {
 
   const onRefresh = () => {
     setRefreshing(true)
+    setRefreshLoading(true)
     fetchProducts()
   }
 
@@ -268,10 +273,8 @@ export default function ExploreScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366F1" />
-          <Text style={styles.loadingText}>Loading products...</Text>
-        </View>
+        <HeaderSkeleton animatedValue={fadeAnim} />
+        <SkeletonLoader count={8} />
       </SafeAreaView>
     )
   }
@@ -318,16 +321,17 @@ export default function ExploreScreen() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No products found</Text>
-            <Text style={styles.emptySubText}>
-              {searchQuery || activeCategory !== 'All'
-                ? 'Try adjusting your search or filters'
-                : 'No products available'
-              }
-            </Text>
-          </View>
+          searchQuery || activeCategory !== 'All' ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyText}>No products found</Text>
+              <Text style={styles.emptySubText}>
+                Try adjusting your search or filters
+              </Text>
+            </View>
+          ) : (
+            <SkeletonLoader count={6} />
+          )
         }
       />
     </SafeAreaView>
@@ -524,6 +528,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 2,
     fontWeight: '500',
+    textTransform:"capitalize"
   },
   productName: {
     fontSize: 14,
@@ -531,6 +536,8 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 6,
     lineHeight: 18,
+    textTransform:"capitalize"
+
   },
   ratingContainer: {
     flexDirection: 'row',

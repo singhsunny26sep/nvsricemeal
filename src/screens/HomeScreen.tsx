@@ -179,7 +179,16 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
             {item.rating} ({item.reviewCount})
           </Text>
         </View>
-        <Text style={styles.productPrice}>₹{item.price}</Text>
+          
+        <Text style={styles.productWeight}>Weight: {item.weight || 'N/A'}</Text>
+        
+        <View style={styles.priceContainer}>
+          <Text style={styles.productPrice}>₹{item.price}</Text>
+          {item.originalPrice && item.originalPrice > item.price && (
+            <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
+          )}
+        </View>
+
         <Animated.View style={[styles.addButton, { transform: [{ scale: scaleValue }] }]}>
           <TouchableOpacity
             style={styles.addButtonTouchable}
@@ -421,13 +430,14 @@ const HomeScreen: React.FC = () => {
               id: apiProduct._id,
               name: apiProduct.name,
               description: apiProduct.description || 'No description available',
-              price: apiProduct.price || 0,
+              price: apiProduct.generalPrice || 0,
               image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
               rating: apiProduct.rating || 4.0,
               reviewCount: apiProduct.reviewCount || 0,
               discount: apiProduct.discount || 0,
               category: apiProduct.category || 'General',
-              subCategory: apiProduct.subCategory || ''
+              subCategory: apiProduct.subCategory || '',
+              weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
             }));
 
             console.log('All products loaded:', transformedProducts.length);
@@ -464,7 +474,9 @@ const HomeScreen: React.FC = () => {
                   reviewCount: apiProduct.reviewCount || 0,
                   discount: apiProduct.discount || 0,
                   category: apiProduct.category || selectedCategory.name,
-                  subCategory: apiProduct.subCategory || subCategory.name
+                  subCategory: apiProduct.subCategory || subCategory.name,
+              weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
+
                 }));
 
                 allProducts = [...allProducts, ...transformedProducts];
@@ -839,6 +851,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
     width: '100%',
+    textTransform:"uppercase"
   },
   productDescription: {
     fontSize: theme.fonts.size.small,
@@ -866,6 +879,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.colors.primary,
     marginBottom: theme.spacing.medium,
+  },
+  productWeight: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.small,
+    textAlign: 'center',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.medium,
+  },
+  originalPrice: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.textSecondary,
+    textDecorationLine: 'line-through',
+    marginLeft: theme.spacing.small,
   },
   addButton: {
     width: '100%',

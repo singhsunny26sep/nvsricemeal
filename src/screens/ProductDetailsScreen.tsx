@@ -753,23 +753,8 @@ const ProductDetailsScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
 
-        {/* Quick Features */}
-        <View style={styles.quickFeatures}>
-          <View style={styles.featureItem}>
-            <Icon name="local-shipping" size={24} color={theme.colors.primary} />
-            <Text style={styles.featureText}>Free Delivery</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Icon name="assignment-return" size={24} color={theme.colors.primary} />
-            <Text style={styles.featureText}>7 Day Return</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Icon name="security" size={24} color={theme.colors.primary} />
-            <Text style={styles.featureText}>Quality Assured</Text>
-          </View>
-        </View>
+    
       </View>
-
       {/* Tabs */}
       <View style={styles.tabs}>
         {[
@@ -1006,6 +991,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    marginBottom:50,
   },
   imageSection: {
     backgroundColor: theme.colors.card,

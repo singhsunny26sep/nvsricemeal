@@ -117,20 +117,17 @@ const ProfileScreen: React.FC = () => {
     navigation.navigate('PrivacyPolicy' as never);
   };
   const handleSavedLocations = () => {
-    navigation.navigate('SavedLocations' as never);
+    navigation.navigate('SaveLocation' as never);
   };
   const handleTermsConditions = () => {
     navigation.navigate('TermsConditions' as never);
   };
-
   const handleHelpSupport = () => {
     navigation.navigate('HelpSupport' as never);
   };
-
   const handleNotifications = () => {
     navigation.navigate('Notifications' as never);
   };
-
   const handleLanguageSelection = () => {
     setShowLanguageSelector(true);
   };

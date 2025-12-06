@@ -48,6 +48,7 @@ const ProfileStack = createStackNavigator();
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from './src/constants/theme';
 import LocationFillPage from './src/screens/LocationFillPage';
+import SaveLocationScreen from './src/screens/SaveLocationScreen';
 
 const styles = StyleSheet.create({
   iconContainer: {
@@ -152,6 +153,10 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen
         name="Notifications"
         component={NotificationScreen}
+      />
+      <ProfileStack.Screen
+        name="SaveLocation"
+        component={SaveLocationScreen}
       />
 
     </ProfileStack.Navigator>
