@@ -1,13 +1,13 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URL for API calls
-  BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
+  BASE_URL: 'https://27e1df89b59a.ngrok-free.app/nvs-rice-mart',
 
   // Development URL (for local development)
-  DEV_BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
+  DEV_BASE_URL: 'https://27e1df89b59a.ngrok-free.app/nvs-rice-mart',
 
   // Production URL
-  PROD_BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
+  PROD_BASE_URL: 'https://27e1df89b59a.ngrok-free.app/nvs-rice-mart',
 
   // Image base URL
   IMAGE_BASE_URL: 'https://your-cdn.com/images',
@@ -39,10 +39,16 @@ export const API_CONFIG = {
     PRODUCTS_API: {
       GET_ALL: '/products/getAll',
       GET_BY_ID: '/products/get',
+      CHECK_DELIVERY: '/products/checkDelivery',
     },
 
     PRODUCTS_Banner: {
       GET_ALL: '/banners/get/6920ad9e62df34d6535ffc58',
+    },
+    CART: {
+      ADD_OR_UPDATE: '/carts/add-or-update',
+      GET_CART: '/carts/get',
+      REMOVE_FROM_CART: '/carts/remove',
     },
   },
 

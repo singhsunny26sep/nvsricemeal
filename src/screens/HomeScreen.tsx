@@ -17,10 +17,11 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Video from 'react-native-video';
 import { useNavigation } from '@react-navigation/native';
-import { Product } from '../constants/products';
+// import { Product } from '../constants/products';
 import { useCart } from '../context/CartContext';
 import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
+import AddToCartModal from '../components/AddToCartModal';
 import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
 
@@ -29,8 +30,10 @@ const { width } = Dimensions.get('window');
 interface ProductItemProps {
   item: Product;
   onAddToCart: (product: Product) => void;
+  onAddOrUpdateToCart: (productId: string, quantity: number) => Promise<boolean>;
   onFavorite: (productId: string) => void;
   isFavorite: boolean;
+  onOpenAddToCartModal: (product: Product) => void;
 }
 interface Category {
   id: string;
@@ -40,6 +43,20 @@ interface SubCategory {
   _id: string;
   name: string;
   category: string;
+}
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  rating: number;
+  reviewCount: number;
+  discount: number;
+  category: string;
+  subCategory: string;
+  weight?: string;
+  originalPrice?: number;
 }
 
 // Skeleton Components
@@ -112,7 +129,7 @@ const HeaderSkeleton: React.FC = () => (
   </View>
 );
 
-const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite, isFavorite }) => {
+const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpdateToCart, onFavorite, isFavorite, onOpenAddToCartModal }) => {
   const navigation = useNavigation();
   const { strings } = useLanguage();
   const scaleValue = useRef(new Animated.Value(1)).current;
@@ -132,8 +149,12 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onFavorite
   };
 
   const handleAddToCart = () => {
-    onAddToCart(item);
-    navigation.getParent()?.navigate('Cart');
+    console.log('🛒 HomeScreen - Add to Cart clicked for product:', item.name);
+    console.log('🛒 HomeScreen - Product ID:', item.id);
+    console.log('🛒 HomeScreen - Opening zip code modal');
+    
+    // Show the modal for zip code validation
+    onOpenAddToCartModal(item);
   };
 
   const toggleFavorite = () => {
@@ -356,7 +377,7 @@ const VideoBanner: React.FC<{ banner: any }> = ({ banner }) => {
 };
 
 const HomeScreen: React.FC = () => {
-  const { addToCart, cart } = useCart();
+  const { addToCart, cart, addOrUpdateToCart } = useCart();
   const { strings } = useLanguage();
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -368,6 +389,69 @@ const HomeScreen: React.FC = () => {
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [banner, setBanner] = useState<any>(null);
   const scrollViewRef = useRef<any>(null);
+  
+  // Add to Cart Modal State
+  const [isAddToCartModalVisible, setIsAddToCartModalVisible] = useState(false);
+  const [selectedProductForCart, setSelectedProductForCart] = useState<Product | null>(null);
+
+  // Modal handler functions
+  const handleOpenAddToCartModal = (product: Product) => {
+    setSelectedProductForCart(product);
+    setIsAddToCartModalVisible(true);
+  };
+
+  const handleCloseAddToCartModal = () => {
+    setIsAddToCartModalVisible(false);
+    setSelectedProductForCart(null);
+  };
+
+  const handleConfirmAddToCart = async (zipCode: string) => {
+    if (!selectedProductForCart) return;
+
+    try {
+      console.log('🛒 HomeScreen - Confirmed add to cart with zip code:', zipCode);
+      console.log('🛒 HomeScreen - Product:', selectedProductForCart.name);
+      console.log('🛒 HomeScreen - Quantity: 1');
+
+      // Call the cart API to add/update item
+      const success = await addOrUpdateToCart(selectedProductForCart.id, 1);
+
+      if (success) {
+        console.log('✅ HomeScreen - Cart API call successful');
+        
+        // Also update local cart for immediate UI feedback
+        addToCart(selectedProductForCart);
+        
+        // Close modal
+        handleCloseAddToCartModal();
+        
+        // Navigate to cart
+        navigation.getParent()?.navigate('Cart');
+      } else {
+        console.log('❌ HomeScreen - Cart API call failed');
+        
+        // Still update local cart as fallback
+        addToCart(selectedProductForCart);
+        
+        // Close modal
+        handleCloseAddToCartModal();
+        
+        // Still navigate to cart
+        navigation.getParent()?.navigate('Cart');
+      }
+    } catch (error) {
+      console.error('❌ HomeScreen - Error in handleConfirmAddToCart:', error);
+      
+      // Fallback to local cart update
+      addToCart(selectedProductForCart);
+      
+      // Close modal
+      handleCloseAddToCartModal();
+      
+      // Still navigate to cart
+      navigation.getParent()?.navigate('Cart');
+    }
+  };
 
   // Fetch categories from API
   useEffect(() => {
@@ -636,8 +720,10 @@ const HomeScreen: React.FC = () => {
               <ProductItem
                 item={item}
                 onAddToCart={addToCart}
+                onAddOrUpdateToCart={addOrUpdateToCart}
                 onFavorite={handleFavorite}
                 isFavorite={favorites.has(item.id)}
+                onOpenAddToCartModal={handleOpenAddToCartModal}
               />
             )}
             keyExtractor={(item) => item.id}
@@ -655,6 +741,18 @@ const HomeScreen: React.FC = () => {
           />
         )}
       </ScrollView>
+
+      {/* Add to Cart Modal */}
+      {selectedProductForCart && (
+        <AddToCartModal
+          visible={isAddToCartModalVisible}
+          onClose={handleCloseAddToCartModal}
+          onConfirm={handleConfirmAddToCart}
+          productName={selectedProductForCart.name}
+          quantity={1}
+          totalPrice={selectedProductForCart.price}
+        />
+      )}
     </SafeAreaView>
   );
 };

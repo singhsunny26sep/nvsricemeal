@@ -14,7 +14,7 @@ import { Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RiceCategory, Product } from '../constants/products';
-import { riceCategories } from '../constants/products';
+// import { riceCategories } from '../constants/products';
 import { useCart } from '../context/CartContext';
 import { theme } from '../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,6 +30,7 @@ interface CategoryCardProps {
 interface ProductItemProps {
   item: Product;
   onAddToCart: (product: Product) => void;
+  onAddOrUpdateToCart: (productId: string, quantity: number) => Promise<boolean>;
   navigation: any;
 }
 
@@ -79,7 +80,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onPress }) => {
   );
 };
 
-const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, navigation }) => {
+const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpdateToCart, navigation }) => {
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -96,12 +97,47 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, navigation
     }).start();
   };
 
-  const handleAddToCart = () => {
-    onAddToCart(item);
-    // Show success message and navigate to cart
-    setTimeout(() => {
-      navigation.getParent()?.navigate('Cart');
-    }, 100);
+  const handleAddToCart = async () => {
+    try {
+      console.log('🛒 RiceCategory - Add to Cart clicked for product:', item.name);
+      console.log('🛒 RiceCategory - Product ID:', item.id);
+      console.log('🛒 RiceCategory - Quantity: 1');
+
+      // Call the cart API to add/update item
+      const success = await onAddOrUpdateToCart(item.id, 1);
+
+      if (success) {
+        console.log('✅ RiceCategory - Cart API call successful');
+        
+        // Also update local cart for immediate UI feedback
+        onAddToCart(item);
+        
+        // Show success message and navigate to cart
+        setTimeout(() => {
+          navigation.getParent()?.navigate('Cart');
+        }, 100);
+      } else {
+        console.log('❌ RiceCategory - Cart API call failed');
+        
+        // Still update local cart as fallback
+        onAddToCart(item);
+        
+        // Still navigate to cart even if API fails
+        setTimeout(() => {
+          navigation.getParent()?.navigate('Cart');
+        }, 100);
+      }
+    } catch (error) {
+      console.error('❌ RiceCategory - Error in handleAddToCart:', error);
+      
+      // Fallback to local cart update
+      onAddToCart(item);
+      
+      // Still navigate to cart
+      setTimeout(() => {
+        navigation.getParent()?.navigate('Cart');
+      }, 100);
+    }
   };
 
   return (
@@ -137,7 +173,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, navigation
 };
 
 const RiceCategoryScreen: React.FC = () => {
-  const { addToCart } = useCart();
+  const { addToCart, addOrUpdateToCart } = useCart();
   const navigation = useNavigation();
   const route = useRoute();
   const [selectedCategory, setSelectedCategory] = useState<RiceCategory | null>(null);
@@ -206,7 +242,12 @@ const RiceCategoryScreen: React.FC = () => {
   );
 
   const renderProduct = ({ item }: { item: Product }) => (
-    <ProductItem item={item} onAddToCart={addToCart} navigation={navigation} />
+    <ProductItem 
+      item={item} 
+      onAddToCart={addToCart} 
+      onAddOrUpdateToCart={addOrUpdateToCart}
+      navigation={navigation} 
+    />
   );
 
   // Show category products if categoryId is provided
@@ -248,6 +289,7 @@ const RiceCategoryScreen: React.FC = () => {
                     brand: item.brand || 'NVS Rice'
                   } as Product}
                   onAddToCart={addToCart}
+                  onAddOrUpdateToCart={addOrUpdateToCart}
                   navigation={navigation}
                 />
               )}

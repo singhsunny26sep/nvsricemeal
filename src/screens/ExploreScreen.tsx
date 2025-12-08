@@ -24,7 +24,7 @@ import BannerSkeleton from '../components/BannerSkeleton'
 import AttractiveBanner from '../components/AttractiveBanner'
 
 export default function ExploreScreen() {
-  const { addToCart } = useCart()
+  const { addToCart, addOrUpdateToCart } = useCart()
   const navigation = useNavigation<any>()
   const [products, setProducts] = useState<any>([])
   const [loading, setLoading] = useState<any>(true)
@@ -116,7 +116,7 @@ export default function ExploreScreen() {
     ))
   }
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = async (product: any) => {
     // Transform product to match Product interface
     const productForCart: Product = {
       id: product.id,
@@ -146,26 +146,85 @@ export default function ExploreScreen() {
       }
     }
 
-    addToCart(productForCart)
+    try {
+      console.log('🛒 Explore - Add to Cart clicked for product:', product.name);
+      console.log('🛒 Explore - Product ID:', product.id);
+      console.log('🛒 Explore - Quantity: 1');
 
-    // Show success feedback
-    Alert.alert(
-      'Success! 🎉',
-      `${product.name} added to cart!`,
-      [
-        {
-          text: 'Continue Shopping',
-          style: 'cancel'
-        },
-        {
-          text: 'View Cart',
-          onPress: () => {
-            // You can navigate to cart here if you have navigation
-            console.log('Navigate to cart')
+      // Call the cart API to add/update item
+      const success = await addOrUpdateToCart(product.id, 1);
+
+      if (success) {
+        console.log('✅ Explore - Cart API call successful');
+        
+        // Also update local cart for immediate UI feedback
+        addToCart(productForCart);
+        
+        // Show success feedback
+        Alert.alert(
+          'Success! 🎉',
+          `${product.name} added to cart!`,
+          [
+            {
+              text: 'Continue Shopping',
+              style: 'cancel'
+            },
+            {
+              text: 'View Cart',
+              onPress: () => {
+                // Navigate to cart tab
+                navigation.getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      } else {
+        console.log('❌ Explore - Cart API call failed');
+        
+        // Still update local cart as fallback
+        addToCart(productForCart);
+        
+        // Show partial success feedback
+        Alert.alert(
+          'Partial Success ⚠️',
+          `${product.name} added locally but server sync failed.`,
+          [
+            {
+              text: 'Continue Shopping',
+              style: 'cancel'
+            },
+            {
+              text: 'View Cart',
+              onPress: () => {
+                navigation.getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Explore - Error in handleAddToCart:', error);
+      
+      // Fallback to local cart update
+      addToCart(productForCart);
+      
+      Alert.alert(
+        'Network Error ⚠️',
+        `${product.name} added locally. Server sync will happen when online.`,
+        [
+          {
+            text: 'Continue Shopping',
+            style: 'cancel'
+          },
+          {
+            text: 'View Cart',
+            onPress: () => {
+              navigation.getParent()?.navigate('Cart');
+            }
           }
-        }
-      ]
-    )
+        ]
+      );
+    }
   }
 
   const renderProductItem = ({ item, index }: any) => (

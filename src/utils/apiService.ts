@@ -117,7 +117,9 @@ class ApiService {
     };
 
     console.log('=== API REQUEST DEBUG ===');
-    console.log('Full URL:', url);
+    console.log('🔗 Full URL:', url);
+    console.log('🌐 Base URL:', url.replace(endpoint, ''));
+    console.log('📍 Endpoint:', endpoint);
     console.log('Method:', config.method || 'GET');
     console.log('Headers:', config.headers);
     console.log('Body:', config.body);
@@ -586,6 +588,59 @@ class ApiService {
   async getBanners(): Promise<ApiResponse<any>> {
     const endpoint = API_CONFIG.ENDPOINTS.PRODUCTS_Banner.GET_ALL;
 console.log(endpoint,"++++++++++++++++++++++++++")
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Add or update item in cart
+  async addOrUpdateToCart(request: {
+    productId: string;
+    quantity: number;
+  }): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.CART.ADD_OR_UPDATE;
+    const fullUrl = buildUrl(endpoint);
+    
+    console.log('=== ADD/UPDATE CART DEBUG ===');
+    console.log('Request data:', request);
+    console.log('API endpoint:', endpoint);
+    console.log('🔗 FULL API URL:', fullUrl);
+    console.log('🌐 Base URL being used:', fullUrl.replace(endpoint, ''));
+
+    return this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Get cart items
+  async getCart(): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.CART.GET_CART;
+    
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Remove item from cart
+  async removeFromCart(productId: string): Promise<ApiResponse<any>> {
+    const endpoint = `${API_CONFIG.ENDPOINTS.CART.REMOVE_FROM_CART}/${productId}`;
+    
+    return this.request<any>(endpoint, {
+      method: 'DELETE',
+    });
+  }
+
+  // Check delivery availability for a product and location
+  async checkDeliveryAvailability(productId: string, zipCode: string): Promise<ApiResponse<any>> {
+    const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.CHECK_DELIVERY}/${productId}?zipCode=${zipCode}`;
+    const fullUrl = buildUrl(`${API_CONFIG.ENDPOINTS.PRODUCTS_API.CHECK_DELIVERY}/${productId}`) + `?zipCode=${zipCode}`;
+    
+    console.log('=== CHECK DELIVERY DEBUG ===');
+    console.log('Product ID:', productId);
+    console.log('Zip Code:', zipCode);
+    console.log('🔗 Full URL:', fullUrl);
+
     return this.request<any>(endpoint, {
       method: 'GET',
     });

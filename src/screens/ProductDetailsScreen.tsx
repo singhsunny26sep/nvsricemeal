@@ -18,6 +18,7 @@ import { useCart } from '../context/CartContext';
 import { theme } from '../constants/theme';
 import { apiService } from '../utils/apiService';
 import { LocationChecker, SavedLocation } from '../utils/locationChecker';
+import AddToCartModal from '../components/AddToCartModal';
 
 const { width } = Dimensions.get('window');
 
@@ -51,7 +52,7 @@ interface ProductDetailsRouteParams {
 const ProductDetailsScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { addToCart, setUserLocation } = useCart();
+  const { addToCart, setUserLocation, setPincode, addOrUpdateToCart } = useCart();
   const routeParams = route.params as ProductDetailsRouteParams;
   const { product } = routeParams;
   // Extract _id from product for API calls
@@ -69,6 +70,7 @@ const ProductDetailsScreen: React.FC = () => {
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [hasCheckedLocations, setHasCheckedLocations] = useState(false);
+  const [showAddToCartModal, setShowAddToCartModal] = useState(false);
   
   // Fetch product details from API
   useEffect(() => {
@@ -329,49 +331,89 @@ const ProductDetailsScreen: React.FC = () => {
   }, [hasCheckedLocations]);
 
   const handleAddToCart = async () => {
-    // Check if user has saved locations
-    const hasLocations = savedLocations.length > 0;
-    
-    if (!hasLocations) {
-      // Show location prompt if no saved locations
-      setShowLocationPrompt(true);
-      return;
-    }
-
-    // User has saved locations, proceed with adding to cart
-    await proceedWithAddToCart();
+    // Show the add to cart modal directly
+    setShowAddToCartModal(true);
   };
 
   const proceedWithAddToCart = async () => {
-    // Set user location if available
-    if (savedLocations.length > 0) {
-      const primaryLocation = savedLocations[0]; // Use the first (most recent) location
-      setUserLocation({
-        coordinates: primaryLocation.coordinates,
-        address: formatLocationDisplay(primaryLocation),
-        name: primaryLocation.name || primaryLocation.address || 'Saved Location'
-      });
-    }
+    try {
+      // Set user location if available
+      if (savedLocations.length > 0) {
+        const primaryLocation = savedLocations[0]; // Use the first (most recent) location
+        setUserLocation({
+          coordinates: primaryLocation.coordinates,
+          address: formatLocationDisplay(primaryLocation),
+          name: primaryLocation.name || primaryLocation.address || 'Saved Location'
+        });
+      }
 
-    // Add items to cart
-    for (let i = 0; i < quantity; i++) {
+      console.log('🛒 Add to Cart clicked for product:', displayProduct.name);
+      console.log('🛒 Product ID:', displayProduct.id);
+      console.log('🛒 Quantity:', quantity);
+
+      // Call the cart API to add/update item
+      const success = await addOrUpdateToCart(displayProduct.id, quantity);
+
+      if (success) {
+        console.log('✅ Cart API call successful');
+        
+        // Also update local cart for immediate UI feedback
+        addToCart(displayProduct);
+        
+        // Show success message and navigate to cart
+        Alert.alert(
+          'Success! 🎉',
+          `${quantity} ${displayProduct.name} added to cart!\n\nRedirecting to payment...`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate to Cart tab for payment
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      } else {
+        console.log('❌ Cart API call failed');
+        
+        // Still update local cart as fallback
+        addToCart(displayProduct);
+        
+        // Show error message
+        Alert.alert(
+          'Partial Success ⚠️',
+          `Item added locally but server sync failed.\nPlease check your internet connection.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Still navigate to cart
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error in proceedWithAddToCart:', error);
+      
+      // Fallback to local cart update
       addToCart(displayProduct);
-    }
-
-    // Show brief success message and navigate to cart
-    Alert.alert(
-      'Success! 🎉',
-      `${quantity} ${displayProduct.name} added to cart!\n\nRedirecting to payment...`,
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Navigate to Cart tab for payment
-            (navigation as any).getParent()?.navigate('Cart');
+      
+      Alert.alert(
+        'Network Error ⚠️',
+        `Item added locally. Server sync will happen when you're back online.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              (navigation as any).getParent()?.navigate('Cart');
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleLocationPromptResponse = (action: 'add' | 'skip') => {
@@ -384,6 +426,86 @@ const ProductDetailsScreen: React.FC = () => {
       // Skip and add to cart directly
       proceedWithAddToCart();
     }
+  };
+
+  const handleAddToCartModalConfirm = async (zipCode: string) => {
+    setShowAddToCartModal(false);
+    
+    try {
+      console.log('🛒 Add to Cart with zipcode:', zipCode);
+      console.log('🛒 Product:', displayProduct.name);
+      console.log('🛒 Quantity:', quantity);
+
+      // Set the pincode in cart context
+      setPincode(zipCode, true); // Assume delivery is available for now
+
+      // Call the cart API to add/update item
+      const success = await addOrUpdateToCart(displayProduct.id, quantity);
+
+      if (success) {
+        console.log('✅ Cart API call successful');
+        
+        // Also update local cart for immediate UI feedback
+        addToCart(displayProduct);
+        
+        // Show success message and navigate to cart
+        Alert.alert(
+          'Success! 🎉',
+          `${quantity} ${displayProduct.name} added to cart!\nDelivery to ${zipCode} confirmed.\n\nRedirecting to cart...`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate to Cart tab for payment
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      } else {
+        console.log('❌ Cart API call failed');
+        
+        // Still update local cart as fallback
+        addToCart(displayProduct);
+        
+        // Show error message
+        Alert.alert(
+          'Partial Success ⚠️',
+          `Item added locally but server sync failed.\nPlease check your internet connection.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Still navigate to cart
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error in handleAddToCartModalConfirm:', error);
+      
+      // Fallback to local cart update
+      addToCart(displayProduct);
+      
+      Alert.alert(
+        'Network Error ⚠️',
+        `Item added locally. Server sync will happen when you're back online.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              (navigation as any).getParent()?.navigate('Cart');
+            }
+          }
+        ]
+      );
+    }
+  };
+
+  const handleAddToCartModalClose = () => {
+    setShowAddToCartModal(false);
   };
 
   const formatLocationDisplay = (location: SavedLocation) => {
@@ -983,6 +1105,16 @@ const ProductDetailsScreen: React.FC = () => {
           </View>
         </View>
       )}
+
+      {/* Add to Cart Modal */}
+      <AddToCartModal
+        visible={showAddToCartModal}
+        onClose={handleAddToCartModalClose}
+        onConfirm={handleAddToCartModalConfirm}
+        productName={displayProduct.name}
+        quantity={quantity}
+        totalPrice={displayProduct.price * quantity}
+      />
     </ScrollView>
   );
 };

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../constants/products';
+import apiService from '../utils/apiService';
 
 export interface CartItem {
   product: Product;
@@ -39,7 +40,8 @@ type CartAction =
   | { type: 'SET_PINCODE'; pincode: string; isAvailable: boolean }
   | { type: 'SET_USER_LOCATION'; location: { coordinates: [number, number]; address?: string; name?: string } | null }
   | { type: 'CLEAR_CART' }
-  | { type: 'LOAD_CART'; cart: CartState };
+  | { type: 'LOAD_CART'; cart: CartState }
+  | { type: 'API_ADD_OR_UPDATE'; productId: string; quantity: number };
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
@@ -128,6 +130,10 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       };
     case 'LOAD_CART':
       return action.cart;
+    case 'API_ADD_OR_UPDATE':
+      // For API operations, we'll handle the actual API call in the context provider
+      // This action is mainly for optimistic updates or syncing with API
+      return state;
     default:
       return state;
   }
@@ -145,6 +151,8 @@ const CartContext = createContext<{
   setPincode: (pincode: string, isAvailable: boolean) => void;
   setUserLocation: (location: { coordinates: [number, number]; address?: string; name?: string } | null) => void;
   clearCart: () => void;
+  addOrUpdateToCart: (productId: string, quantity: number) => Promise<boolean>;
+  syncCartFromServer: () => Promise<void>;
 } | undefined>(undefined);
 
 interface CartProviderProps {
@@ -242,6 +250,61 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     dispatch({ type: 'CLEAR_CART' });
   };
 
+  const addOrUpdateToCart = async (productId: string, quantity: number): Promise<boolean> => {
+    try {
+      console.log('🔄 API CART: Adding/updating item in cart via API');
+      console.log('🔄 API CART: Product ID:', productId);
+      console.log('🔄 API CART: Quantity:', quantity);
+
+      const response = await apiService.addOrUpdateToCart({
+        productId,
+        quantity,
+      });
+
+      if (response.success) {
+        console.log('✅ API CART: Successfully added/updated item in server cart');
+        
+        // Update local cart optimistically
+        const existingItem = cart.items.find(item => item.product.id === productId);
+        if (existingItem) {
+          dispatch({ type: 'UPDATE_QUANTITY', productId, quantity });
+        } else {
+          // We need to get the product details first - for now, just update the quantity
+          // In a real implementation, you'd fetch the product details
+          console.log('⚠️ API CART: Need to fetch product details for new item');
+        }
+        
+        return true;
+      } else {
+        console.log('❌ API CART: Failed to add/update item in server cart');
+        console.log('❌ API CART: Error:', response.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ API CART: Error calling addOrUpdateToCart API:', error);
+      return false;
+    }
+  };
+
+  const syncCartFromServer = async (): Promise<void> => {
+    try {
+      console.log('🔄 API CART: Syncing cart from server');
+      
+      const response = await apiService.getCart();
+      if (response.success && response.data) {
+        console.log('✅ API CART: Successfully fetched cart from server');
+        // Transform server cart data to match our local cart structure
+        // This would depend on the actual server response structure
+        // For now, we'll just log the response
+        console.log('🔄 API CART: Server cart data:', response.data);
+      } else {
+        console.log('❌ API CART: Failed to sync cart from server');
+      }
+    } catch (error) {
+      console.error('❌ API CART: Error syncing cart from server:', error);
+    }
+  };
+
   return (
     <CartContext.Provider value={{
       cart,
@@ -255,6 +318,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       setPincode,
       setUserLocation,
       clearCart,
+      addOrUpdateToCart,
+      syncCartFromServer,
     }}>
       {children}
     </CartContext.Provider>
