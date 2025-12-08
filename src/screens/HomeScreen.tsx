@@ -393,6 +393,8 @@ const HomeScreen: React.FC = () => {
   // Add to Cart Modal State
   const [isAddToCartModalVisible, setIsAddToCartModalVisible] = useState(false);
   const [selectedProductForCart, setSelectedProductForCart] = useState<Product | null>(null);
+  const [deliveryCheckError, setDeliveryCheckError] = useState('');
+  const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
 
   // Modal handler functions
   const handleOpenAddToCartModal = (product: Product) => {
@@ -403,13 +405,56 @@ const HomeScreen: React.FC = () => {
   const handleCloseAddToCartModal = () => {
     setIsAddToCartModalVisible(false);
     setSelectedProductForCart(null);
+    setDeliveryCheckError('');
+    setIsCheckingDelivery(false);
   };
 
   const handleConfirmAddToCart = async (zipCode: string) => {
     if (!selectedProductForCart) return;
 
+    setIsCheckingDelivery(true);
+    setDeliveryCheckError('');
+
     try {
-      console.log('🛒 HomeScreen - Confirmed add to cart with zip code:', zipCode);
+      console.log('🛒 HomeScreen - Checking delivery availability');
+      console.log('🛒 HomeScreen - Product ID:', selectedProductForCart.id);
+      console.log('🛒 HomeScreen - Zip Code:', zipCode);
+
+      // First check delivery availability
+      const deliveryResponse = await apiService.checkDeliveryAvailability(selectedProductForCart.id, zipCode);
+      
+      setIsCheckingDelivery(false);
+
+      console.log('🛒 HomeScreen - Delivery check response:', deliveryResponse);
+
+      if (!deliveryResponse.success) {
+        console.log('❌ HomeScreen - Delivery check failed:', deliveryResponse.error);
+        const errorMessage = deliveryResponse.error || 'Delivery not available in this area';
+        setDeliveryCheckError(errorMessage);
+        return;
+      }
+
+      // Check if delivery is actually available
+      const deliveryData = deliveryResponse.data;
+      console.log('🛒 HomeScreen - Delivery check data:', deliveryData);
+
+      // Check the response format: { success: true, message: "...", data: { isDeliverable: true } }
+      if (deliveryData && deliveryData.isDeliverable === false) {
+        console.log('❌ HomeScreen - Delivery not available:', deliveryData.message);
+        const errorMessage = deliveryData.message || 'Delivery not available in this area';
+        setDeliveryCheckError(errorMessage);
+        return;
+      }
+
+      // Also handle case where isDeliverable is not explicitly true
+      if (deliveryData && deliveryData.isDeliverable !== true) {
+        console.log('❌ HomeScreen - Delivery not available (isDeliverable not true)');
+        const errorMessage = deliveryData.message || 'Delivery not available in this area';
+        setDeliveryCheckError(errorMessage);
+        return;
+      }
+
+      console.log('✅ HomeScreen - Delivery check successful, proceeding to add to cart');
       console.log('🛒 HomeScreen - Product:', selectedProductForCart.name);
       console.log('🛒 HomeScreen - Quantity: 1');
 
@@ -441,15 +486,8 @@ const HomeScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('❌ HomeScreen - Error in handleConfirmAddToCart:', error);
-      
-      // Fallback to local cart update
-      addToCart(selectedProductForCart);
-      
-      // Close modal
-      handleCloseAddToCartModal();
-      
-      // Still navigate to cart
-      navigation.getParent()?.navigate('Cart');
+      setIsCheckingDelivery(false);
+      setDeliveryCheckError('Failed to check delivery availability. Please try again.');
     }
   };
 
@@ -751,6 +789,8 @@ const HomeScreen: React.FC = () => {
           productName={selectedProductForCart.name}
           quantity={1}
           totalPrice={selectedProductForCart.price}
+          deliveryError={deliveryCheckError}
+          isCheckingDelivery={isCheckingDelivery}
         />
       )}
     </SafeAreaView>

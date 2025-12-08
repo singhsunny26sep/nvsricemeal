@@ -633,8 +633,8 @@ console.log(endpoint,"++++++++++++++++++++++++++")
 
   // Check delivery availability for a product and location
   async checkDeliveryAvailability(productId: string, zipCode: string): Promise<ApiResponse<any>> {
-    const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.CHECK_DELIVERY}/${productId}?zipCode=${zipCode}`;
-    const fullUrl = buildUrl(`${API_CONFIG.ENDPOINTS.PRODUCTS_API.CHECK_DELIVERY}/${productId}`) + `?zipCode=${zipCode}`;
+    const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.CHECK_DELIVERY}/${productId}`;
+    const fullUrl = buildUrl(endpoint);
     
     console.log('=== CHECK DELIVERY DEBUG ===');
     console.log('Product ID:', productId);
@@ -642,7 +642,10 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     console.log('🔗 Full URL:', fullUrl);
 
     return this.request<any>(endpoint, {
-      method: 'GET',
+      method: 'POST',
+      body: JSON.stringify({
+        zipCode: zipCode
+      }),
     });
   }
 }

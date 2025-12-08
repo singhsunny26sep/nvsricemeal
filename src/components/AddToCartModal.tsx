@@ -7,6 +7,7 @@ import {
   TextInput,
   Modal,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
@@ -18,6 +19,8 @@ interface AddToCartModalProps {
   productName: string;
   quantity: number;
   totalPrice: number;
+  deliveryError?: string;
+  isCheckingDelivery?: boolean;
 }
 
 const AddToCartModal: React.FC<AddToCartModalProps> = ({
@@ -27,6 +30,8 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
   productName,
   quantity,
   totalPrice,
+  deliveryError = '',
+  isCheckingDelivery = false,
 }) => {
   const [zipCode, setZipCode] = useState('');
   const [zipCodeError, setZipCodeError] = useState('');
@@ -130,6 +135,14 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
               {zipCodeError && (
                 <Text style={styles.errorText}>{zipCodeError}</Text>
               )}
+              
+              {/* Delivery Error Display */}
+              {deliveryError && (
+                <View style={styles.deliveryErrorContainer}>
+                  <Icon name="error" size={16} color={theme.colors.error} />
+                  <Text style={styles.deliveryErrorText}>{deliveryError}</Text>
+                </View>
+              )}
             </View>
 
             <View style={styles.infoBox}>
@@ -150,12 +163,18 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, styles.confirmButton, !zipCode && styles.confirmButtonDisabled]}
+              style={[styles.button, styles.confirmButton, (!zipCode || isCheckingDelivery) && styles.confirmButtonDisabled]}
               onPress={handleConfirm}
-              disabled={!zipCode}
+              disabled={!zipCode || isCheckingDelivery}
             >
-              <Icon name="add-shopping-cart" size={20} color="white" />
-              <Text style={styles.confirmButtonText}>Add to Cart</Text>
+              {isCheckingDelivery ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Icon name="add-shopping-cart" size={20} color="white" />
+              )}
+              <Text style={styles.confirmButtonText}>
+                {isCheckingDelivery ? 'Checking Delivery...' : 'Add to Cart'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -290,6 +309,24 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     fontSize: theme.fonts.size.small,
     marginTop: theme.spacing.small,
+    fontFamily: theme.fonts.family.regular,
+  },
+  deliveryErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.error + '10',
+    padding: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.error,
+    marginTop: theme.spacing.small,
+  },
+  deliveryErrorText: {
+    flex: 1,
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.error,
+    marginLeft: theme.spacing.small,
+    lineHeight: 18,
     fontFamily: theme.fonts.family.regular,
   },
   infoBox: {
