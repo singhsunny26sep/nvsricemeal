@@ -1,13 +1,13 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URL for API calls
-  BASE_URL: 'https://27e1df89b59a.ngrok-free.app/nvs-rice-mart',
+  BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
 
   // Development URL (for local development)
-  DEV_BASE_URL: 'https://27e1df89b59a.ngrok-free.app/nvs-rice-mart',
+  DEV_BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
 
   // Production URL
-  PROD_BASE_URL: 'https://27e1df89b59a.ngrok-free.app/nvs-rice-mart',
+  PROD_BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
 
   // Image base URL
   IMAGE_BASE_URL: 'https://your-cdn.com/images',
