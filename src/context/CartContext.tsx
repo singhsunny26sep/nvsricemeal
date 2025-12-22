@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../constants/products';
 import apiService from '../utils/apiService';
@@ -153,6 +153,7 @@ const CartContext = createContext<{
   clearCart: () => void;
   addOrUpdateToCart: (productId: string, quantity: number) => Promise<boolean>;
   syncCartFromServer: () => Promise<void>;
+  isSyncing: boolean;
 } | undefined>(undefined);
 
 interface CartProviderProps {
@@ -172,8 +173,10 @@ const initialState: CartState = {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cart, dispatch] = useReducer(cartReducer, initialState);
+  const [isSyncing, setIsSyncing] = React.useState(false);
+  const syncInProgressRef = React.useRef(false);
 
-  // Load cart from AsyncStorage on mount
+  // Load cart from AsyncStorage on mount (only once)
   useEffect(() => {
     const loadCart = async () => {
       try {
@@ -198,16 +201,20 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     loadCart();
   }, []);
 
-  // Save cart to AsyncStorage whenever it changes
+  // Save cart to AsyncStorage whenever it changes (debounced)
   useEffect(() => {
-    const saveCart = async () => {
-      try {
-        await AsyncStorage.setItem('cart', JSON.stringify(cart));
-      } catch (error) {
-        console.error('Error saving cart:', error);
-      }
-    };
-    saveCart();
+    const timeoutId = setTimeout(() => {
+      const saveCart = async () => {
+        try {
+          await AsyncStorage.setItem('cart', JSON.stringify(cart));
+        } catch (error) {
+          console.error('Error saving cart:', error);
+        }
+      };
+      saveCart();
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(timeoutId);
   }, [cart]);
 
   const addToCart = (product: Product) => {
@@ -286,24 +293,195 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   };
 
-  const syncCartFromServer = async (): Promise<void> => {
+  const syncCartFromServer = useCallback(async (): Promise<void> => {
+    // Prevent multiple simultaneous sync operations
+    if (syncInProgressRef.current) {
+      console.log('⚠️ CART SYNC: Already in progress, skipping...');
+      return;
+    }
+
     try {
-      console.log('🔄 API CART: Syncing cart from server');
+      console.log('🛒 =======================================');
+      console.log('🛒 CART CONTEXT: SYNCING CART FROM SERVER');
+      console.log('🛒 =======================================');
+      
+      syncInProgressRef.current = true;
+      setIsSyncing(true);
+      
+      console.log('🔄 API CART: Syncing cart from server with product details');
       
       const response = await apiService.getCart();
+      console.log('📥 CART CONTEXT: Cart sync response received');
+      console.log('📥 CART CONTEXT: Response success:', response.success);
+      console.log('📥 CART CONTEXT: Response data:', JSON.stringify(response.data, null, 2));
+
       if (response.success && response.data) {
+        console.log('✅ =======================================');
         console.log('✅ API CART: Successfully fetched cart from server');
-        // Transform server cart data to match our local cart structure
-        // This would depend on the actual server response structure
-        // For now, we'll just log the response
-        console.log('🔄 API CART: Server cart data:', response.data);
+        
+        // Extract cart items from response - Handle the actual API structure
+        const cartData = response.data;
+        let cartItems: any[] = [];
+        
+        // The API returns: { success: true, message: "Cart fetched", data: { items: [...] } }
+        if (cartData?.data?.items && Array.isArray(cartData.data.items)) {
+          cartItems = cartData.data.items;
+          console.log('✅ API CART: Found items in cartData.data.items');
+        } else if (cartData?.data?.data && Array.isArray(cartData.data.data)) {
+          cartItems = cartData.data.data;
+          console.log('✅ API CART: Found items in cartData.data.data');
+        } else if (cartData?.data && Array.isArray(cartData.data)) {
+          cartItems = cartData.data;
+          console.log('✅ API CART: Found items in cartData.data');
+        } else if (Array.isArray(cartData)) {
+          cartItems = cartData;
+          console.log('✅ API CART: Found items directly in cartData');
+        } else {
+          console.log('⚠️ API CART: Unexpected cart data structure');
+          console.log('⚠️ Available keys:', Object.keys(cartData));
+          cartItems = [];
+        }
+
+        console.log('📦 API CART: Found', cartItems.length, 'items in cart');
+        console.log('📦 API CART: Cart items:', JSON.stringify(cartItems, null, 2));
+
+        // Extract product IDs from cart items
+        const productIds = cartItems.map((item: any) => {
+          return item.productId || item.product_id || item._id || item.id;
+        }).filter(Boolean);
+
+        console.log('🆔 API CART: Extracted product IDs:', productIds);
+
+        if (productIds.length === 0) {
+          console.log('⚠️ API CART: No product IDs found in cart');
+          dispatch({
+            type: 'LOAD_CART',
+            cart: {
+              ...initialState,
+              items: []
+            }
+          });
+          return;
+        }
+
+        // Fetch product details for each product ID (limit to avoid too many requests)
+        const limitedProductIds = productIds.slice(0, 10); // Limit to 10 products max
+        console.log('🔄 API CART: Fetching product details for', limitedProductIds.length, 'products (limited)');
+        
+        const productDetailsPromises = limitedProductIds.map(async (productId: string) => {
+          console.log('🔄 API CART: Fetching product details for ID:', productId);
+          try {
+            const productResponse = await apiService.getProductById(productId);
+            if (productResponse.success) {
+              console.log('✅ API CART: Successfully fetched product:', productId);
+              return {
+                productId,
+                productDetails: productResponse.data
+              };
+            } else {
+              console.log('❌ API CART: Failed to fetch product:', productId);
+              return {
+                productId,
+                productDetails: null,
+                error: productResponse.error
+              };
+            }
+          } catch (error) {
+            console.log('💥 API CART: Error fetching product:', productId, error);
+            return {
+              productId,
+              productDetails: null,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            };
+          }
+        });
+
+        // Wait for all product detail requests to complete
+        const productDetailsResults = await Promise.all(productDetailsPromises);
+        
+        console.log('📊 API CART: Product details fetched for all items');
+        console.log('📊 API CART: Product details results:', JSON.stringify(productDetailsResults, null, 2));
+
+        // Combine cart items with product details
+        const enrichedCartItems = cartItems.map((item: any) => {
+          const productId = item.productId || item.product_id || item._id || item.id;
+          const productDetailsResult = productDetailsResults.find(result => result.productId === productId);
+          
+          return {
+            ...item,
+            productId,
+            productDetails: productDetailsResult?.productDetails,
+            fetchError: productDetailsResult?.error
+          };
+        });
+
+        // Calculate totals
+        const totalItems = enrichedCartItems.reduce((sum: number, item: any) => {
+          return sum + (item.quantity || 1);
+        }, 0);
+
+        const totalPrice = enrichedCartItems.reduce((sum: number, item: any) => {
+          const price = item.productDetails?.price || item.productDetails?.generalPrice || 0;
+          const quantity = item.quantity || 1;
+          return sum + (price * quantity);
+        }, 0);
+
+        console.log('🎉 =======================================');
+        console.log('🎉 CART CONTEXT: CART ENRICHMENT COMPLETED');
+        console.log('🎉 Total items:', totalItems);
+        console.log('🎉 Total price:', totalPrice);
+        console.log('🎉 =======================================');
+
+        // Update local cart state with enriched data
+        dispatch({
+          type: 'LOAD_CART',
+          cart: {
+            ...initialState,
+            items: enrichedCartItems.map((item: any) => ({
+              product: {
+                id: item.productId,
+                name: item.productDetails?.name || 'Product Name Not Available',
+                description: item.productDetails?.description || 'No description available',
+                price: item.productDetails?.price || item.productDetails?.generalPrice || 0,
+                image: item.productDetails?.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+                rating: item.productDetails?.rating || 4.0,
+                reviewCount: item.productDetails?.reviewCount || 0,
+                discount: item.productDetails?.discount || 0,
+                category: item.productDetails?.category || 'General',
+                subCategory: item.productDetails?.subCategory || '',
+                weight: item.productDetails?.weightInKg ? `${item.productDetails.weightInKg}kg` : 'N/A',
+                originalPrice: item.productDetails?.originalPrice
+              },
+              quantity: item.quantity || 1,
+              addedAt: new Date(item.addedAt || Date.now()),
+              fetchError: item.fetchError
+            }))
+          }
+        });
+
+        console.log('🎉 =======================================');
+        console.log('🎉 CART CONTEXT: CART SYNC COMPLETED SUCCESSFULLY');
+        console.log('🎉 Local cart updated with server data');
+        console.log('🎉 =======================================');
+        
       } else {
+        console.log('❌ =======================================');
         console.log('❌ API CART: Failed to sync cart from server');
+        console.log('❌ API CART: Error:', response.error);
+        console.log('❌ =======================================');
       }
     } catch (error) {
-      console.error('❌ API CART: Error syncing cart from server:', error);
+      console.error('💥 =======================================');
+      console.error('💥 API CART: Error syncing cart from server');
+      console.error('💥 Error:', error);
+      console.error('💥 Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('💥 Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('💥 =======================================');
+    } finally {
+      syncInProgressRef.current = false;
+      setIsSyncing(false);
     }
-  };
+  }, []);
 
   return (
     <CartContext.Provider value={{
@@ -320,6 +498,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       clearCart,
       addOrUpdateToCart,
       syncCartFromServer,
+      isSyncing,
     }}>
       {children}
     </CartContext.Provider>

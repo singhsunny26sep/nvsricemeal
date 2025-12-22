@@ -21,7 +21,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useCart } from '../context/CartContext';
 import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
-import AddToCartModal from '../components/AddToCartModal';
 import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
 
@@ -33,7 +32,6 @@ interface ProductItemProps {
   onAddOrUpdateToCart: (productId: string, quantity: number) => Promise<boolean>;
   onFavorite: (productId: string) => void;
   isFavorite: boolean;
-  onOpenAddToCartModal: (product: Product) => void;
 }
 interface Category {
   id: string;
@@ -129,7 +127,7 @@ const HeaderSkeleton: React.FC = () => (
   </View>
 );
 
-const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpdateToCart, onFavorite, isFavorite, onOpenAddToCartModal }) => {
+const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpdateToCart, onFavorite, isFavorite }) => {
   const navigation = useNavigation();
   const { strings } = useLanguage();
   const scaleValue = useRef(new Animated.Value(1)).current;
@@ -148,13 +146,86 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
     }).start();
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     console.log('🛒 HomeScreen - Add to Cart clicked for product:', item.name);
     console.log('🛒 HomeScreen - Product ID:', item.id);
-    console.log('🛒 HomeScreen - Opening zip code modal');
-    
-    // Show the modal for zip code validation
-    onOpenAddToCartModal(item);
+    console.log('🛒 HomeScreen - Quantity: 1');
+
+    try {
+      // Call the cart API to add/update item
+      const success = await onAddOrUpdateToCart(item.id, 1);
+
+      if (success) {
+        console.log('✅ HomeScreen - Cart API call successful');
+        
+        // Also update local cart for immediate UI feedback
+        onAddToCart(item);
+        
+        // Show success feedback
+        Alert.alert(
+          'Success! 🎉',
+          `${item.name} added to cart!`,
+          [
+            {
+              text: 'Continue Shopping',
+              style: 'cancel'
+            },
+            {
+              text: 'View Cart',
+              onPress: () => {
+                // Navigate to cart tab
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      } else {
+        console.log('❌ HomeScreen - Cart API call failed');
+        
+        // Still update local cart as fallback
+        onAddToCart(item);
+        
+        // Show partial success feedback
+        Alert.alert(
+          'Partial Success ⚠️',
+          `${item.name} added locally but server sync failed.`,
+          [
+            {
+              text: 'Continue Shopping',
+              style: 'cancel'
+            },
+            {
+              text: 'View Cart',
+              onPress: () => {
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('❌ HomeScreen - Error in handleAddToCart:', error);
+      
+      // Fallback to local cart update
+      onAddToCart(item);
+      
+      Alert.alert(
+        'Network Error ⚠️',
+        `${item.name} added locally. Server sync will happen when online.`,
+        [
+          {
+            text: 'Continue Shopping',
+            style: 'cancel'
+          },
+          {
+            text: 'View Cart',
+            onPress: () => {
+              (navigation as any).getParent()?.navigate('Cart');
+            }
+          }
+        ]
+      );
+    }
   };
 
   const toggleFavorite = () => {
@@ -389,107 +460,6 @@ const HomeScreen: React.FC = () => {
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [banner, setBanner] = useState<any>(null);
   const scrollViewRef = useRef<any>(null);
-  
-  // Add to Cart Modal State
-  const [isAddToCartModalVisible, setIsAddToCartModalVisible] = useState(false);
-  const [selectedProductForCart, setSelectedProductForCart] = useState<Product | null>(null);
-  const [deliveryCheckError, setDeliveryCheckError] = useState('');
-  const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
-
-  // Modal handler functions
-  const handleOpenAddToCartModal = (product: Product) => {
-    setSelectedProductForCart(product);
-    setIsAddToCartModalVisible(true);
-  };
-
-  const handleCloseAddToCartModal = () => {
-    setIsAddToCartModalVisible(false);
-    setSelectedProductForCart(null);
-    setDeliveryCheckError('');
-    setIsCheckingDelivery(false);
-  };
-
-  const handleConfirmAddToCart = async (zipCode: string) => {
-    if (!selectedProductForCart) return;
-
-    setIsCheckingDelivery(true);
-    setDeliveryCheckError('');
-
-    try {
-      console.log('🛒 HomeScreen - Checking delivery availability');
-      console.log('🛒 HomeScreen - Product ID:', selectedProductForCart.id);
-      console.log('🛒 HomeScreen - Zip Code:', zipCode);
-
-      // First check delivery availability
-      const deliveryResponse = await apiService.checkDeliveryAvailability(selectedProductForCart.id, zipCode);
-      
-      setIsCheckingDelivery(false);
-
-      console.log('🛒 HomeScreen - Delivery check response:', deliveryResponse);
-
-      if (!deliveryResponse.success) {
-        console.log('❌ HomeScreen - Delivery check failed:', deliveryResponse.error);
-        const errorMessage = deliveryResponse.error || 'Delivery not available in this area';
-        setDeliveryCheckError(errorMessage);
-        return;
-      }
-
-      // Check if delivery is actually available
-      const deliveryData = deliveryResponse.data;
-      console.log('🛒 HomeScreen - Delivery check data:', deliveryData);
-
-      // Check the response format: { success: true, message: "...", data: { isDeliverable: true } }
-      if (deliveryData && deliveryData.isDeliverable === false) {
-        console.log('❌ HomeScreen - Delivery not available:', deliveryData.message);
-        const errorMessage = deliveryData.message || 'Delivery not available in this area';
-        setDeliveryCheckError(errorMessage);
-        return;
-      }
-
-      // Also handle case where isDeliverable is not explicitly true
-      if (deliveryData && deliveryData.isDeliverable !== true) {
-        console.log('❌ HomeScreen - Delivery not available (isDeliverable not true)');
-        const errorMessage = deliveryData.message || 'Delivery not available in this area';
-        setDeliveryCheckError(errorMessage);
-        return;
-      }
-
-      console.log('✅ HomeScreen - Delivery check successful, proceeding to add to cart');
-      console.log('🛒 HomeScreen - Product:', selectedProductForCart.name);
-      console.log('🛒 HomeScreen - Quantity: 1');
-
-      // Call the cart API to add/update item
-      const success = await addOrUpdateToCart(selectedProductForCart.id, 1);
-
-      if (success) {
-        console.log('✅ HomeScreen - Cart API call successful');
-        
-        // Also update local cart for immediate UI feedback
-        addToCart(selectedProductForCart);
-        
-        // Close modal
-        handleCloseAddToCartModal();
-        
-        // Navigate to cart
-        navigation.getParent()?.navigate('Cart');
-      } else {
-        console.log('❌ HomeScreen - Cart API call failed');
-        
-        // Still update local cart as fallback
-        addToCart(selectedProductForCart);
-        
-        // Close modal
-        handleCloseAddToCartModal();
-        
-        // Still navigate to cart
-        navigation.getParent()?.navigate('Cart');
-      }
-    } catch (error) {
-      console.error('❌ HomeScreen - Error in handleConfirmAddToCart:', error);
-      setIsCheckingDelivery(false);
-      setDeliveryCheckError('Failed to check delivery availability. Please try again.');
-    }
-  };
 
   // Fetch categories from API
   useEffect(() => {
@@ -761,7 +731,6 @@ const HomeScreen: React.FC = () => {
                 onAddOrUpdateToCart={addOrUpdateToCart}
                 onFavorite={handleFavorite}
                 isFavorite={favorites.has(item.id)}
-                onOpenAddToCartModal={handleOpenAddToCartModal}
               />
             )}
             keyExtractor={(item) => item.id}
@@ -779,20 +748,6 @@ const HomeScreen: React.FC = () => {
           />
         )}
       </ScrollView>
-
-      {/* Add to Cart Modal */}
-      {selectedProductForCart && (
-        <AddToCartModal
-          visible={isAddToCartModalVisible}
-          onClose={handleCloseAddToCartModal}
-          onConfirm={handleConfirmAddToCart}
-          productName={selectedProductForCart.name}
-          quantity={1}
-          totalPrice={selectedProductForCart.price}
-          deliveryError={deliveryCheckError}
-          isCheckingDelivery={isCheckingDelivery}
-        />
-      )}
     </SafeAreaView>
   );
 };

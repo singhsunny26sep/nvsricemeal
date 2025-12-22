@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,10 +22,43 @@ import { useNavigation } from '@react-navigation/native';
 import { theme } from '../constants/theme';
 import { locationService, LocationData } from '../utils/locationService';
 import GoogleMapComponent from '../components/GoogleMapComponent';
+import { apiService } from '../utils/apiService';
 
 const { width, height } = Dimensions.get('window');
 const isSmallDevice = width < 375;
 
+// API Response types
+interface ApiLocation {
+  _id: string;
+  name: string | null;
+  address: string;
+  area: string;
+  city: string;
+  district: string;
+  state: string;
+  country: string;
+  formattedAddress: string;
+  zipcode: string;
+  coordinates: [number, number];
+  isActive: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ApiLocationResponse {
+  success: boolean;
+  message: string;
+  data: {
+    total: number;
+    totalPages: number;
+    page: number;
+    limit: number;
+    data: ApiLocation[];
+  };
+}
+
+// Local storage type for saved locations (for add/edit functionality)
 interface SavedLocation {
   id: string;
   name: string;
@@ -41,35 +74,12 @@ interface SavedLocation {
 
 export default function SaveLocationScreen() {
   const navigation = useNavigation();
-  const [locations, setLocations] = useState<SavedLocation[]>([
-    // Sample data for demo
-    {
-      id: '1',
-      name: 'Home',
-      address: '123 Main Street',
-      city: 'Mumbai',
-      district: 'South Mumbai',
-      state: 'Maharashtra',
-      zipCode: '400001',
-      area: 'Colaba',
-      coordinates: [19.0760, 72.8777],
-      isDefault: true,
-    },
-    {
-      id: '2',
-      name: 'Office',
-      address: '456 Business Park',
-      city: 'Mumbai',
-      district: 'Andheri East',
-      state: 'Maharashtra',
-      zipCode: '400093',
-      area: 'MIDC',
-      coordinates: [19.1197, 72.9050],
-      isDefault: false,
-    },
-  ]);
+  const [locations, setLocations] = useState<ApiLocation[]>([]);
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]); // For user-added locations
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [requiresAuth, setRequiresAuth] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   
   // Form states
   const [locationName, setLocationName] = useState('');
@@ -86,6 +96,48 @@ export default function SaveLocationScreen() {
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Fetch locations from API
+  const fetchLocations = async () => {
+    try {
+      setIsLoading(true);
+      setApiError(null);
+      setRequiresAuth(false);
+      console.log('🔍 Fetching locations from API...');
+      
+      const response = await apiService.getLocations('india');
+      
+      if (response.success && response.data) {
+        const locationData = response.data as ApiLocationResponse;
+        if (locationData.success && locationData.data.data) {
+          setLocations(locationData.data.data);
+          console.log('✅ Locations fetched successfully:', locationData.data.data.length, 'locations');
+        } else {
+          setApiError('Invalid response format from server');
+          console.error('❌ Invalid response format:', response.data);
+        }
+      } else {
+        // Handle authentication error
+        if (response.error && (response.error.includes('authorization') || response.error.includes('Access Denied'))) {
+          setRequiresAuth(true);
+          setApiError('Please login to view available locations.');
+        } else {
+          setApiError(response.error || 'Failed to fetch locations');
+        }
+        console.error('❌ API Error:', response.error);
+      }
+    } catch (error) {
+      console.error('🚨 Network error:', error);
+      setApiError('Network error. Please check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load locations on component mount
+  useEffect(() => {
+    fetchLocations();
+  }, []);
 
   React.useEffect(() => {
     if (showAddForm) {
@@ -115,13 +167,6 @@ export default function SaveLocationScreen() {
       if (location) {
         const coords: [number, number] = [location.latitude, location.longitude];
         setCoordinates(coords);
-        // Auto-fill address if possible
-        if (location.address) {
-          setAddress(location.address);
-        }
-        if (location.city) {
-          setCity(location.city);
-        }
         Alert.alert('📍 Location Captured', 'Your current location has been captured successfully!', [
           { text: 'OK' }
         ]);
@@ -162,7 +207,7 @@ export default function SaveLocationScreen() {
 
     const newLocation: SavedLocation = {
       id: Date.now().toString(),
-      name: locationName.trim() || (locations.length === 0 ? 'Home' : 'Location ' + (locations.length + 1)),
+      name: locationName.trim() || (savedLocations.length === 0 ? 'Home' : 'Location ' + (savedLocations.length + 1)),
       address: address.trim(),
       city: city.trim(),
       district: district.trim(),
@@ -170,10 +215,10 @@ export default function SaveLocationScreen() {
       zipCode: zipCode.trim(),
       area: area.trim(),
       coordinates: coordinates,
-      isDefault: locations.length === 0,
+      isDefault: savedLocations.length === 0,
     };
 
-    setLocations([...locations, newLocation]);
+    setSavedLocations([...savedLocations, newLocation]);
     
     // Reset form
     resetForm();
@@ -210,7 +255,7 @@ export default function SaveLocationScreen() {
   };
 
   const handleDeleteLocation = (locationId: string) => {
-    const locationToDelete = locations.find(loc => loc.id === locationId);
+    const locationToDelete = savedLocations.find(loc => loc.id === locationId);
     
     Alert.alert(
       '🗑️ Delete Location',
@@ -224,7 +269,7 @@ export default function SaveLocationScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setLocations(locations.filter(loc => loc.id !== locationId));
+            setSavedLocations(savedLocations.filter(loc => loc.id !== locationId));
             Alert.alert('Deleted', 'Location has been removed.');
           }
         }
@@ -233,10 +278,27 @@ export default function SaveLocationScreen() {
   };
 
   const handleSetDefault = (locationId: string) => {
-    setLocations(locations.map(loc => ({
+    setSavedLocations(savedLocations.map(loc => ({
       ...loc,
       isDefault: loc.id === locationId
     })));
+  };
+
+  const handleLogin = () => {
+    Alert.alert(
+      'Login Required',
+      'Please login to view available locations.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Login', 
+          onPress: () => {
+            // Navigate to login screen
+            navigation.navigate('Login');
+          }
+        }
+      ]
+    );
   };
 
   const InputField: React.FC<{
@@ -287,7 +349,64 @@ export default function SaveLocationScreen() {
     </View>
   );
 
-  const LocationCard = ({ location }: { location: SavedLocation }) => (
+  const LocationCard = ({ location }: { location: ApiLocation }) => (
+    <View style={styles.locationCard}>
+      <View style={styles.locationCardHeader}>
+        <View style={styles.locationIconContainer}>
+          <Icon 
+            name={location.name ? "home" : "location-on"} 
+            size={24} 
+            color={theme.colors.primary} 
+          />
+        </View>
+        <View style={styles.locationInfo}>
+          <View style={styles.locationTitleRow}>
+            <Text style={styles.locationName}>
+              {location.name || 'Unnamed Location'}
+            </Text>
+            {location.isActive && (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultBadgeText}>Active</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.locationAddress} numberOfLines={2}>
+            {location.formattedAddress}
+          </Text>
+          <View style={styles.locationDetails}>
+            <Text style={styles.locationDetailText}>
+              {location.city}, {location.state}, {location.country}
+            </Text>
+            {location.zipcode && (
+              <Text style={styles.zipCode}>PIN: {location.zipcode}</Text>
+            )}
+          </View>
+        </View>
+      </View>
+      
+      <View style={styles.locationActions}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.viewButton]}
+          onPress={() => {
+            Alert.alert('Location Details', 
+              `Address: ${location.formattedAddress}\n` +
+              `City: ${location.city}\n` +
+              `District: ${location.district}\n` +
+              `State: ${location.state}\n` +
+              `Country: ${location.country}\n` +
+              `PIN: ${location.zipcode}\n` +
+              `Coordinates: ${location.coordinates[0]}, ${location.coordinates[1]}`
+            );
+          }}
+        >
+          <Icon name="visibility" size={16} color={theme.colors.primary} />
+          <Text style={[styles.actionButtonText, styles.viewButtonText]}>View Details</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const SavedLocationCard = ({ location }: { location: SavedLocation }) => (
     <View style={styles.locationCard}>
       <View style={styles.locationCardHeader}>
         <View style={styles.locationIconContainer}>
@@ -354,13 +473,46 @@ export default function SaveLocationScreen() {
     </View>
   );
 
+  const renderAuthenticationRequired = () => (
+    <View style={styles.authRequiredContainer}>
+      <View style={styles.authRequiredIcon}>
+        <Icon name="lock" size={64} color="#ff9800" />
+      </View>
+      <Text style={styles.authRequiredTitle}>Login Required</Text>
+      <Text style={styles.authRequiredSubtitle}>
+        You need to login to view available locations from the server.
+      </Text>
+      <TouchableOpacity 
+        style={styles.loginButton}
+        onPress={handleLogin}
+      >
+        <Icon name="login" size={20} color="white" />
+        <Text style={styles.loginButtonText}>Login Now</Text>
+      </TouchableOpacity>
+      
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>OR</Text>
+        <View style={styles.dividerLine} />
+      </View>
+      
+      <TouchableOpacity 
+        style={styles.addLocationButton}
+        onPress={() => setShowAddForm(true)}
+      >
+        <Icon name="add-location" size={20} color={theme.colors.primary} />
+        <Text style={styles.addLocationButtonText}>Add Your Own Location</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderSavedLocations = () => (
     <Animated.View style={[styles.savedLocationsContainer, { opacity: fadeAnim }]}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleContainer}>
           <Icon name="location-on" size={28} color={theme.colors.primary} />
           <Text style={styles.sectionTitle}>
-            Saved Locations
+            Available Locations
             <Text style={styles.locationCount}> ({locations.length})</Text>
           </Text>
         </View>
@@ -373,14 +525,38 @@ export default function SaveLocationScreen() {
         </TouchableOpacity>
       </View>
       
-      {locations.length === 0 ? (
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <View style={styles.mainLoadingSpinner} />
+          <Text style={styles.loadingText}>Loading locations...</Text>
+        </View>
+      ) : requiresAuth ? (
+        renderAuthenticationRequired()
+      ) : apiError ? (
+        <View style={styles.errorState}>
+          <View style={styles.errorStateIcon}>
+            <Icon name="error-outline" size={64} color="#ff4444" />
+          </View>
+          <Text style={styles.errorStateTitle}>Error Loading Locations</Text>
+          <Text style={styles.errorStateSubtitle}>
+            {apiError}
+          </Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={fetchLocations}
+          >
+            <Icon name="refresh" size={20} color="white" />
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : locations.length === 0 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyStateIcon}>
             <Icon name="location-off" size={64} color="#e0e0e0" />
           </View>
-          <Text style={styles.emptyStateTitle}>No Saved Locations</Text>
+          <Text style={styles.emptyStateTitle}>No Locations Available</Text>
           <Text style={styles.emptyStateSubtitle}>
-            Add your first delivery address to get started
+            No locations found for the specified criteria
           </Text>
           <TouchableOpacity 
             style={styles.emptyStateButton}
@@ -396,9 +572,31 @@ export default function SaveLocationScreen() {
           contentContainerStyle={styles.locationsList}
         >
           {locations.map((location) => (
-            <LocationCard key={location.id} location={location} />
+            <LocationCard key={location._id} location={location} />
           ))}
         </ScrollView>
+      )}
+
+      {/* Saved Locations Section */}
+      {savedLocations.length > 0 && (
+        <View style={styles.savedLocationsSection}>
+          <View style={styles.sectionTitleContainer}>
+            <Icon name="bookmark" size={24} color={theme.colors.primary} />
+            <Text style={styles.sectionTitle}>
+              Your Saved Locations
+              <Text style={styles.locationCount}> ({savedLocations.length})</Text>
+            </Text>
+          </View>
+          
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.locationsList}
+          >
+            {savedLocations.map((location) => (
+              <SavedLocationCard key={location.id} location={location} />
+            ))}
+          </ScrollView>
+        </View>
       )}
     </Animated.View>
   );
@@ -462,7 +660,6 @@ export default function SaveLocationScreen() {
                   height={180}
                   editable={true}
                   showUserLocation={true}
-                  style={styles.map}
                 />
               ) : (
                 <TouchableOpacity 
@@ -568,7 +765,7 @@ export default function SaveLocationScreen() {
                   size={20} 
                   color="white" 
                 />
-                {isLoading && <View style={styles.loadingSpinner} />}
+                {isLoading && <View style={styles.secondaryLoadingSpinner} />}
               </View>
               <Text style={styles.currentLocationText}>
                 {isLoading ? 'Getting Your Location...' : 'Use Current Location'}
@@ -647,7 +844,7 @@ export default function SaveLocationScreen() {
       </View>
 
       {/* Floating Action Button - Only show when in list view and has locations */}
-      {!showAddForm && locations.length > 0 && (
+      {!showAddForm && (locations.length > 0 || savedLocations.length > 0) && (
         <TouchableOpacity
           style={styles.floatingAddBtn}
           onPress={() => setShowAddForm(true)}
@@ -747,6 +944,137 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  mainLoadingSpinner: {
+    width: 40,
+    height: 40,
+    borderWidth: 4,
+    borderColor: '#f0f0f0',
+    borderTopColor: theme.colors.primary,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+  },
+  
+  // Authentication Required Styles
+  authRequiredContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  authRequiredIcon: {
+    marginBottom: 24,
+  },
+  authRequiredTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: 12,
+  },
+  authRequiredSubtitle: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 32,
+    maxWidth: 280,
+    lineHeight: 24,
+  },
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    elevation: 4,
+    marginBottom: 24,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    width: '100%',
+    maxWidth: 200,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  dividerText: {
+    fontSize: 14,
+    color: '#999',
+    marginHorizontal: 16,
+  },
+  addLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  addLocationButtonText: {
+    color: theme.colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  errorStateIcon: {
+    marginBottom: 24,
+  },
+  errorStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ff4444',
+    marginBottom: 8,
+  },
+  errorStateSubtitle: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 32,
+    maxWidth: 250,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    elevation: 4,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -783,6 +1111,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  savedLocationsSection: {
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
   locationsList: {
     paddingBottom: 30,
@@ -879,6 +1213,9 @@ const styles = StyleSheet.create({
   setDefaultButton: {
     backgroundColor: '#FFF8E1',
   },
+  viewButton: {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  },
   editButton: {
     backgroundColor: 'rgba(76, 175, 80, 0.1)',
   },
@@ -889,6 +1226,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  viewButtonText: {
+    color: theme.colors.primary,
   },
   editButtonText: {
     color: theme.colors.primary,
@@ -940,10 +1280,6 @@ const styles = StyleSheet.create({
   },
   mapSection: {
     marginBottom: 32,
-  },
-  map: {
-    borderRadius: 16,
-    overflow: 'hidden',
   },
   mapPlaceholder: {
     height: 180,
@@ -1043,7 +1379,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     position: 'relative',
   },
-  loadingSpinner: {
+  secondaryLoadingSpinner: {
     position: 'absolute',
     top: -2,
     left: -2,

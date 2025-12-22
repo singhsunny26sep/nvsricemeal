@@ -601,25 +601,140 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     const endpoint = API_CONFIG.ENDPOINTS.CART.ADD_OR_UPDATE;
     const fullUrl = buildUrl(endpoint);
     
-    console.log('=== ADD/UPDATE CART DEBUG ===');
-    console.log('Request data:', request);
-    console.log('API endpoint:', endpoint);
-    console.log('🔗 FULL API URL:', fullUrl);
-    console.log('🌐 Base URL being used:', fullUrl.replace(endpoint, ''));
+    console.log('🛒 =======================================');
+    console.log('🛒 API SERVICE: CART ADD/UPDATE REQUEST');
+    console.log('🛒 =======================================');
+    console.log('📡 API CALL: addOrUpdateToCart');
+    console.log('🔗 Full API URL:', fullUrl);
+    console.log('📍 Endpoint:', endpoint);
+    console.log('🌐 Base URL:', fullUrl.replace(endpoint, ''));
+    console.log('📦 Request Payload:', JSON.stringify(request, null, 2));
+    console.log('🆔 Product ID:', request.productId);
+    console.log('🔢 Quantity:', request.quantity);
+    console.log('⏰ Request Time:', new Date().toISOString());
+    console.log('🚀 Making POST request to cart endpoint...');
 
-    return this.request<any>(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    const requestStartTime = Date.now();
+    
+    try {
+      const response = await this.request<any>(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+      
+      const requestEndTime = Date.now();
+      const requestDuration = requestEndTime - requestStartTime;
+      
+      console.log('📥 =======================================');
+      console.log('📥 API SERVICE: CART ADD/UPDATE RESPONSE');
+      console.log('📥 =======================================');
+      console.log('⏱️ Request Duration:', requestDuration + 'ms');
+      console.log('✅ Response Success:', response.success);
+      console.log('📦 Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('📝 Response Message:', response.message);
+      console.log('❌ Response Error:', response.error);
+      console.log('🕐 Response Time:', new Date().toISOString());
+      
+      if (response.success) {
+        console.log('🎉 =======================================');
+        console.log('🎉 CART ADD/UPDATE API CALL SUCCESSFUL!');
+        console.log('🎉 Product added/updated successfully');
+        console.log('🎉 Server response processed');
+        console.log('🎉 =======================================');
+      } else {
+        console.log('💥 =======================================');
+        console.log('💥 CART ADD/UPDATE API CALL FAILED!');
+        console.log('💥 Error details:', response.error);
+        console.log('💥 Request failed at server level');
+        console.log('💥 =======================================');
+      }
+      
+      return response;
+    } catch (networkError) {
+      const requestEndTime = Date.now();
+      const requestDuration = requestEndTime - requestStartTime;
+      
+      console.error('🚨 =======================================');
+      console.error('🚨 API SERVICE: CART ADD/UPDATE NETWORK ERROR');
+      console.error('🚨 =======================================');
+      console.error('⏱️ Failed after:', requestDuration + 'ms');
+      console.error('🌐 Network error type:', networkError instanceof Error ? networkError.constructor.name : typeof networkError);
+      console.error('💬 Error message:', networkError instanceof Error ? networkError.message : 'Unknown network error');
+      console.error('🔗 Failed URL:', fullUrl);
+      console.error('📦 Request that failed:', JSON.stringify(request, null, 2));
+      console.error('🚨 CART ADD/UPDATE FAILED - NETWORK ERROR');
+      console.error('🚨 =======================================');
+      
+      throw networkError;
+    }
   }
 
   // Get cart items
   async getCart(): Promise<ApiResponse<any>> {
     const endpoint = API_CONFIG.ENDPOINTS.CART.GET_CART;
+    const fullUrl = buildUrl(endpoint);
     
-    return this.request<any>(endpoint, {
-      method: 'GET',
-    });
+    console.log('🛒 =======================================');
+    console.log('🛒 API SERVICE: GET CART REQUEST');
+    console.log('🛒 =======================================');
+    console.log('📡 API CALL: getCart');
+    console.log('🔗 Full API URL:', fullUrl);
+    console.log('📍 Endpoint:', endpoint);
+    console.log('🌐 Base URL:', fullUrl.replace(endpoint, ''));
+    console.log('⏰ Request Time:', new Date().toISOString());
+    console.log('🚀 Making GET request to cart endpoint...');
+
+    const requestStartTime = Date.now();
+    
+    try {
+      const response = await this.request<any>(endpoint, {
+        method: 'GET',
+      });
+      
+      const requestEndTime = Date.now();
+      const requestDuration = requestEndTime - requestStartTime;
+      
+      console.log('📥 =======================================');
+      console.log('📥 API SERVICE: GET CART RESPONSE');
+      console.log('📥 =======================================');
+      console.log('⏱️ Request Duration:', requestDuration + 'ms');
+      console.log('✅ Response Success:', response.success);
+      console.log('📦 Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('📝 Response Message:', response.message);
+      console.log('❌ Response Error:', response.error);
+      console.log('🕐 Response Time:', new Date().toISOString());
+      
+      if (response.success) {
+        console.log('🎉 =======================================');
+        console.log('🎉 GET CART API CALL SUCCESSFUL!');
+        console.log('🎉 Cart data retrieved successfully');
+        console.log('🎉 Server response processed');
+        console.log('🎉 =======================================');
+      } else {
+        console.log('💥 =======================================');
+        console.log('💥 GET CART API CALL FAILED!');
+        console.log('💥 Error details:', response.error);
+        console.log('💥 Request failed at server level');
+        console.log('💥 =======================================');
+      }
+      
+      return response;
+    } catch (networkError) {
+      const requestEndTime = Date.now();
+      const requestDuration = requestEndTime - requestStartTime;
+      
+      console.error('🚨 =======================================');
+      console.error('🚨 API SERVICE: GET CART NETWORK ERROR');
+      console.error('🚨 =======================================');
+      console.error('⏱️ Failed after:', requestDuration + 'ms');
+      console.error('🌐 Network error type:', networkError instanceof Error ? networkError.constructor.name : typeof networkError);
+      console.error('💬 Error message:', networkError instanceof Error ? networkError.message : 'Unknown network error');
+      console.error('🔗 Failed URL:', fullUrl);
+      console.error('🚨 GET CART FAILED - NETWORK ERROR');
+      console.error('🚨 =======================================');
+      
+      throw networkError;
+    }
   }
 
   // Remove item from cart
@@ -646,6 +761,24 @@ console.log(endpoint,"++++++++++++++++++++++++++")
       body: JSON.stringify({
         zipCode: zipCode
       }),
+    });
+  }
+
+  // Get all locations
+  async getLocations(country?: string): Promise<ApiResponse<any>> {
+    let endpoint = API_CONFIG.ENDPOINTS.LOCATIONS.GET_ALL;
+    
+    // Add country query parameter if provided
+    if (country) {
+      endpoint += `?country=${encodeURIComponent(country)}`;
+    }
+
+    console.log('=== GET LOCATIONS DEBUG ===');
+    console.log('Country filter:', country || 'all countries');
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
     });
   }
 }

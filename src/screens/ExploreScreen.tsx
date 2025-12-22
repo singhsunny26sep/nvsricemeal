@@ -34,7 +34,6 @@ export default function ExploreScreen() {
   const [refreshLoading, setRefreshLoading] = useState(false)
   const fadeAnim = useState(new Animated.Value(0))[0]
 
-
   // Fetch products from API
   const fetchProducts = async () => {
     try {
@@ -45,7 +44,6 @@ export default function ExploreScreen() {
         setLoading(false)
         return
       }
-
       const response = await fetch('https://nvs-rice-mart.onrender.com/nvs-rice-mart/products/getAll', {
         method: 'GET',
         headers: {
@@ -53,9 +51,7 @@ export default function ExploreScreen() {
           'Authorization': `Bearer ${storedToken}`
         }
       })
-
       const data = await response.json()
-
       if (data.success) {
         const formattedProducts = data.data.data.map((product: any) => ({
           id: product._id,
@@ -92,22 +88,19 @@ export default function ExploreScreen() {
       setRefreshLoading(false)
     }
   }
-
   useEffect(() => {
     fetchProducts()
   }, [])
-
   const onRefresh = () => {
     setRefreshing(true)
     setRefreshLoading(true)
     fetchProducts()
   }
-  
   const handleProductPress = (item: any) => {
     // Navigate to ProductDetails screen (now available in main tabs)
     (navigation as any).navigate('ProductDetails', { product: item });
   };
-  
+
   const toggleFavorite = (productId: any) => {
     setProducts(products.map((product: any) =>
       product.id === productId
@@ -156,10 +149,10 @@ export default function ExploreScreen() {
 
       if (success) {
         console.log('✅ Explore - Cart API call successful');
-        
+
         // Also update local cart for immediate UI feedback
         addToCart(productForCart);
-        
+
         // Show success feedback
         Alert.alert(
           'Success! 🎉',
@@ -180,10 +173,10 @@ export default function ExploreScreen() {
         );
       } else {
         console.log('❌ Explore - Cart API call failed');
-        
+
         // Still update local cart as fallback
         addToCart(productForCart);
-        
+
         // Show partial success feedback
         Alert.alert(
           'Partial Success ⚠️',
@@ -204,10 +197,9 @@ export default function ExploreScreen() {
       }
     } catch (error) {
       console.error('❌ Explore - Error in handleAddToCart:', error);
-      
       // Fallback to local cart update
       addToCart(productForCart);
-      
+
       Alert.alert(
         'Network Error ⚠️',
         `${product.name} added locally. Server sync will happen when online.`,
@@ -242,91 +234,91 @@ export default function ExploreScreen() {
         }
       ]}
     >
-   <TouchableOpacity onPress={() => handleProductPress(item)}>
+      <TouchableOpacity onPress={() => handleProductPress(item)}>
 
-      <TouchableOpacity
-        style={styles.favoriteButton}
-        onPress={() => toggleFavorite(item.id)}
-      >
-        <Ionicons
-          name={item.isFavorite ? "heart" : "heart-outline"}
-          size={20}
-          color={item.isFavorite ? "#FF6B6B" : "#666"}
-        />
-      </TouchableOpacity>
-
-      {/* Stock Status Badge */}
-      {item.stockQuantity <= 10 && item.stockQuantity > 0 && (
-        <View style={styles.lowStockBadge}>
-          <Text style={styles.lowStockText}>Low Stock</Text>
-        </View>
-      )}
-
-      {item.stockQuantity === 0 && (
-        <View style={styles.outOfStockBadge}>
-          <Text style={styles.outOfStockText}>Out of Stock</Text>
-        </View>
-      )}
-
-      <Image
-        source={{ uri: item.image }}
-        style={[
-          styles.productImage,
-          item.stockQuantity === 0 && styles.outOfStockImage
-        ]}
-        resizeMode="cover"
-        defaultSource={require('../assets/img/logo.png')} // Add a placeholder image
-      />
-
-      <View style={styles.productInfo}>
-        <Text style={styles.productBrand} numberOfLines={1}>{item.brand}</Text>
-        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-
-        <View style={styles.ratingContainer}>
-          <Ionicons name="star" size={14} color="#FFD700" />
-          <Text style={styles.ratingText}>{item.rating}</Text>
-        </View>
-
-        <View style={styles.priceWeightContainer}>
-          <Text style={styles.productPrice}>{item.price}</Text>
-          <Text style={styles.productWeight}>{item.weight}</Text>
-        </View>
-
-        <View style={styles.categoryTag}>
-          <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
-
-        {/* Stock Information */}
-        <Text style={[
-          styles.stockText,
-          item.stockQuantity === 0 ? styles.outOfStockText :
-            item.stockQuantity <= 10 ? styles.lowStockText : styles.inStockText
-        ]}>
-          {item.stockQuantity === 0 ? 'Out of Stock' : `${item.stockQuantity} in stock`}
-        </Text>
-
-        {/* Add to Cart Button */}
         <TouchableOpacity
-          style={[
-            styles.addToCartButton,
-            item.stockQuantity === 0 && styles.addToCartButtonDisabled
-          ]}
-          onPress={() => handleAddToCart(item)}
-          disabled={item.stockQuantity === 0}
+          style={styles.favoriteButton}
+          onPress={() => toggleFavorite(item.id)}
         >
           <Ionicons
-            name={item.stockQuantity === 0 ? "close-circle" : "add-circle"}
-            size={16}
-            color={item.stockQuantity === 0 ? "#ccc" : "white"}
+            name={item.isFavorite ? "heart" : "heart-outline"}
+            size={20}
+            color={item.isFavorite ? "#FF6B6B" : "#666"}
           />
-          <Text style={[
-            styles.addToCartButtonText,
-            item.stockQuantity === 0 && styles.addToCartButtonTextDisabled
-          ]}>
-            {item.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
-          </Text>
         </TouchableOpacity>
-      </View>
+
+        {/* Stock Status Badge */}
+        {item.stockQuantity <= 10 && item.stockQuantity > 0 && (
+          <View style={styles.lowStockBadge}>
+            <Text style={styles.lowStockText}>Low Stock</Text>
+          </View>
+        )}
+
+        {item.stockQuantity === 0 && (
+          <View style={styles.outOfStockBadge}>
+            <Text style={styles.outOfStockText}>Out of Stock</Text>
+          </View>
+        )}
+
+        <Image
+          source={{ uri: item.image }}
+          style={[
+            styles.productImage,
+            item.stockQuantity === 0 && styles.outOfStockImage
+          ]}
+          resizeMode="cover"
+          defaultSource={require('../assets/img/logo.png')} // Add a placeholder image
+        />
+
+        <View style={styles.productInfo}>
+          <Text style={styles.productBrand} numberOfLines={1}>{item.brand}</Text>
+          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={14} color="#FFD700" />
+            <Text style={styles.ratingText}>{item.rating}</Text>
+          </View>
+
+          <View style={styles.priceWeightContainer}>
+            <Text style={styles.productPrice}>{item.price}</Text>
+            <Text style={styles.productWeight}>{item.weight}</Text>
+          </View>
+
+          <View style={styles.categoryTag}>
+            <Text style={styles.categoryText}>{item.category}</Text>
+          </View>
+
+          {/* Stock Information */}
+          <Text style={[
+            styles.stockText,
+            item.stockQuantity === 0 ? styles.outOfStockText :
+              item.stockQuantity <= 10 ? styles.lowStockText : styles.inStockText
+          ]}>
+            {item.stockQuantity === 0 ? 'Out of Stock' : `${item.stockQuantity} in stock`}
+          </Text>
+
+          {/* Add to Cart Button */}
+          <TouchableOpacity
+            style={[
+              styles.addToCartButton,
+              item.stockQuantity === 0 && styles.addToCartButtonDisabled
+            ]}
+            onPress={() => handleAddToCart(item)}
+            disabled={item.stockQuantity === 0}
+          >
+            <Ionicons
+              name={item.stockQuantity === 0 ? "close-circle" : "add-circle"}
+              size={16}
+              color={item.stockQuantity === 0 ? "#ccc" : "white"}
+            />
+            <Text style={[
+              styles.addToCartButtonText,
+              item.stockQuantity === 0 && styles.addToCartButtonTextDisabled
+            ]}>
+              {item.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   )
@@ -359,7 +351,7 @@ export default function ExploreScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Discover</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => navigation.navigate('Notifications')}
           >
@@ -385,15 +377,15 @@ export default function ExploreScreen() {
           )}
         </View>
       </View>
-      
+
       {/* Attractive Banner */}
-      <AttractiveBanner 
+      <AttractiveBanner
         onBannerPress={(banner) => {
           console.log('Banner pressed:', banner.title);
           // Add your navigation logic here
         }}
       />
-      
+
       <FlatList
         data={filteredProducts}
         renderItem={renderProductItem}
@@ -426,7 +418,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
- marginBottom:60
+    marginBottom: 60
   },
   header: {
     padding: 20,
@@ -524,7 +516,7 @@ const styles = StyleSheet.create({
   productsList: {
     padding: 16,
     paddingTop: 8,
-   
+
   },
   columnWrapper: {
     justifyContent: 'space-between',
@@ -549,7 +541,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f0f0f0',
     position: 'relative',
-   
+
   },
   favoriteButton: {
     position: 'absolute',
@@ -612,7 +604,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 2,
     fontWeight: '500',
-    textTransform:"capitalize"
+    textTransform: "capitalize"
   },
   productName: {
     fontSize: 14,
@@ -620,7 +612,7 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 6,
     lineHeight: 18,
-    textTransform:"capitalize"
+    textTransform: "capitalize"
 
   },
   ratingContainer: {
