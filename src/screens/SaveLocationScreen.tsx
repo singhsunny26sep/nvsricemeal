@@ -1,34 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
+  Text,
+  View,
   ScrollView,
+  ActivityIndicator,
   Alert,
-  SafeAreaView,
-  StatusBar,
-  KeyboardTypeOptions,
-  Platform,
-  Dimensions,
-  KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  Keyboard,
-  Animated,
+  TouchableOpacity,
+  RefreshControl,
+  
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
 import { theme } from '../constants/theme';
-import { locationService, LocationData } from '../utils/locationService';
-import GoogleMapComponent from '../components/GoogleMapComponent';
 import { apiService } from '../utils/apiService';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import Statusbar from '../constants/Statusbar';
 
-const { width, height } = Dimensions.get('window');
-const isSmallDevice = width < 375;
-
-// API Response types
-interface ApiLocation {
+// Types for location data
+interface Location {
   _id: string;
   name: string | null;
   address: string;
@@ -46,91 +34,56 @@ interface ApiLocation {
   updatedAt: string;
 }
 
-interface ApiLocationResponse {
-  success: boolean;
-  message: string;
-  data: {
-    total: number;
-    totalPages: number;
-    page: number;
-    limit: number;
-    data: ApiLocation[];
-  };
-}
-
-// Local storage type for saved locations (for add/edit functionality)
-interface SavedLocation {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  district: string;
-  state: string;
-  zipCode: string;
-  area: string;
-  coordinates: [number, number] | null;
-  isDefault: boolean;
+interface LocationsResponse {
+  total: number;
+  totalPages: number;
+  page: number;
+  limit: number;
+  data: Location[];
 }
 
 export default function SaveLocationScreen() {
   const navigation = useNavigation();
-  const [locations, setLocations] = useState<ApiLocation[]>([]);
-  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]); // For user-added locations
-  const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [requiresAuth, setRequiresAuth] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  
-  // Form states
-  const [locationName, setLocationName] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [district, setDistrict] = useState('');
-  const [state, setState] = useState('');
-  const [zipCode, setZipCode] = useState('');
-  const [area, setArea] = useState('');
-  const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
-  const [shouldLoadMap, setShouldLoadMap] = useState(false);
-  const [isFormDirty, setIsFormDirty] = useState(false);
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
   // Fetch locations from API
-  const fetchLocations = async () => {
+  const fetchLocations = async (showRefreshIndicator = false) => {
     try {
-      setIsLoading(true);
-      setApiError(null);
-      setRequiresAuth(false);
-      console.log('🔍 Fetching locations from API...');
-      
+      if (showRefreshIndicator) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      console.log('🌍 Fetching locations from API...');
       const response = await apiService.getLocations('india');
       
       if (response.success && response.data) {
-        const locationData = response.data as ApiLocationResponse;
-        if (locationData.success && locationData.data.data) {
-          setLocations(locationData.data.data);
-          console.log('✅ Locations fetched successfully:', locationData.data.data.length, 'locations');
+        // Handle the nested response structure
+        const locationsData = response.data.data || response.data;
+        
+        if (locationsData && Array.isArray(locationsData.data)) {
+          setLocations(locationsData.data);
+          console.log('✅ Locations fetched successfully:', locationsData.data.length, 'locations');
         } else {
-          setApiError('Invalid response format from server');
-          console.error('❌ Invalid response format:', response.data);
+          console.log('⚠️ No locations data found in response');
+          setLocations([]);
         }
       } else {
-        // Handle authentication error
-        if (response.error && (response.error.includes('authorization') || response.error.includes('Access Denied'))) {
-          setRequiresAuth(true);
-          setApiError('Please login to view available locations.');
-        } else {
-          setApiError(response.error || 'Failed to fetch locations');
-        }
-        console.error('❌ API Error:', response.error);
+        console.log('❌ API call failed:', response.error);
+        setError(response.error || 'Failed to fetch locations');
       }
-    } catch (error) {
-      console.error('🚨 Network error:', error);
-      setApiError('Network error. Please check your connection.');
+    } catch (err) {
+      console.log('🚨 Error fetching locations:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -139,1330 +92,469 @@ export default function SaveLocationScreen() {
     fetchLocations();
   }, []);
 
-  React.useEffect(() => {
-    if (showAddForm) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-    }
-  }, [showAddForm]);
-
-  const handleGetCurrentLocation = async () => {
-    setIsLoading(true);
-    try {
-      const location: LocationData | null = await locationService.getLocation('save_location');
-      if (location) {
-        const coords: [number, number] = [location.latitude, location.longitude];
-        setCoordinates(coords);
-        Alert.alert('📍 Location Captured', 'Your current location has been captured successfully!', [
-          { text: 'OK' }
-        ]);
-      } else {
-        Alert.alert('Location Error', 'Unable to access your location. Please check your permissions.');
-      }
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert('Error', 'Failed to get location. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSaveLocation = () => {
-    // Validate required fields
-    const requiredFields = [
-      { field: address, name: 'Address' },
-      { field: city, name: 'City' },
-      { field: state, name: 'State' },
-    ];
-
-    const missingFields = requiredFields.filter(f => !f.field.trim());
-    
-    if (missingFields.length > 0) {
-      Alert.alert(
-        'Missing Information',
-        `Please fill in: ${missingFields.map(f => f.name).join(', ')}`,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    if (zipCode && !/^\d{6}$/.test(zipCode)) {
-      Alert.alert('Invalid PIN Code', 'Please enter a valid 6-digit PIN code.');
-      return;
-    }
-
-    const newLocation: SavedLocation = {
-      id: Date.now().toString(),
-      name: locationName.trim() || (savedLocations.length === 0 ? 'Home' : 'Location ' + (savedLocations.length + 1)),
-      address: address.trim(),
-      city: city.trim(),
-      district: district.trim(),
-      state: state.trim(),
-      zipCode: zipCode.trim(),
-      area: area.trim(),
-      coordinates: coordinates,
-      isDefault: savedLocations.length === 0,
-    };
-
-    setSavedLocations([...savedLocations, newLocation]);
-    
-    // Reset form
-    resetForm();
-    
-    Alert.alert(
-      '✅ Location Saved!',
-      'Your location has been saved successfully.',
-      [
-        { 
-          text: 'Add More', 
-          onPress: () => setShowAddForm(true),
-          style: 'default'
-        },
-        { 
-          text: 'View Locations', 
-          onPress: () => setShowAddForm(false),
-          style: 'cancel'
-        }
-      ]
-    );
-  };
-
-  const resetForm = () => {
-    setLocationName('');
-    setAddress('');
-    setCity('');
-    setDistrict('');
-    setState('');
-    setZipCode('');
-    setArea('');
-    setCoordinates(null);
-    setShouldLoadMap(false);
-    setIsFormDirty(false);
-  };
-
-  const handleDeleteLocation = (locationId: string) => {
-    const locationToDelete = savedLocations.find(loc => loc.id === locationId);
-    
-    Alert.alert(
-      '🗑️ Delete Location',
-      `Are you sure you want to delete "${locationToDelete?.name}"?`,
-      [
-        { 
-          text: 'Cancel', 
-          style: 'cancel' 
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            setSavedLocations(savedLocations.filter(loc => loc.id !== locationId));
-            Alert.alert('Deleted', 'Location has been removed.');
-          }
-        }
-      ]
-    );
-  };
-
-  const handleSetDefault = (locationId: string) => {
-    setSavedLocations(savedLocations.map(loc => ({
-      ...loc,
-      isDefault: loc.id === locationId
-    })));
-  };
-
-  const handleLogin = () => {
-    Alert.alert(
-      'Login Required',
-      'Please login to view available locations.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Login', 
-          onPress: () => {
-            // Navigate to login screen
-            navigation.navigate('Login');
-          }
-        }
-      ]
-    );
-  };
-
-  const InputField: React.FC<{
-    icon: string;
-    label: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    placeholder: string;
-    required?: boolean;
-    keyboardType?: KeyboardTypeOptions;
-    multiline?: boolean;
-  }> = ({ 
-    icon, 
-    label, 
-    value, 
-    onChangeText, 
-    placeholder, 
-    required = false, 
-    keyboardType = 'default',
-    multiline = false 
-  }) => (
-    <View style={styles.inputContainer}>
-      <View style={[styles.inputIcon, value ? styles.inputIconActive : null]}>
-        <Icon 
-          name={icon} 
-          size={20} 
-          color={value ? theme.colors.primary : '#999'} 
-        />
-      </View>
-      <View style={styles.inputWrapper}>
-        <Text style={styles.inputLabel}>
-          {label} {required && <Text style={styles.required}>*</Text>}
-        </Text>
-        <TextInput
-          style={[styles.input, multiline && styles.multilineInput]}
-          value={value}
-          onChangeText={(text) => {
-            onChangeText(text);
-            setIsFormDirty(true);
-          }}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          keyboardType={keyboardType}
-          multiline={multiline}
-          numberOfLines={multiline ? 3 : 1}
-        />
-      </View>
-    </View>
+  // Refresh locations when screen comes into focus (e.g., after creating a new location)
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchLocations();
+    }, [])
   );
 
-  const LocationCard = ({ location }: { location: ApiLocation }) => (
-    <View style={styles.locationCard}>
-      <View style={styles.locationCardHeader}>
-        <View style={styles.locationIconContainer}>
-          <Icon 
-            name={location.name ? "home" : "location-on"} 
-            size={24} 
-            color={theme.colors.primary} 
-          />
-        </View>
-        <View style={styles.locationInfo}>
-          <View style={styles.locationTitleRow}>
-            <Text style={styles.locationName}>
+  // Handle pull-to-refresh
+  const onRefresh = () => {
+    fetchLocations(true);
+  };
+
+  // Handle location selection
+  const selectLocation = (location: Location) => {
+    setSelectedLocation(location);
+    console.log('📍 Location selected:', location.formattedAddress);
+    
+    // Show confirmation alert
+    Alert.alert(
+      'Location Selected',
+      `You have selected:\n${location.formattedAddress}`,
+      [
+        {
+          text: 'OK',
+          onPress: () => console.log('Location selection confirmed')
+        }
+      ]
+    );
+  };
+
+  // Handle navigation to create location page
+  const handleCreateLocation = () => {
+    console.log('🆕 Navigating to Create Location page');
+    // @ts-ignore - TypeScript issue with navigation
+    navigation.navigate('CreateLocationScreen');
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'Invalid Date';
+    }
+  };
+
+  // Render location item
+  const renderLocationItem = (location: Location) => {
+    const isSelected = selectedLocation?._id === location._id;
+    
+    return (
+      <TouchableOpacity
+        key={location._id}
+        style={[
+          styles.locationCard,
+          isSelected && styles.selectedLocationCard
+        ]}
+        onPress={() => selectLocation(location)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.locationHeader}>
+          <View style={styles.locationTitleContainer}>
+            <Text style={[
+              styles.locationName,
+              isSelected && styles.selectedLocationName
+            ]}>
               {location.name || 'Unnamed Location'}
             </Text>
-            {location.isActive && (
-              <View style={styles.defaultBadge}>
-                <Text style={styles.defaultBadgeText}>Active</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.locationAddress} numberOfLines={2}>
-            {location.formattedAddress}
-          </Text>
-          <View style={styles.locationDetails}>
-            <Text style={styles.locationDetailText}>
-              {location.city}, {location.state}, {location.country}
-            </Text>
-            {location.zipcode && (
-              <Text style={styles.zipCode}>PIN: {location.zipcode}</Text>
-            )}
-          </View>
-        </View>
-      </View>
-      
-      <View style={styles.locationActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.viewButton]}
-          onPress={() => {
-            Alert.alert('Location Details', 
-              `Address: ${location.formattedAddress}\n` +
-              `City: ${location.city}\n` +
-              `District: ${location.district}\n` +
-              `State: ${location.state}\n` +
-              `Country: ${location.country}\n` +
-              `PIN: ${location.zipcode}\n` +
-              `Coordinates: ${location.coordinates[0]}, ${location.coordinates[1]}`
-            );
-          }}
-        >
-          <Icon name="visibility" size={16} color={theme.colors.primary} />
-          <Text style={[styles.actionButtonText, styles.viewButtonText]}>View Details</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const SavedLocationCard = ({ location }: { location: SavedLocation }) => (
-    <View style={styles.locationCard}>
-      <View style={styles.locationCardHeader}>
-        <View style={styles.locationIconContainer}>
-          <Icon 
-            name={location.isDefault ? "home" : "location-on"} 
-            size={24} 
-            color={location.isDefault ? "#FFB300" : theme.colors.primary} 
-          />
-        </View>
-        <View style={styles.locationInfo}>
-          <View style={styles.locationTitleRow}>
-            <Text style={styles.locationName}>{location.name}</Text>
-            {location.isDefault && (
-              <View style={styles.defaultBadge}>
-                <Icon name="star" size={12} color="white" />
-                <Text style={styles.defaultBadgeText}>Default</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.locationAddress} numberOfLines={2}>
-            {location.address}
-          </Text>
-          <View style={styles.locationDetails}>
-            <Text style={styles.locationDetailText}>
-              {[location.area, location.city, location.state].filter(Boolean).join(', ')}
-            </Text>
-            {location.zipCode && (
-              <Text style={styles.zipCode}>PIN: {location.zipCode}</Text>
-            )}
-          </View>
-        </View>
-      </View>
-      
-      <View style={styles.locationActions}>
-        {!location.isDefault && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.setDefaultButton]}
-            onPress={() => handleSetDefault(location.id)}
-          >
-            <Icon name="star-outline" size={16} color="#FFB300" />
-            <Text style={styles.actionButtonText}>Set Default</Text>
-          </TouchableOpacity>
-        )}
-        
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => {
-            // TODO: Implement edit functionality
-            Alert.alert('Edit Location', 'Edit functionality coming soon!');
-          }}
-        >
-          <Icon name="edit" size={16} color={theme.colors.primary} />
-          <Text style={[styles.actionButtonText, styles.editButtonText]}>Edit</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDeleteLocation(location.id)}
-        >
-          <Icon name="delete-outline" size={16} color="#ff4444" />
-          <Text style={[styles.actionButtonText, styles.deleteButtonText]}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const renderAuthenticationRequired = () => (
-    <View style={styles.authRequiredContainer}>
-      <View style={styles.authRequiredIcon}>
-        <Icon name="lock" size={64} color="#ff9800" />
-      </View>
-      <Text style={styles.authRequiredTitle}>Login Required</Text>
-      <Text style={styles.authRequiredSubtitle}>
-        You need to login to view available locations from the server.
-      </Text>
-      <TouchableOpacity 
-        style={styles.loginButton}
-        onPress={handleLogin}
-      >
-        <Icon name="login" size={20} color="white" />
-        <Text style={styles.loginButtonText}>Login Now</Text>
-      </TouchableOpacity>
-      
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>OR</Text>
-        <View style={styles.dividerLine} />
-      </View>
-      
-      <TouchableOpacity 
-        style={styles.addLocationButton}
-        onPress={() => setShowAddForm(true)}
-      >
-        <Icon name="add-location" size={20} color={theme.colors.primary} />
-        <Text style={styles.addLocationButtonText}>Add Your Own Location</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderSavedLocations = () => (
-    <Animated.View style={[styles.savedLocationsContainer, { opacity: fadeAnim }]}>
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionTitleContainer}>
-          <Icon name="location-on" size={28} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>
-            Available Locations
-            <Text style={styles.locationCount}> ({locations.length})</Text>
-          </Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setShowAddForm(true)}
-        >
-          <Icon name="add" size={20} color="white" />
-          <Text style={styles.addButtonText}>Add New</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <View style={styles.mainLoadingSpinner} />
-          <Text style={styles.loadingText}>Loading locations...</Text>
-        </View>
-      ) : requiresAuth ? (
-        renderAuthenticationRequired()
-      ) : apiError ? (
-        <View style={styles.errorState}>
-          <View style={styles.errorStateIcon}>
-            <Icon name="error-outline" size={64} color="#ff4444" />
-          </View>
-          <Text style={styles.errorStateTitle}>Error Loading Locations</Text>
-          <Text style={styles.errorStateSubtitle}>
-            {apiError}
-          </Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={fetchLocations}
-          >
-            <Icon name="refresh" size={20} color="white" />
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : locations.length === 0 ? (
-        <View style={styles.emptyState}>
-          <View style={styles.emptyStateIcon}>
-            <Icon name="location-off" size={64} color="#e0e0e0" />
-          </View>
-          <Text style={styles.emptyStateTitle}>No Locations Available</Text>
-          <Text style={styles.emptyStateSubtitle}>
-            No locations found for the specified criteria
-          </Text>
-          <TouchableOpacity 
-            style={styles.emptyStateButton}
-            onPress={() => setShowAddForm(true)}
-          >
-            <Icon name="add-location" size={20} color="white" />
-            <Text style={styles.emptyStateButtonText}>Add Your First Location</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.locationsList}
-        >
-          {locations.map((location) => (
-            <LocationCard key={location._id} location={location} />
-          ))}
-        </ScrollView>
-      )}
-
-      {/* Saved Locations Section */}
-      {savedLocations.length > 0 && (
-        <View style={styles.savedLocationsSection}>
-          <View style={styles.sectionTitleContainer}>
-            <Icon name="bookmark" size={24} color={theme.colors.primary} />
-            <Text style={styles.sectionTitle}>
-              Your Saved Locations
-              <Text style={styles.locationCount}> ({savedLocations.length})</Text>
-            </Text>
-          </View>
-          
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.locationsList}
-          >
-            {savedLocations.map((location) => (
-              <SavedLocationCard key={location.id} location={location} />
-            ))}
-          </ScrollView>
-        </View>
-      )}
-    </Animated.View>
-  );
-
-  const renderAddForm = () => (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <Animated.View 
-        style={[
-          styles.addFormContainer, 
-          { 
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.keyboardAvoid}
-        >
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.formScrollContent}
-          >
-            <View style={styles.formHeader}>
-              <TouchableOpacity 
-                style={styles.backButton}
-                onPress={() => {
-                  if (isFormDirty) {
-                    Alert.alert(
-                      'Discard Changes?',
-                      'You have unsaved changes. Are you sure you want to go back?',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Discard', style: 'destructive', onPress: () => {
-                          resetForm();
-                          setShowAddForm(false);
-                        }}
-                      ]
-                    );
-                  } else {
-                    setShowAddForm(false);
-                  }
-                }}
-              >
-                <Icon name="arrow-back" size={24} color={theme.colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.formTitle}>Add New Location</Text>
-              <View style={styles.placeholder} />
-            </View>
-
-            {/* Map Section */}
-            <View style={styles.mapSection}>
-              <Text style={styles.sectionLabel}>Pin Your Location</Text>
-              {shouldLoadMap ? (
-                <GoogleMapComponent
-                  coordinates={coordinates}
-                  onLocationSelect={(coords) => {
-                    setCoordinates(coords);
-                    setIsFormDirty(true);
-                  }}
-                  height={180}
-                  editable={true}
-                  showUserLocation={true}
-                />
-              ) : (
-                <TouchableOpacity 
-                  style={styles.mapPlaceholder}
-                  onPress={() => setShouldLoadMap(true)}
-                >
-                  <View style={styles.mapPlaceholderIcon}>
-                    <Icon name="map" size={48} color={theme.colors.primary} />
-                  </View>
-                  <Text style={styles.mapPlaceholderTitle}>Tap to Open Map</Text>
-                  <Text style={styles.mapPlaceholderSubtitle}>
-                    Pinpoint your exact location on the map
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Location Details Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Location Details</Text>
-              
-              <InputField
-                icon="label"
-                label="Location Name"
-                value={locationName}
-                onChangeText={setLocationName}
-                placeholder="Home, Office, Shop, etc."
-              />
-
-              <InputField
-                icon="home"
-                label="Address"
-                value={address}
-                onChangeText={setAddress}
-                placeholder="House no., Building, Street, Area"
-                required={true}
-                multiline={true}
-              />
-
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <InputField
-                    icon="location-city"
-                    label="City"
-                    value={city}
-                    onChangeText={setCity}
-                    placeholder="Enter city"
-                    required={true}
-                  />
-                </View>
-                <View style={styles.halfInput}>
-                  <InputField
-                    icon="apartment"
-                    label="District"
-                    value={district}
-                    onChangeText={setDistrict}
-                    placeholder="Enter district"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={styles.halfInput}>
-                  <InputField
-                    icon="public"
-                    label="State"
-                    value={state}
-                    onChangeText={setState}
-                    placeholder="Enter state"
-                    required={true}
-                  />
-                </View>
-                <View style={styles.halfInput}>
-                  <InputField
-                    icon="local-post-office"
-                    label="PIN Code"
-                    value={zipCode}
-                    onChangeText={setZipCode}
-                    placeholder="6-digit PIN"
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              <InputField
-                icon="place"
-                label="Area/Locality"
-                value={area}
-                onChangeText={setArea}
-                placeholder="Neighborhood or locality name"
-              />
-            </View>
-
-            {/* Current Location Button */}
-            <TouchableOpacity
-              style={[styles.currentLocationBtn, isLoading && styles.currentLocationBtnDisabled]}
-              onPress={handleGetCurrentLocation}
-              disabled={isLoading}
-            >
-              <View style={styles.currentLocationIcon}>
-                <Icon 
-                  name={isLoading ? "refresh" : "my-location"} 
-                  size={20} 
-                  color="white" 
-                />
-                {isLoading && <View style={styles.secondaryLoadingSpinner} />}
-              </View>
-              <Text style={styles.currentLocationText}>
-                {isLoading ? 'Getting Your Location...' : 'Use Current Location'}
+            <View style={[
+              styles.statusBadge,
+              { backgroundColor: location.isActive ? theme.colors.success : theme.colors.error }
+            ]}>
+              <Text style={styles.statusBadgeText}>
+                {location.isActive ? 'Active' : 'Inactive'}
               </Text>
-            </TouchableOpacity>
-
-            {/* Action Buttons */}
-            <View style={styles.formActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => {
-                  if (isFormDirty) {
-                    Alert.alert(
-                      'Discard Changes?',
-                      'You have unsaved changes. Are you sure you want to cancel?',
-                      [
-                        { text: 'Continue Editing', style: 'cancel' },
-                        { text: 'Discard', style: 'destructive', onPress: resetForm }
-                      ]
-                    );
-                  } else {
-                    resetForm();
-                  }
-                }}
-              >
-                <Icon name="close" size={20} color={theme.colors.textSecondary} />
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.saveBtn,
-                  (!address.trim() || !city.trim() || !state.trim()) && styles.saveBtnDisabled
-                ]}
-                onPress={handleSaveLocation}
-                disabled={!address.trim() || !city.trim() || !state.trim()}
-              >
-                <Icon name="check" size={20} color="white" />
-                <Text style={styles.saveText}>Save Location</Text>
-              </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Animated.View>
-    </TouchableWithoutFeedback>
-  );
+            {isSelected && (
+              <View style={styles.selectedBadge}>
+                <Text style={styles.selectedBadgeText}>✓ Selected</Text>
+              </View>
+            )}
+          </View>
+          {location.address && (
+            <Text style={styles.locationAddress}>{location.address}</Text>
+          )}
+        </View>
+
+        <View style={styles.locationDetails}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Area:</Text>
+            <Text style={styles.detailValue}>{location.area}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>City:</Text>
+            <Text style={styles.detailValue}>{location.city}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>District:</Text>
+            <Text style={styles.detailValue}>{location.district}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>State:</Text>
+            <Text style={styles.detailValue}>{location.state}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Country:</Text>
+            <Text style={styles.detailValue}>{location.country}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>ZIP Code:</Text>
+            <Text style={styles.detailValue}>{location.zipcode}</Text>
+          </View>
+          {location.coordinates && location.coordinates.length === 2 && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Coordinates:</Text>
+              <Text style={styles.detailValue}>
+                {location.coordinates[0].toFixed(6)}, {location.coordinates[1].toFixed(6)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.locationFooter}>
+          <Text style={styles.formattedAddress}>{location.formattedAddress}</Text>
+          <Text style={styles.createdDate}>
+            Created: {formatDate(location.createdAt)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Render loading state
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Loading locations...</Text>
+      </View>
+    );
+  }
+
+  // Render error state
+  if (error && !loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => fetchLocations()}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor={showAddForm ? "#ffffff" : "#f8f9ff"} 
-      />
-      
-      {/* Header - Only show when not in add form mode */}
-      {!showAddForm && (
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-back" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <Statusbar/>
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Saved Locations</Text>
           <TouchableOpacity 
-            style={styles.headerButton}
-            onPress={() => setShowAddForm(true)}
+            style={styles.createButton}
+            onPress={handleCreateLocation}
           >
-            <Icon name="add" size={24} color={theme.colors.primary} />
+            <Text style={styles.createButtonText}>+ Create Location</Text>
           </TouchableOpacity>
         </View>
-      )}
-
-      <View style={styles.content}>
-        {showAddForm ? renderAddForm() : renderSavedLocations()}
+        <Text style={styles.headerSubtitle}>
+          {locations.length} location{locations.length !== 1 ? 's' : ''} found
+        </Text>
+        {selectedLocation && (
+          <View style={styles.selectedLocationInfo}>
+            <Text style={styles.selectedLocationLabel}>Selected Location:</Text>
+            <Text style={styles.selectedLocationValue}>
+              {selectedLocation.formattedAddress}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Floating Action Button - Only show when in list view and has locations */}
-      {!showAddForm && (locations.length > 0 || savedLocations.length > 0) && (
-        <TouchableOpacity
-          style={styles.floatingAddBtn}
-          onPress={() => setShowAddForm(true)}
-          activeOpacity={0.9}
-        >
-          <View style={styles.floatingAddBtnContent}>
-            <Icon name="add-location" size={24} color="white" />
-            <Text style={styles.floatingAddBtnText}>Add Location</Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
+        }
+      >
+        {locations.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.noDataText}>No locations found</Text>
+            <Text style={styles.noDataSubtext}>
+              Pull down to refresh or check your connection
+            </Text>
           </View>
-        </TouchableOpacity>
+        ) : (
+          locations.map(renderLocationItem)
+        )}
+      </ScrollView>
+
+      {locations.length > 0 && (
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={() => fetchLocations()}
+          >
+            <Text style={styles.refreshButtonText}>Refresh Locations</Text>
+          </TouchableOpacity>
+          {selectedLocation && (
+            <TouchableOpacity 
+              style={styles.clearSelectionButton}
+              onPress={() => setSelectedLocation(null)}
+            >
+              <Text style={styles.clearSelectionButtonText}>Clear Selection</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9ff',
+    backgroundColor: theme.colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.card,
+    padding: theme.spacing.medium,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 2 },
+    borderBottomColor: '#E0E0E0',
   },
-  headerButton: {
-    width: 40,
-    height: 40,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    marginBottom: theme.spacing.small,
+  },
+  createButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+  },
+  createButtonText: {
+    color: 'white',
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.medium,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: theme.fonts.size.xlarge,
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.text,
-    letterSpacing: -0.5,
+    marginBottom: theme.spacing.small,
   },
-  content: {
+  headerSubtitle: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+  },
+  scrollView: {
     flex: 1,
   },
-  keyboardAvoid: {
+  scrollContent: {
+    padding: theme.spacing.medium,
+  },
+  centerContainer: {
     flex: 1,
-  },
-
-  // Saved Locations Styles
-  savedLocationsContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    marginLeft: 12,
-  },
-  locationCount: {
-    color: theme.colors.primary,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    elevation: 3,
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  mainLoadingSpinner: {
-    width: 40,
-    height: 40,
-    borderWidth: 4,
-    borderColor: '#f0f0f0',
-    borderTopColor: theme.colors.primary,
-    borderRadius: 20,
-    marginBottom: 16,
+    alignItems: 'center',
+    padding: theme.spacing.xlarge,
   },
   loadingText: {
-    fontSize: 16,
+    marginTop: theme.spacing.medium,
+    fontSize: theme.fonts.size.medium,
     color: theme.colors.textSecondary,
   },
-  
-  // Authentication Required Styles
-  authRequiredContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
+  errorText: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.error,
+    textAlign: 'center',
+    marginBottom: theme.spacing.medium,
   },
-  authRequiredIcon: {
-    marginBottom: 24,
-  },
-  authRequiredTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  noDataText: {
+    fontSize: theme.fonts.size.large,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.text,
-    marginBottom: 12,
+    marginBottom: theme.spacing.small,
   },
-  authRequiredSubtitle: {
-    fontSize: 16,
+  noDataSubtext: {
+    fontSize: theme.fonts.size.medium,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 32,
-    maxWidth: 280,
-    lineHeight: 24,
-  },
-  loginButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    elevation: 4,
-    marginBottom: 24,
-  },
-  loginButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-    width: '100%',
-    maxWidth: 200,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  dividerText: {
-    fontSize: 14,
-    color: '#999',
-    marginHorizontal: 16,
-  },
-  addLocationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  addLocationButtonText: {
-    color: theme.colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-
-  errorState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  errorStateIcon: {
-    marginBottom: 24,
-  },
-  errorStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ff4444',
-    marginBottom: 8,
-  },
-  errorStateSubtitle: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 32,
-    maxWidth: 250,
   },
   retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    elevation: 4,
+    paddingHorizontal: theme.spacing.large,
+    paddingVertical: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
   },
   retryButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateIcon: {
-    marginBottom: 24,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
-  },
-  emptyStateSubtitle: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 32,
-    maxWidth: 250,
-  },
-  emptyStateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    elevation: 4,
-  },
-  emptyStateButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  savedLocationsSection: {
-    marginTop: 32,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  locationsList: {
-    paddingBottom: 30,
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.medium,
   },
   locationCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.large,
+    padding: theme.spacing.medium,
+    marginBottom: theme.spacing.medium,
+    ...theme.shadows.card,
   },
-  locationCardHeader: {
+  locationHeader: {
+    marginBottom: theme.spacing.medium,
+  },
+  locationTitleContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-  },
-  locationIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  locationInfo: {
-    flex: 1,
-  },
-  locationTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: theme.spacing.small,
   },
   locationName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: theme.fonts.size.large,
+    fontWeight: theme.fonts.weight.bold,
     color: theme.colors.text,
     flex: 1,
   },
-  defaultBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFB300',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
+  statusBadge: {
+    paddingHorizontal: theme.spacing.small,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius.small,
   },
-  defaultBadgeText: {
+  statusBadgeText: {
     color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginLeft: 4,
+    fontSize: theme.fonts.size.small,
+    fontWeight: theme.fonts.weight.medium,
   },
   locationAddress: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.medium,
     color: theme.colors.textSecondary,
-    marginBottom: 8,
-    lineHeight: 20,
+    fontStyle: 'italic',
   },
   locationDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    marginBottom: theme.spacing.medium,
   },
-  locationDetailText: {
-    fontSize: 13,
-    color: '#666',
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.small,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  detailLabel: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.medium,
     flex: 1,
   },
-  zipCode: {
-    fontSize: 13,
-    color: theme.colors.primary,
-    fontWeight: '600',
+  detailValue: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.text,
+    flex: 2,
+    textAlign: 'right',
   },
-  locationActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+  locationFooter: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    paddingTop: 16,
+    borderTopColor: '#E0E0E0',
+    paddingTop: theme.spacing.medium,
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginLeft: 8,
-  },
-  setDefaultButton: {
-    backgroundColor: '#FFF8E1',
-  },
-  viewButton: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-  },
-  editButton: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-  },
-  deleteButton: {
-    backgroundColor: '#FFEBEE',
-  },
-  actionButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  viewButtonText: {
-    color: theme.colors.primary,
-  },
-  editButtonText: {
-    color: theme.colors.primary,
-  },
-  deleteButtonText: {
-    color: '#ff4444',
-  },
-
-  // Add Form Styles
-  addFormContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  formScrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  formHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  formTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+  formattedAddress: {
+    fontSize: theme.fonts.size.medium,
     color: theme.colors.text,
-    letterSpacing: -0.5,
+    marginBottom: theme.spacing.small,
+    lineHeight: 20,
   },
-  placeholder: {
-    width: 40,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 16,
-  },
-  mapSection: {
-    marginBottom: 32,
-  },
-  mapPlaceholder: {
-    height: 180,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#e9ecef',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  mapPlaceholderIcon: {
-    marginBottom: 12,
-  },
-  mapPlaceholderTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 4,
-  },
-  mapPlaceholderSubtitle: {
-    fontSize: 12,
+  createdDate: {
+    fontSize: theme.fonts.size.small,
     color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+  footer: {
+    padding: theme.spacing.medium,
+    backgroundColor: theme.colors.card,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
   },
-  inputIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    marginTop: 4,
-  },
-  inputIconActive: {
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-  },
-  inputWrapper: {
-    flex: 1,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    fontSize: 16,
-    color: theme.colors.text,
-    padding: 0,
-    minHeight: 24,
-  },
-  multilineInput: {
-    minHeight: 72,
-    textAlignVertical: 'top',
-  },
-  required: {
-    color: '#ff4444',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  halfInput: {
-    width: '48%',
-  },
-  currentLocationBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  refreshButton: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    marginBottom: 32,
-    elevation: 3,
+    paddingVertical: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
   },
-  currentLocationBtnDisabled: {
-    opacity: 0.7,
+  refreshButtonText: {
+    color: 'white',
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.medium,
   },
-  currentLocationIcon: {
-    marginRight: 10,
-    position: 'relative',
-  },
-  secondaryLoadingSpinner: {
-    position: 'absolute',
-    top: -2,
-    left: -2,
-    right: -2,
-    bottom: -2,
+  // Selection styles
+  selectedLocationCard: {
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderTopColor: 'white',
-    borderRadius: 12,
+    borderColor: theme.colors.primary,
+    backgroundColor: '#f8f9ff',
   },
-  currentLocationText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+  selectedLocationName: {
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.bold,
   },
-  formActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  cancelBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    marginRight: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: 'white',
-  },
-  cancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginLeft: 8,
-  },
-  saveBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    marginLeft: 12,
-    borderRadius: 14,
-    backgroundColor: theme.colors.success,
-    elevation: 3,
-  },
-  saveBtnDisabled: {
-    opacity: 0.6,
-    elevation: 0,
-  },
-  saveText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-
-  // Floating Action Button
-  floatingAddBtn: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
+  selectedBadge: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 16,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    paddingHorizontal: theme.spacing.small,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius.small,
+    marginLeft: theme.spacing.small,
   },
-  floatingAddBtnContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  floatingAddBtnText: {
+  selectedBadgeText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: theme.fonts.size.small,
+    fontWeight: theme.fonts.weight.bold,
+  },
+  // Header selected location styles
+  selectedLocationInfo: {
+    marginTop: theme.spacing.small,
+    padding: theme.spacing.medium,
+    backgroundColor: theme.colors.rice,
+    borderRadius: theme.borderRadius.medium,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.primary,
+  },
+  selectedLocationLabel: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.medium,
+    marginBottom: theme.spacing.small,
+  },
+  selectedLocationValue: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.text,
+    fontWeight: theme.fonts.weight.medium,
+    lineHeight: 18,
+  },
+  clearSelectionButton: {
+    backgroundColor: theme.colors.error,
+    paddingVertical: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
+    marginTop: theme.spacing.small,
+  },
+  clearSelectionButtonText: {
+    color: 'white',
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.medium,
   },
 });

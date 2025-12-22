@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Video from 'react-native-video';
@@ -639,6 +640,7 @@ const HomeScreen: React.FC = () => {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           <HeaderSkeleton />
           <View style={styles.categorySection}>
@@ -668,6 +670,7 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
       <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>

@@ -11,6 +11,7 @@ import {
   Dimensions,
   Image,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
@@ -261,6 +262,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
 
   return (
     <ScrollView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary} />
       <View style={styles.header}>
         {/* <Logo
           size="medium"

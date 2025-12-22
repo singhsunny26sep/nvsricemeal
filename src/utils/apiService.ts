@@ -781,6 +781,32 @@ console.log(endpoint,"++++++++++++++++++++++++++")
       method: 'GET',
     });
   }
+
+  // Create new location
+  async createLocation(locationData: {
+    coordinates?: [number, number];
+    userId?: string;
+    name?: string;
+    shopOrBuildingNumber?: string;
+    address?: string;
+    city?: string;
+    district?: string;
+    zipcode?: string;
+    state?: string;
+    area?: string;
+    country?: string;
+  }): Promise<ApiResponse<any>> {
+    const endpoint = '/locations/create';
+    
+    console.log('=== CREATE LOCATION DEBUG ===');
+    console.log('Location data:', locationData);
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(locationData),
+    });
+  }
 }
 
 // Export singleton instance

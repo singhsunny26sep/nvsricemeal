@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -140,6 +141,7 @@ const ProfileScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
+        <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
@@ -148,6 +150,7 @@ const ProfileScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>

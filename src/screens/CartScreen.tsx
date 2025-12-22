@@ -13,6 +13,7 @@ import {
   Animated,
   Easing,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCart } from '../context/CartContext';
@@ -448,6 +449,7 @@ const CartScreen: React.FC = () => {
 
   return (
     <ScrollView style={{marginBottom: 64}}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
