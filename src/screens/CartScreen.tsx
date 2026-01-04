@@ -106,10 +106,6 @@ const CartScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessWave, setShowSuccessWave] = useState(false);
   const [syncError, setSyncError] = useState('');
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState<any>(null);
-  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const hasSyncedRef = useRef(false);
 
   // Animation refs
@@ -267,8 +263,57 @@ const CartScreen: React.FC = () => {
     }, 3000);
   };
 
+  // Save order to history
+  const saveOrderToHistory = async (paymentMethod: string, paymentId?: string) => {
+    try {
+      const orderId = `ORD${Date.now()}`;
+      const orderData = {
+        id: orderId,
+        date: new Date().toISOString().split('T')[0],
+        status: 'processing' as const,
+        total: finalTotal,
+        items: cart.items.map(item => `${item.product.name} ${item.quantity}kg`),
+        paymentMethod,
+        paymentId
+      };
+
+      const existingOrders = await AsyncStorage.getItem('orderHistory');
+      const orders = existingOrders ? JSON.parse(existingOrders) : [];
+      orders.unshift(orderData); // Add to beginning
+      await AsyncStorage.setItem('orderHistory', JSON.stringify(orders));
+    } catch (error) {
+      console.error('Error saving order:', error);
+    }
+  };
+
+  // Cash on Delivery
+  const handleCashOnDelivery = async () => {
+    setIsLoading(true);
+    try {
+      await saveOrderToHistory('Cash on Delivery');
+      setIsLoading(false);
+      startSuccessAnimation();
+
+      setTimeout(() => {
+        Alert.alert(
+          'Order Placed Successfully! 🎉',
+          `Your order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\nPayment: Cash on Delivery\n\nThank you for shopping with NVS Rice Mall!`,
+          [
+            {
+              text: 'Continue Shopping',
+              onPress: () => clearCart()
+            }
+          ]
+        );
+      }, 3500);
+    } catch (error) {
+      setIsLoading(false);
+      Alert.alert('Error', 'Failed to place order. Please try again.');
+    }
+  };
+
   // Razorpay Integration
-  const handleRazorpayPayment = (selectedAddress?: any) => {
+  const handleRazorpayPayment = () => {
     setIsLoading(true);
 
     const options = {
@@ -287,19 +332,16 @@ const CartScreen: React.FC = () => {
     };
 
     RazorpayCheckout.open(options)
-      .then((data: any) => {
+      .then(async (data: any) => {
         // Payment successful
+        await saveOrderToHistory('Online Payment', data.razorpay_payment_id);
         setIsLoading(false);
         startSuccessAnimation();
 
         setTimeout(() => {
-          const addressInfo = selectedAddress ?
-            `\n\nDelivery Address:\n${selectedAddress.name} - ${selectedAddress.address}, ${selectedAddress.city}, ${selectedAddress.state} - ${selectedAddress.pincode}` :
-            '';
-            
           Alert.alert(
             'Payment Successful! 🎉',
-            `Payment ID: ${data.razorpay_payment_id}\n\nYour order has been placed successfully!${addressInfo}\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\n\nThank you for shopping with NVS Rice Mall!`,
+            `Payment ID: ${data.razorpay_payment_id}\n\nYour order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\n\nThank you for shopping with NVS Rice Mall!`,
             [
               {
                 text: 'Continue Shopping',
@@ -316,105 +358,7 @@ const CartScreen: React.FC = () => {
       });
   };
 
-  // Fetch addresses from API
-  const fetchAddresses = async () => {
-    setIsLoadingAddresses(true);
-    try {
-      // Get stored token from AsyncStorage (like other API calls)
-      const storedToken = await AsyncStorage.getItem('userToken');
-      
-      if (!storedToken) {
-        Alert.alert('Error', 'User token not found. Please login again.');
-        setIsLoadingAddresses(false);
-        return;
-      }
 
-      const response = await fetch('https://nvs-rice-mart.onrender.com/nvs-rice-mart/locations/getAll?country=india', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${storedToken}`
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.data?.data) {
-        // Transform API response to match our address format
-        const transformedAddresses = data.data.data.map((location: any, index: number) => ({
-          id: location._id,
-          name: location.name || `Location ${index + 1}`,
-          fullName: auth?.user?.name || 'Customer Name',
-          phone: auth?.user?.phone || '9876543210',
-          address: location.address || '',
-          area: location.area || '',
-          city: location.city || '',
-          district: location.district || '',
-          state: location.state || '',
-          country: location.country || '',
-          pincode: location.zipcode || '',
-          formattedAddress: location.formattedAddress || '',
-          coordinates: location.coordinates || [],
-          isDefault: index === 0 // First location as default
-        }));
-        
-        setSavedAddresses(transformedAddresses);
-        console.log('✅ Addresses fetched successfully:', transformedAddresses.length);
-      } else {
-        console.log('❌ Failed to fetch addresses:', data.message);
-        Alert.alert('Error', data.message || 'Failed to load delivery locations');
-        setSavedAddresses([]);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching addresses:', error);
-      Alert.alert('Error', 'Failed to load delivery locations. Please try again.');
-      setSavedAddresses([]);
-    } finally {
-      setIsLoadingAddresses(false);
-    }
-  };
-
-  // Address Selection Handlers
-  const handleAddressSelect = (address: any) => {
-    setSelectedAddress(address);
-    setShowAddressModal(false);
-    
-    // After address selection, show payment options
-    setTimeout(() => {
-      const displayAddress = address.formattedAddress ||
-        `${address.area ? address.area + ', ' : ''}${address.city}, ${address.district}, ${address.state} - ${address.pincode}`;
-        
-      Alert.alert(
-        'Choose Payment Method',
-        `Order Total: ₹${finalTotal}\n\nDelivery Address:\n${address.name}\n${displayAddress}\n\nSelect your preferred payment method:`,
-        [
-          {
-            text: 'Cash on Delivery',
-            onPress: () => {
-              Alert.alert(
-                'Order Confirmed! 🎉',
-                `Your order has been placed successfully!\n\nDelivery Address:\n${address.name}\n${displayAddress}\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\n\nThank you for shopping with NVS Rice Mall!`,
-                [
-                  {
-                    text: 'Continue Shopping',
-                    onPress: () => clearCart()
-                  }
-                ]
-              );
-            }
-          },
-          {
-            text: 'Pay Online (Razorpay)',
-            onPress: () => handleRazorpayPayment(address)
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          }
-        ]
-      );
-    }, 300);
-  };
 
   const handleCheckout = async () => {
     if (cart.items.length === 0) {
@@ -426,9 +370,25 @@ const CartScreen: React.FC = () => {
       return;
     }
 
-    // Fetch addresses first, then show modal
-    await fetchAddresses();
-    setShowAddressModal(true);
+    // Directly show payment options
+    Alert.alert(
+      'Choose Payment Method',
+      `Order Total: ₹${finalTotal}\n\nSelect your preferred payment method:`,
+      [
+        {
+          text: 'Cash on Delivery',
+          onPress: () => handleCashOnDelivery()
+        },
+        {
+          text: 'Pay Online (Razorpay)',
+          onPress: () => handleRazorpayPayment()
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
   };
 
   // Skeleton Loading Component
@@ -608,87 +568,6 @@ const CartScreen: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Address Selection Modal */}
-        {showAddressModal && (
-     
-          <View style={styles.modalOverlay}>
-            <View style={styles.addressModal}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Delivery Location</Text>
-                <TouchableOpacity
-                  onPress={() => setShowAddressModal(false)}
-                  style={styles.closeButton}
-                >
-                  <Icon name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-              
-              {isLoadingAddresses ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#28a745" />
-                  <Text style={styles.loadingText}>Loading delivery locations...</Text>
-                </View>
-              ) : (
-                <ScrollView style={styles.addressList} showsVerticalScrollIndicator={false}>
-                  {savedAddresses.length > 0 ? (
-                    savedAddresses.map((location) => {
-                      const displayAddress = location.formattedAddress ||
-                        `${location.area ? location.area + ', ' : ''}${location.city}, ${location.district}, ${location.state} - ${location.pincode}`;
-                      
-                      return (
-                        <TouchableOpacity
-                          key={location.id}
-                          style={[
-                            styles.addressCard,
-                            selectedAddress?.id === location.id && styles.selectedAddressCard
-                          ]}
-                          onPress={() => handleAddressSelect(location)}
-                        >
-                          <View style={styles.addressHeader}>
-                            <View style={styles.addressNameContainer}>
-                              <Text style={styles.addressName}>{location.name}</Text>
-                              {location.isDefault && (
-                                <View style={styles.defaultBadge}>
-                                  <Text style={styles.defaultBadgeText}>Default</Text>
-                                </View>
-                              )}
-                            </View>
-                            <Icon
-                              name={selectedAddress?.id === location.id ? 'radio-button-checked' : 'radio-button-unchecked'}
-                              size={24}
-                              color={selectedAddress?.id === location.id ? '#28a745' : '#ccc'}
-                            />
-                          </View>
-                          
-                          <Text style={styles.addressText}>{displayAddress}</Text>
-                          <Text style={styles.addressText}>Pincode: {location.pincode}</Text>
-                        </TouchableOpacity>
-                      );
-                    })
-                  ) : (
-                    <View style={styles.noAddressesContainer}>
-                      <Icon name="location-off" size={48} color="#ccc" />
-                      <Text style={styles.noAddressesText}>No delivery locations available</Text>
-                      <Text style={styles.noAddressesSubtext}>Please try again later</Text>
-                    </View>
-                  )}
-                </ScrollView>
-              )}
-              
-              {selectedAddress && !isLoadingAddresses && (
-                <TouchableOpacity
-                  style={styles.confirmAddressButton}
-                  onPress={() => handleAddressSelect(selectedAddress)}
-                >
-                  <Text style={styles.confirmAddressText}>
-                    Deliver to: {selectedAddress.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-          
-        )}
       </View>
     </ScrollView>
   );

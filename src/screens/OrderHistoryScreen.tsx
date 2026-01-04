@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
 import { PDFGenerator } from '../utils/pdfGenerator';
@@ -20,6 +21,8 @@ interface Order {
   status: 'delivered' | 'processing' | 'shipped' | 'cancelled';
   total: number;
   items: string[];
+  paymentMethod?: string;
+  paymentId?: string;
   hasReview?: boolean;
   review?: {
     rating: number;
@@ -37,42 +40,21 @@ const OrderHistoryScreen: React.FC = () => {
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [reviewData, setReviewData] = useState<Review>({ rating: 5, comment: '' });
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: 'ORD001',
-      date: '2024-01-15',
-      status: 'delivered',
-      total: 450,
-      items: ['Basmati Rice 5kg', 'Brown Rice 2kg'],
-      hasReview: true,
-      review: {
-        rating: 5,
-        comment: 'Excellent quality rice! Very satisfied with the purchase.',
-        date: '2024-01-16',
-      },
-    },
-    {
-      id: 'ORD002',
-      date: '2024-01-10',
-      status: 'shipped',
-      total: 320,
-      items: ['Sona Masoori Rice 10kg'],
-    },
-    {
-      id: 'ORD003',
-      date: '2024-01-05',
-      status: 'processing',
-      total: 280,
-      items: ['Jasmine Rice 3kg', 'Parboiled Rice 5kg'],
-    },
-    {
-      id: 'ORD004',
-      date: '2024-01-01',
-      status: 'delivered',
-      total: 380,
-      items: ['Thai Jasmine Rice 5kg', 'Organic Brown Rice 2kg'],
-    },
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const storedOrders = await AsyncStorage.getItem('orderHistory');
+        if (storedOrders) {
+          setOrders(JSON.parse(storedOrders));
+        }
+      } catch (error) {
+        console.error('Error loading orders:', error);
+      }
+    };
+    loadOrders();
+  }, []);
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -110,7 +92,7 @@ const OrderHistoryScreen: React.FC = () => {
     setReviewModalVisible(true);
   };
 
-  const handleSubmitReview = () => {
+  const handleSubmitReview = async () => {
     if (!selectedOrder) return;
 
     const updatedOrders = orders.map(order => {
@@ -129,6 +111,7 @@ const OrderHistoryScreen: React.FC = () => {
     });
 
     setOrders(updatedOrders);
+    await AsyncStorage.setItem('orderHistory', JSON.stringify(updatedOrders));
     setReviewModalVisible(false);
     setSelectedOrder(null);
 
@@ -300,12 +283,10 @@ const OrderHistoryScreen: React.FC = () => {
                 <Text style={styles.modalSubtitle}>
                   How would you rate your order #{selectedOrder.id}?
                 </Text>
-
                 <View style={styles.ratingSection}>
                   <Text style={styles.ratingLabel}>Rating:</Text>
                   {renderStars(reviewData.rating, true)}
                 </View>
-
                 <View style={styles.commentSection}>
                   <Text style={styles.commentLabel}>Comment:</Text>
                   <TextInput
@@ -318,7 +299,6 @@ const OrderHistoryScreen: React.FC = () => {
                     placeholderTextColor={theme.colors.textSecondary}
                   />
                 </View>
-
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
                     style={styles.cancelButton}
