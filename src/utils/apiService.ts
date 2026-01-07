@@ -61,6 +61,10 @@ interface OTPSessionData {
   isFirst: boolean;
 }
 
+interface CreateOrderRequest {
+  paymentMethod: 'COD' | 'ONLINE';
+}
+
 class ApiService {
   private currentSession: OTPSessionData | null = null;
 
@@ -797,7 +801,7 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     country?: string;
   }): Promise<ApiResponse<any>> {
     const endpoint = '/locations/create';
-    
+
     console.log('=== CREATE LOCATION DEBUG ===');
     console.log('Location data:', locationData);
     console.log('Full URL:', buildUrl(endpoint));
@@ -805,6 +809,20 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     return this.request<any>(endpoint, {
       method: 'POST',
       body: JSON.stringify(locationData),
+    });
+  }
+
+  // Create order
+  async createOrder(request: CreateOrderRequest): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.ORDERS.CREATE;
+
+    console.log('=== CREATE ORDER DEBUG ===');
+    console.log('Order request:', request);
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
   }
 }

@@ -16,7 +16,9 @@ export const API_CONFIG = {
   ENDPOINTS: {
     PRODUCTS: '/subCategories/getAll',
     CATEGORIES: '/api/categories',
-    ORDERS: '/api/orders',
+    ORDERS: {
+      CREATE: '/orders/create',
+    },
     USER: {
       PROFILE: '/users/get',
       UPDATE: '/users/update',
@@ -86,6 +88,7 @@ export const API_URLS = {
   PRODUCTS: buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS),
   CATEGORIES: buildUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
   ORDERS: buildUrl(API_CONFIG.ENDPOINTS.ORDERS),
+  ORDERS_CREATE: buildUrl(API_CONFIG.ENDPOINTS.ORDERS.CREATE),
   USER_PROFILE: buildUrl(API_CONFIG.ENDPOINTS.USER.PROFILE),
   USER_UPDATE: buildUrl(API_CONFIG.ENDPOINTS.USER.UPDATE),
   REGISTER: buildUrl(API_CONFIG.ENDPOINTS.AUTH.REGISTER),

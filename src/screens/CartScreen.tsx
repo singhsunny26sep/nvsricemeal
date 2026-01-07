@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { apiService } from '../utils/apiService';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RazorpayCheckout from 'react-native-razorpay';
 
@@ -290,22 +291,29 @@ const CartScreen: React.FC = () => {
   const handleCashOnDelivery = async () => {
     setIsLoading(true);
     try {
-      await saveOrderToHistory('Cash on Delivery');
-      setIsLoading(false);
-      startSuccessAnimation();
+      // Call the orders/create API
+      const orderResponse = await apiService.createOrder({ paymentMethod: 'COD' });
+      if (orderResponse.success) {
+        await saveOrderToHistory('Cash on Delivery');
+        setIsLoading(false);
+        startSuccessAnimation();
 
-      setTimeout(() => {
-        Alert.alert(
-          'Order Placed Successfully! 🎉',
-          `Your order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\nPayment: Cash on Delivery\n\nThank you for shopping with NVS Rice Mall!`,
-          [
-            {
-              text: 'Continue Shopping',
-              onPress: () => clearCart()
-            }
-          ]
-        );
-      }, 3500);
+        setTimeout(() => {
+          Alert.alert(
+            'Order Placed Successfully! 🎉',
+            `Your order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\nPayment: Cash on Delivery\n\nThank you for shopping with NVS Rice Mall!`,
+            [
+              {
+                text: 'Continue Shopping',
+                onPress: () => clearCart()
+              }
+            ]
+          );
+        }, 3500);
+      } else {
+        setIsLoading(false);
+        Alert.alert('Error', orderResponse.error || 'Failed to place order. Please try again.');
+      }
     } catch (error) {
       setIsLoading(false);
       Alert.alert('Error', 'Failed to place order. Please try again.');
@@ -333,23 +341,29 @@ const CartScreen: React.FC = () => {
 
     RazorpayCheckout.open(options)
       .then(async (data: any) => {
-        // Payment successful
-        await saveOrderToHistory('Online Payment', data.razorpay_payment_id);
-        setIsLoading(false);
-        startSuccessAnimation();
+        // Payment successful - Call the orders/create API
+        const orderResponse = await apiService.createOrder({ paymentMethod: 'ONLINE' });
+        if (orderResponse.success) {
+          await saveOrderToHistory('Online Payment', data.razorpay_payment_id);
+          setIsLoading(false);
+          startSuccessAnimation();
 
-        setTimeout(() => {
-          Alert.alert(
-            'Payment Successful! 🎉',
-            `Payment ID: ${data.razorpay_payment_id}\n\nYour order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\n\nThank you for shopping with NVS Rice Mall!`,
-            [
-              {
-                text: 'Continue Shopping',
-                onPress: () => clearCart()
-              }
-            ]
-          );
-        }, 3500);
+          setTimeout(() => {
+            Alert.alert(
+              'Payment Successful! 🎉',
+              `Payment ID: ${data.razorpay_payment_id}\n\nYour order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\n\nThank you for shopping with NVS Rice Mall!`,
+              [
+                {
+                  text: 'Continue Shopping',
+                  onPress: () => clearCart()
+                }
+              ]
+            );
+          }, 3500);
+        } else {
+          setIsLoading(false);
+          Alert.alert('Error', orderResponse.error || 'Failed to place order. Please try again.');
+        }
       })
       .catch((error: any) => {
         setIsLoading(false);

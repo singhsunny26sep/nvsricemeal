@@ -1,6 +1,7 @@
 import Geolocation from '@react-native-community/geolocation';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { PERMISSIONS, request, RESULTS } from 'react-native-permissions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationLogger } from './locationLogger';
 
 export interface LocationData {
@@ -130,7 +131,7 @@ class LocationService {
         ...(locationData.city && { city: locationData.city }),
         ...(locationData.district && { district: locationData.district }),
         ...(locationData.state && { state: locationData.state }),
-        ...(locationData.zipCode && { zipCode: locationData.zipCode }),
+        ...(locationData.zipCode && { zipcode: locationData.zipCode }),
         ...(locationData.area && { area: locationData.area }),
         ...(locationData.country && { country: locationData.country }),
       };
