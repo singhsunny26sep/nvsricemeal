@@ -107,6 +107,7 @@ const CartScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessWave, setShowSuccessWave] = useState(false);
   const [syncError, setSyncError] = useState('');
+  const [deliveryErrorMessage, setDeliveryErrorMessage] = useState('');
   const hasSyncedRef = useRef(false);
 
   // Animation refs
@@ -140,13 +141,15 @@ const CartScreen: React.FC = () => {
   // Manual sync function
   const handleSyncCart = async () => {
     setSyncError('');
-    
+
     try {
       await syncCartFromServer();
       console.log('✅ CartScreen: Manual cart sync successful');
+      Alert.alert('✅ Sync Successful', 'Cart data has been updated from server.');
     } catch (error) {
       console.error('❌ CartScreen: Manual cart sync failed:', error);
       setSyncError('Failed to sync cart data. Please try again.');
+      Alert.alert('❌ Sync Failed', 'Unable to sync cart data. Please check your connection.');
     }
   };
 
@@ -194,39 +197,8 @@ const CartScreen: React.FC = () => {
     finalTotal
   } = calculateTotals();
 
-  const handleApplyCoupon = () => {
-    if (couponInput.trim() === '') {
-      Alert.alert('Error', 'Please enter a coupon code.');
-      return;
-    }
+  
 
-    if (couponInput.toUpperCase() === 'SAVE10') {
-      // Fixed discount of ₹50
-      applyCoupon('SAVE10', 50);
-      Alert.alert('Success', 'Coupon applied successfully! You saved ₹50.');
-    } else if (couponInput.toUpperCase() === 'RICE20') {
-      // 20% discount on total after product discounts
-      const discountAmount = Math.round(totalAfterDiscount * 0.2);
-      applyCoupon('RICE20', discountAmount);
-      Alert.alert('Success', `Coupon applied successfully! You saved ₹${discountAmount}.`);
-    } else {
-      Alert.alert('Invalid Coupon', 'Please enter a valid coupon code.');
-    }
-    setCouponInput('');
-  };
-
-  const handlePincodeCheck = () => {
-    if (pincodeInput.length === 6 && /^\d+$/.test(pincodeInput)) {
-      const isAvailable = pincodeInput.startsWith('1') || pincodeInput.startsWith('2') || pincodeInput.startsWith('3');
-      setPincode(pincodeInput, isAvailable);
-      Alert.alert(
-        isAvailable ? 'Delivery Available' : 'Delivery Not Available',
-        isAvailable ? 'We deliver to your area!' : 'Sorry, we don\'t deliver to this area yet.'
-      );
-    } else {
-      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit pincode.');
-    }
-  };
 
   // Success Wave Animation
   const startSuccessAnimation = () => {
@@ -284,6 +256,76 @@ const CartScreen: React.FC = () => {
       await AsyncStorage.setItem('orderHistory', JSON.stringify(orders));
     } catch (error) {
       console.error('Error saving order:', error);
+    }
+  };
+
+  // Handle pincode check for delivery verification
+  const handlePincodeCheck = async () => {
+    if (!pincodeInput || pincodeInput.length !== 6) {
+      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit pincode.');
+      return;
+    }
+
+    setIsLoading(true);
+    setDeliveryErrorMessage('');
+
+    try {
+      console.log('🔍 Verifying delivery for pincode:', pincodeInput);
+      const apiUrl = 'https://nvs-rice-mart.onrender.com/nvs-rice-mart/carts/verify-delivery';
+      console.log('🌐 API URL for delivery verification:', apiUrl);
+
+      // Get token from AsyncStorage for authenticated request
+      const token = await AsyncStorage.getItem('userToken');
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ zipcode: pincodeInput }),
+      });
+
+      const responseData = await response.json();
+      console.log('📥 API Response:', responseData);
+
+      if (responseData.success) {
+        console.log('✅ Delivery verification successful');
+        setPincode(pincodeInput, true);
+        setDeliveryErrorMessage('');
+        Alert.alert('✅ Delivery Available', 'Delivery is available for this pincode.');
+      } else {
+        console.log('❌ Delivery verification failed:', responseData);
+
+        // Check if some items are not deliverable
+        const errorData = responseData.data?.error || responseData.error;
+        console.log(errorData,"this is error Data")
+        if (errorData && errorData.unavailableItems && Array.isArray(errorData.unavailableItems)) {
+          const unavailableItems = errorData.unavailableItems;
+          console.log('📦 Unavailable items:', unavailableItems);
+
+          const unavailableNames = unavailableItems.map((item: any) => {
+            const cartItem = cart.items.find(cartItem => cartItem.product.id === item.productId);
+            return cartItem ? cartItem.product.name : `Product ${item.productId}`;
+          }).join(', ');
+
+          setPincode(pincodeInput, false);
+          setDeliveryErrorMessage(responseData.message || 'Some items are not deliverable to this pincode');
+         
+        } else {
+          // General delivery not available
+          setPincode(pincodeInput, false);
+          setDeliveryErrorMessage(responseData.message || 'Delivery not available for this pincode.');
+          Alert.alert('❌ Delivery Not Available', responseData.message || 'Delivery not available for this pincode.');
+        }
+      }
+    } catch (error) {
+      console.error('💥 Error verifying delivery:', error);
+      setPincode(pincodeInput, false);
+      setDeliveryErrorMessage('Unable to verify delivery. Please try again.');
+      Alert.alert('❌ Verification Error', 'Unable to verify delivery. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -379,30 +421,93 @@ const CartScreen: React.FC = () => {
       Alert.alert('Cart Empty', 'Your cart is empty. Please add some products.');
       return;
     }
-    if (!cart.isDeliveryAvailable) {
-      Alert.alert('Delivery Not Available', 'Please check delivery availability for your area.');
+    if (!cart.pincode) {
+      Alert.alert('Delivery Check Required', 'Please check delivery availability for your area first.');
       return;
     }
 
-    // Directly show payment options
-    Alert.alert(
-      'Choose Payment Method',
-      `Order Total: ₹${finalTotal}\n\nSelect your preferred payment method:`,
-      [
-        {
-          text: 'Cash on Delivery',
-          onPress: () => handleCashOnDelivery()
-        },
-        {
-          text: 'Pay Online (Razorpay)',
-          onPress: () => handleRazorpayPayment()
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel'
+    // Verify delivery before proceeding
+    setIsLoading(true);
+    try {
+      console.log('🔍 Verifying delivery before checkout for pincode:', cart.pincode);
+      const response = await apiService.verifyDelivery(cart.pincode);
+
+      if (response.success) {
+        console.log('✅ Delivery verification successful for checkout');
+        setIsLoading(false);
+        // Proceed with payment options
+        Alert.alert(
+          'Choose Payment Method',
+          `Order Total: ₹${finalTotal}\n\nSelect your preferred payment method:`,
+          [
+            {
+              text: 'Cash on Delivery',
+              onPress: () => handleCashOnDelivery()
+            },
+            {
+              text: 'Pay Online (Razorpay)',
+              onPress: () => handleRazorpayPayment()
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+      } else {
+        setIsLoading(false);
+        console.log('❌ Delivery verification failed during checkout:', response.error);
+
+        // Check if some items are not deliverable
+        const errorData = response.data?.error || response.error;
+        if (errorData && errorData.unavailableItems && Array.isArray(errorData.unavailableItems)) {
+          const unavailableItems = errorData.unavailableItems;
+          console.log('📦 Unavailable items during checkout:', unavailableItems);
+
+          // Show detailed message about unavailable items
+          const unavailableNames = unavailableItems.map((item: any) => {
+            const cartItem = cart.items.find(cartItem => cartItem.product.id === item.productId);
+            return cartItem ? cartItem.product.name : `Product ${item.productId}`;
+          }).join(', ');
+
+          setDeliveryErrorMessage(response.message || 'Some items are not deliverable to this pincode');
+          Alert.alert(
+            '⚠️ Items Not Deliverable',
+            `${response.message}\n\nUnavailable items:\n${unavailableNames}\n\nPlease remove these items or try a different pincode.`,
+            [
+              {
+                text: 'Remove Items',
+                onPress: () => {
+                  // Remove unavailable items from cart
+                  unavailableItems.forEach((item: any) => {
+                    removeFromCart(item.productId);
+                  });
+                  // Update delivery status
+                  setPincode(cart.pincode, true);
+                  setDeliveryErrorMessage(''); // Clear message after removal
+                }
+              },
+              {
+                text: 'Change Pincode',
+                style: 'cancel'
+              }
+            ]
+          );
+        } else {
+          // General delivery not available
+          setPincode(cart.pincode, false);
+          setDeliveryErrorMessage(response.message || 'Delivery not available for this pincode.');
+          Alert.alert(response.message || 'Delivery not available for this pincode.');
         }
-      ]
-    );
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.error('💥 Error verifying delivery during checkout:', error);
+      Alert.alert(
+        '❌ Verification Error',
+        'Unable to verify delivery. Please try again.'
+      );
+    }
   };
 
   // Skeleton Loading Component
@@ -497,9 +602,36 @@ const CartScreen: React.FC = () => {
                 />
               )}
 
-          
-
-              {/* Delivery Section */}
+             {/* Delivery Section */}
+             <View style={styles.deliveryContainer}>
+               <Text style={styles.sectionTitle}>Delivery Information</Text>
+               <View style={styles.pincodeContainer}>
+                 <TextInput
+                   style={styles.pincodeInput}
+                   placeholder="Enter Pincode"
+                   value={pincodeInput}
+                   onChangeText={(text) => { setPincodeInput(text); setDeliveryErrorMessage(''); }}
+                   keyboardType="numeric"
+                   maxLength={6}
+                 />
+                 <TouchableOpacity
+                   style={styles.checkButton}
+                   onPress={handlePincodeCheck}
+                 >
+                   <Text style={styles.checkButtonText}>Check</Text>
+                 </TouchableOpacity>
+               </View>
+               {cart.pincode && cart.isDeliveryAvailable && !deliveryErrorMessage && (
+                 <Text style={[styles.deliveryStatus, { color: '#28a745' }]}>
+                   ✅ Delivery available to {cart.pincode}
+                 </Text>
+               )}
+               {cart.pincode && deliveryErrorMessage && (
+                 <Text style={[styles.deliveryStatus, { color: cart.isDeliveryAvailable ? '#ff9800' : '#dc3545' }]}>
+                   {deliveryErrorMessage}
+                 </Text>
+               )}
+             </View>
             
             </ScrollView>
 

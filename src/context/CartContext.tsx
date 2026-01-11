@@ -235,12 +235,67 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     dispatch({ type: 'ADD_TO_CART', product });
   };
 
-  const removeFromCart = (productId: string) => {
-    dispatch({ type: 'REMOVE_FROM_CART', productId });
+  const removeFromCart = async (productId: string) => {
+    try {
+      console.log('🗑️ CART CONTEXT: Removing item from cart via API');
+      const response = await apiService.removeFromCart(productId, 'remove');
+      if (response.success) {
+        console.log('✅ CART CONTEXT: Successfully removed item from server cart');
+        dispatch({ type: 'REMOVE_FROM_CART', productId });
+        // Show success message
+        console.log('✅ Item removed from cart successfully');
+      } else {
+        console.log('❌ CART CONTEXT: Failed to remove item from server cart');
+        // Still update local state as fallback
+        dispatch({ type: 'REMOVE_FROM_CART', productId });
+        console.log('⚠️ Item removed locally (server sync failed)');
+      }
+    } catch (error) {
+      console.error('💥 CART CONTEXT: Error removing item from cart:', error);
+      // Fallback to local state update
+      dispatch({ type: 'REMOVE_FROM_CART', productId });
+      console.log('⚠️ Item removed locally (network error)');
+    }
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    dispatch({ type: 'UPDATE_QUANTITY', productId, quantity });
+  const updateQuantity = async (productId: string, quantity: number) => {
+    const currentItem = cart.items.find(item => item.product.id === productId);
+    if (!currentItem) return;
+
+    const currentQuantity = currentItem.quantity;
+
+    try {
+      if (quantity < currentQuantity) {
+        // Decrease quantity
+        console.log('🔽 CART CONTEXT: Decreasing quantity via API');
+        const response = await apiService.removeFromCart(productId, 'decrease');
+        if (response.success) {
+          console.log('✅ CART CONTEXT: Successfully decreased quantity on server');
+          dispatch({ type: 'UPDATE_QUANTITY', productId, quantity });
+          console.log('✅ Quantity decreased successfully');
+        } else {
+          console.log('❌ CART CONTEXT: Failed to decrease quantity on server');
+          // Still update local state as fallback
+          dispatch({ type: 'UPDATE_QUANTITY', productId, quantity });
+          console.log('⚠️ Quantity decreased locally (server sync failed)');
+        }
+      } else {
+        // Increase quantity - use addOrUpdateToCart
+        console.log('🔼 CART CONTEXT: Increasing quantity via API');
+        const success = await addOrUpdateToCart(productId, quantity);
+        if (success) {
+          dispatch({ type: 'UPDATE_QUANTITY', productId, quantity });
+          console.log('✅ Quantity increased successfully');
+        } else {
+          console.log('⚠️ Quantity increased locally (server sync failed)');
+        }
+      }
+    } catch (error) {
+      console.error('💥 CART CONTEXT: Error updating quantity:', error);
+      // Fallback to local state update
+      dispatch({ type: 'UPDATE_QUANTITY', productId, quantity });
+      console.log('⚠️ Quantity updated locally (network error)');
+    }
   };
 
   const saveForLater = (productId: string) => {
@@ -267,8 +322,26 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     dispatch({ type: 'SET_USER_LOCATION', location });
   };
 
-  const clearCart = () => {
-    dispatch({ type: 'CLEAR_CART' });
+  const clearCart = async () => {
+    try {
+      console.log('🗑️ CART CONTEXT: Clearing entire cart via API');
+      const response = await apiService.clearCart();
+      if (response.success) {
+        console.log('✅ CART CONTEXT: Successfully cleared cart on server');
+        dispatch({ type: 'CLEAR_CART' });
+        console.log('✅ Cart cleared successfully');
+      } else {
+        console.log('❌ CART CONTEXT: Failed to clear cart on server');
+        // Still update local state as fallback
+        dispatch({ type: 'CLEAR_CART' });
+        console.log('⚠️ Cart cleared locally (server sync failed)');
+      }
+    } catch (error) {
+      console.error('💥 CART CONTEXT: Error clearing cart:', error);
+      // Fallback to local state update
+      dispatch({ type: 'CLEAR_CART' });
+      console.log('⚠️ Cart cleared locally (network error)');
+    }
   };
 
   const addOrUpdateToCart = async (productId: string, quantity: number): Promise<boolean> => {

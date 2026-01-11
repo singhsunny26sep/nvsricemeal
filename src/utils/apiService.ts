@@ -120,15 +120,6 @@ class ApiService {
       ...options,
     };
 
-    console.log('=== API REQUEST DEBUG ===');
-    console.log('🔗 Full URL:', url);
-    console.log('🌐 Base URL:', url.replace(endpoint, ''));
-    console.log('📍 Endpoint:', endpoint);
-    console.log('Method:', config.method || 'GET');
-    console.log('Headers:', config.headers);
-    console.log('Body:', config.body);
-    console.log('Authorization header set:', !!(config.headers as any)?.['Authorization']);
-    console.log('Token used:', token ? 'Token exists and set in headers' : 'No token');
 
     try {
       const response = await fetch(url, config);
@@ -742,11 +733,31 @@ console.log(endpoint,"++++++++++++++++++++++++++")
   }
 
   // Remove item from cart
-  async removeFromCart(productId: string): Promise<ApiResponse<any>> {
+  async removeFromCart(productId: string, action: 'decrease' | 'remove' = 'remove'): Promise<ApiResponse<any>> {
     const endpoint = `${API_CONFIG.ENDPOINTS.CART.REMOVE_FROM_CART}/${productId}`;
-    
+
+    return this.request<any>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ action }),
+    });
+  }
+
+  // Clear entire cart
+  async clearCart(): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.CART.CLEAR_CART;
+
     return this.request<any>(endpoint, {
       method: 'DELETE',
+    });
+  }
+
+  // Verify delivery for pincode
+  async verifyDelivery(pincode: string): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.CART.VERIFY_DELIVERY;
+
+    return this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ zipcode: pincode }),
     });
   }
 

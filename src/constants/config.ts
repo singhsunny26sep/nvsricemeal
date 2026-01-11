@@ -51,6 +51,8 @@ export const API_CONFIG = {
       ADD_OR_UPDATE: '/carts/add-or-update',
       GET_CART: '/carts/get',
       REMOVE_FROM_CART: '/carts/remove',
+      CLEAR_CART: '/carts/clear',
+      VERIFY_DELIVERY: '/carts/verify-delivery',
     },
     LOCATIONS: {
       GET_ALL: '/locations/getAll',
