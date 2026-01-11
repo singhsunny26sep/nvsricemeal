@@ -16,7 +16,7 @@ class LocationService {
   async requestLocationPermission(context: string = 'general'): Promise<boolean> {
     try {
       await locationLogger.logPermissionRequested(context, 'manual');
-      
+
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
@@ -28,19 +28,17 @@ class LocationService {
             buttonPositive: 'OK',
           }
         );
-        
-        const result = granted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 
-                      granted === PermissionsAndroid.RESULTS.DENIED ? 'denied' : 'blocked';
-        
+
+        const result = granted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' :
+          granted === PermissionsAndroid.RESULTS.DENIED ? 'denied' : 'blocked';
         await locationLogger.logPermissionResult(result, context);
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       } else {
         // iOS
         const result = await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
-        
-        const mappedResult = result === RESULTS.GRANTED ? 'granted' : 
-                           result === RESULTS.DENIED ? 'denied' : 'blocked';
-        
+        const mappedResult = result === RESULTS.GRANTED ? 'granted' :
+          result === RESULTS.DENIED ? 'denied' : 'blocked';
+
         await locationLogger.logPermissionResult(mappedResult, context);
         return result === RESULTS.GRANTED;
       }
@@ -58,18 +56,14 @@ class LocationService {
         (position) => {
           const { latitude, longitude } = position.coords;
           console.log('Current position:', { latitude, longitude });
-          
           // Log successful location retrieval
           locationLogger.logLocationRetrieved([latitude, longitude], context);
-          
           resolve({ latitude, longitude });
         },
         (error) => {
           console.error('Error getting current position:', error);
-          
           // Log failed location retrieval
           locationLogger.logLocationSaveFailed(`Failed to retrieve location: ${error.message}`, context);
-          
           reject(error);
         },
         {
@@ -102,23 +96,23 @@ class LocationService {
   async saveLocation(locationData: any, context: string = 'general'): Promise<boolean> {
     try {
       console.log('Saving location data:', locationData);
-      
+
       // Ensure coordinates are in correct format: [latitude, longitude]
       let formattedCoordinates: [number, number] | null = null;
       if (locationData.coordinates && Array.isArray(locationData.coordinates) && locationData.coordinates.length === 2) {
         const lat = parseFloat(locationData.coordinates[0]); // latitude
         const lng = parseFloat(locationData.coordinates[1]);  // longitude
-        
+
         // Validate coordinates
         if (isNaN(lat) || isNaN(lng)) {
           throw new Error('Invalid coordinates format');
         }
-        
+
         // Check if coordinates are within valid ranges
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
           throw new Error('Coordinates out of valid range');
         }
-        
+
         formattedCoordinates = [lat, lng];
       }
 
@@ -137,7 +131,7 @@ class LocationService {
       };
 
       console.log('Formatted API request body:', apiRequestBody);
-      
+
       // Log the save attempt
       if (formattedCoordinates) {
         await locationLogger.logLocationSaved(
@@ -156,11 +150,9 @@ class LocationService {
         },
         body: JSON.stringify(apiRequestBody),
       });
-
       if (response.ok) {
         const result = await response.json();
         console.log('Location saved successfully:', result);
-        
         // Log successful save
         if (formattedCoordinates) {
           await locationLogger.logLocationSaved(
@@ -169,7 +161,7 @@ class LocationService {
             'api_success'
           );
         }
-        
+
         return true;
       } else {
         const errorMessage = `Failed to save location: ${response.status} - ${response.statusText}`;

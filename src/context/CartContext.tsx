@@ -1,7 +1,21 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useCallback, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Product } from '../constants/products';
 import apiService from '../utils/apiService';
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  rating: number;
+  reviewCount: number;
+  discount: number;
+  category: string;
+  subCategory: string;
+  weight?: string;
+  originalPrice?: number;
+}
 
 export interface CartItem {
   product: Product;
@@ -322,14 +336,15 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         // Extract cart items from response - Handle the actual API structure
         const cartData = response.data;
         let cartItems: any[] = [];
-        
+
         // The API returns: { success: true, message: "Cart fetched", data: { items: [...] } }
-        if (cartData?.data?.items && Array.isArray(cartData.data.items)) {
+        // response.data is the data field, which contains items array
+        if (cartData?.items && Array.isArray(cartData.items)) {
+          cartItems = cartData.items;
+          console.log('✅ API CART: Found items in cartData.items');
+        } else if (cartData?.data?.items && Array.isArray(cartData.data.items)) {
           cartItems = cartData.data.items;
           console.log('✅ API CART: Found items in cartData.data.items');
-        } else if (cartData?.data?.data && Array.isArray(cartData.data.data)) {
-          cartItems = cartData.data.data;
-          console.log('✅ API CART: Found items in cartData.data.data');
         } else if (cartData?.data && Array.isArray(cartData.data)) {
           cartItems = cartData.data;
           console.log('✅ API CART: Found items in cartData.data');
@@ -376,7 +391,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
               console.log('✅ API CART: Successfully fetched product:', productId);
               return {
                 productId,
-                productDetails: productResponse.data
+                productDetails: productResponse.data.data
               };
             } else {
               console.log('❌ API CART: Failed to fetch product:', productId);
