@@ -595,7 +595,7 @@ console.log(endpoint,"++++++++++++++++++++++++++")
   }): Promise<ApiResponse<any>> {
     const endpoint = API_CONFIG.ENDPOINTS.CART.ADD_OR_UPDATE;
     const fullUrl = buildUrl(endpoint);
-    
+
     console.log('🛒 =======================================');
     console.log('🛒 API SERVICE: CART ADD/UPDATE REQUEST');
     console.log('🛒 =======================================');
@@ -610,11 +610,14 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     console.log('🚀 Making POST request to cart endpoint...');
 
     const requestStartTime = Date.now();
-    
+
     try {
       const response = await this.request<any>(endpoint, {
         method: 'POST',
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          ...request,
+          quantity: request.quantity.toString(), // Convert quantity to string
+        }),
       });
       
       const requestEndTime = Date.now();
@@ -735,6 +738,13 @@ console.log(endpoint,"++++++++++++++++++++++++++")
   // Remove item from cart
   async removeFromCart(productId: string, action: 'decrease' | 'remove' = 'remove'): Promise<ApiResponse<any>> {
     const endpoint = `${API_CONFIG.ENDPOINTS.CART.REMOVE_FROM_CART}/${productId}`;
+    const fullUrl = buildUrl(endpoint);
+
+    console.log('🗑️ REMOVE FROM CART API:');
+    console.log('🔗 Full URL:', fullUrl);
+    console.log('📦 Product ID:', productId);
+    console.log('🎯 Action:', action);
+    console.log('📨 Request Body:', JSON.stringify({ action }));
 
     return this.request<any>(endpoint, {
       method: 'PUT',

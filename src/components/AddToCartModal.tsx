@@ -91,7 +91,6 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
               <Icon name="close" size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
-
           {/* Product Summary */}
           <View style={styles.productSummary}>
             <Text style={styles.productName} numberOfLines={2}>
@@ -109,7 +108,6 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
             <Text style={styles.sectionSubtitle}>
               Please enter your delivery pincode to check service availability
             </Text>
-
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Delivery Pincode</Text>
               <View style={[
@@ -135,7 +133,6 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
               {zipCodeError && (
                 <Text style={styles.errorText}>{zipCodeError}</Text>
               )}
-              
               {/* Delivery Error Display */}
               {deliveryError && (
                 <View style={styles.deliveryErrorContainer}>
@@ -144,7 +141,6 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
                 </View>
               )}
             </View>
-
             <View style={styles.infoBox}>
               <Icon name="info" size={16} color={theme.colors.primary} />
               <Text style={styles.infoText}>
@@ -161,7 +157,6 @@ const AddToCartModal: React.FC<AddToCartModalProps> = ({
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={[styles.button, styles.confirmButton, (!zipCode || isCheckingDelivery) && styles.confirmButtonDisabled]}
               onPress={handleConfirm}
