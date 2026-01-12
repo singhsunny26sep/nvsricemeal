@@ -13,7 +13,7 @@ import {
 import { Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Product } from '../constants/products';
+import { Product } from '../context/CartContext';
 import { useCart } from '../context/CartContext';
 import { theme } from '../constants/theme';
 import { apiService } from '../utils/apiService';
@@ -331,8 +331,86 @@ const ProductDetailsScreen: React.FC = () => {
   }, [hasCheckedLocations]);
 
   const handleAddToCart = async () => {
-    // Show the add to cart modal directly
-    setShowAddToCartModal(true);
+    try {
+      console.log('🛒 ProductDetails - Add to Cart clicked for product:', displayProduct.name);
+      console.log('🛒 ProductDetails - Product ID:', displayProduct.id);
+      console.log('🛒 ProductDetails - Quantity:', quantity);
+
+      // Call the cart API to add/update item
+      const success = await addOrUpdateToCart(displayProduct.id, quantity);
+
+      if (success) {
+        console.log('✅ ProductDetails - Cart API call successful');
+
+        // Also update local cart for immediate UI feedback
+        addToCart(displayProduct);
+
+        // Show success feedback
+        Alert.alert(
+          'Success! 🎉',
+          `${quantity} ${displayProduct.name} added to cart!`,
+          [
+            {
+              text: 'Continue Shopping',
+              style: 'cancel'
+            },
+            {
+              text: 'View Cart',
+              onPress: () => {
+                // Navigate to cart tab
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      } else {
+        console.log('❌ ProductDetails - Cart API call failed');
+
+        // Still update local cart as fallback
+        addToCart(displayProduct);
+
+        // Show partial success feedback
+        Alert.alert(
+          'Partial Success ⚠️',
+          `${quantity} ${displayProduct.name} added locally but server sync failed.`,
+          [
+            {
+              text: 'Continue Shopping',
+              style: 'cancel'
+            },
+            {
+              text: 'View Cart',
+              onPress: () => {
+                // Navigate to cart tab
+                (navigation as any).getParent()?.navigate('Cart');
+              }
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('❌ ProductDetails - Error in handleAddToCart:', error);
+      // Fallback to local cart update
+      addToCart(displayProduct);
+
+      Alert.alert(
+        'Network Error ⚠️',
+        `${quantity} ${displayProduct.name} added locally. Server sync will happen when online.`,
+        [
+          {
+            text: 'Continue Shopping',
+            style: 'cancel'
+          },
+          {
+            text: 'View Cart',
+            onPress: () => {
+              // Navigate to cart tab
+              (navigation as any).getParent()?.navigate('Cart');
+            }
+          }
+        ]
+      );
+    }
   };
 
   const proceedWithAddToCart = async () => {

@@ -8,6 +8,7 @@ export interface Product {
   description: string;
   price: number;
   image: string;
+  images?: string[];
   rating: number;
   reviewCount: number;
   discount: number;
@@ -15,6 +16,21 @@ export interface Product {
   subCategory: string;
   weight?: string;
   originalPrice?: number;
+  inStock?: boolean;
+  brand?: string;
+  specifications?: {
+    origin?: string;
+    processing?: string;
+    shelfLife?: string;
+    storage?: string;
+  };
+  nutritionInfo?: {
+    calories?: string;
+    protein?: string;
+    carbs?: string;
+    fat?: string;
+    fiber?: string;
+  };
 }
 
 export interface CartItem {
