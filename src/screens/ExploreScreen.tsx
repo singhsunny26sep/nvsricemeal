@@ -32,10 +32,13 @@ export default function ExploreScreen() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [refreshing, setRefreshing] = useState(false)
   const [refreshLoading, setRefreshLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const fadeAnim = useState(new Animated.Value(0))[0]
 
-  // Fetch products from API
-  const fetchProducts = async () => {
+  // Fetch products from API with pagination
+  const fetchProducts = async (currentPage = 1, isLoadMore = false) => {
     try {
       const storedToken = await AsyncStorage.getItem('userToken')
 
@@ -44,7 +47,14 @@ export default function ExploreScreen() {
         setLoading(false)
         return
       }
-      const response = await fetch('https://nvs-rice-mart.onrender.com/nvs-rice-mart/products/getAll', {
+
+      if (isLoadMore) {
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
+
+      const response = await fetch(`https://nvs-rice-mart.onrender.com/nvs-rice-mart/products/getAll?page=${currentPage}&limit=10`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -68,14 +78,27 @@ export default function ExploreScreen() {
           sku: product.SKU
         }))
 
-        setProducts(formattedProducts)
+        if (isLoadMore) {
+          setProducts((prevProducts: any[]) => [...prevProducts, ...formattedProducts])
+        } else {
+          setProducts(formattedProducts)
+        }
 
-        // Fade in animation
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }).start()
+        // Check if there are more pages
+        if (formattedProducts.length < 10) {
+          setHasMore(false)
+        } else {
+          setHasMore(true)
+        }
+
+        // Fade in animation only for initial load
+        if (!isLoadMore) {
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }).start()
+        }
       } else {
         Alert.alert('Error', data.message || 'Failed to fetch products')
       }
@@ -86,16 +109,31 @@ export default function ExploreScreen() {
       setLoading(false)
       setRefreshing(false)
       setRefreshLoading(false)
+      setLoadingMore(false)
     }
   }
   useEffect(() => {
-    fetchProducts()
+    setPage(1)
+    setHasMore(true)
+    fetchProducts(1, false)
   }, [])
+
   const onRefresh = () => {
     setRefreshing(true)
     setRefreshLoading(true)
-    fetchProducts()
+    setPage(1)
+    setHasMore(true)
+    fetchProducts(1, false)
   }
+
+  const loadMore = () => {
+    if (!loadingMore && hasMore && !refreshing) {
+      const nextPage = page + 1
+      setPage(nextPage)
+      fetchProducts(nextPage, true)
+    }
+  }
+
   const handleProductPress = (item: any) => {
     // Navigate to ProductDetails screen (now available in main tabs)
     (navigation as any).navigate('ProductDetails', { product: item });
@@ -379,12 +417,12 @@ export default function ExploreScreen() {
       </View>
 
       {/* Attractive Banner */}
-      <AttractiveBanner
+      {/* <AttractiveBanner
         onBannerPress={(banner) => {
           console.log('Banner pressed:', banner.title);
           // Add your navigation logic here
         }}
-      />
+      /> */}
 
       <FlatList
         data={filteredProducts}
@@ -396,6 +434,9 @@ export default function ExploreScreen() {
         columnWrapperStyle={styles.columnWrapper}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color="#6366F1" /> : null}
         ListEmptyComponent={
           searchQuery || activeCategory !== 'All' ? (
             <View style={styles.emptyContainer}>

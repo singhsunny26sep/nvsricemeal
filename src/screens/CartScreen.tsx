@@ -335,6 +335,7 @@ const CartScreen: React.FC = () => {
     try {
       // Call the orders/create API
       const orderResponse = await apiService.createOrder({ paymentMethod: 'COD' });
+      console.log('🛒 COD Order API Response:', orderResponse);
       if (orderResponse.success) {
         await saveOrderToHistory('Cash on Delivery');
         setIsLoading(false);
@@ -358,6 +359,7 @@ const CartScreen: React.FC = () => {
       }
     } catch (error) {
       setIsLoading(false);
+      console.error('🛒 COD Order API Error:', error);
       Alert.alert('Error', 'Failed to place order. Please try again.');
     }
   };
@@ -385,6 +387,7 @@ const CartScreen: React.FC = () => {
       .then(async (data: any) => {
         // Payment successful - Call the orders/create API
         const orderResponse = await apiService.createOrder({ paymentMethod: 'ONLINE' });
+        console.log('🛒 Online Order API Response:', orderResponse);
         if (orderResponse.success) {
           await saveOrderToHistory('Online Payment', data.razorpay_payment_id);
           setIsLoading(false);
@@ -409,6 +412,7 @@ const CartScreen: React.FC = () => {
       })
       .catch((error: any) => {
         setIsLoading(false);
+        console.error('🛒 Razorpay Payment Error:', error);
         Alert.alert('Payment Failed', 'Payment was cancelled or failed. Please try again.');
         console.log('Razorpay error:', error);
       });
