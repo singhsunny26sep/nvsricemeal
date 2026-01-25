@@ -460,6 +460,9 @@ const HomeScreen: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [banner, setBanner] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const scrollViewRef = useRef<any>(null);
 
   // Fetch categories from API
@@ -510,89 +513,125 @@ const HomeScreen: React.FC = () => {
   }, []);
   // Fetch products when category changes
   useEffect(() => {
-    const fetchProductsByCategory = async () => {
-      setIsProductsLoading(true);
-      try {
-        if (selectedCategory.id === 'all') {
-          console.log('=== FETCHING ALL PRODUCTS ===');
-          const allProductsResponse = await apiService.getAllProducts();
-          console.log('All Products API Response:', allProductsResponse);
+    setPage(1);
+    setHasMore(true);
+    fetchProductsByCategory(1, false);
+  }, [selectedCategory]);
 
-          if (allProductsResponse.success && allProductsResponse.data?.data?.data) {
-            const transformedProducts: Product[] = allProductsResponse.data.data.data.map((apiProduct: any) => ({
-              id: apiProduct._id,
-              name: apiProduct.name,
-              description: apiProduct.description || 'No description available',
-              price: apiProduct.generalPrice || 0,
-              image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
-              rating: apiProduct.rating || 4.0,
-              reviewCount: apiProduct.reviewCount || 0,
-              discount: apiProduct.discount || 0,
-              category: apiProduct.category || 'General',
-              subCategory: apiProduct.subCategory || '',
-              weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
-            }));
+  const fetchProductsByCategory = async (currentPage = 1, isLoadMore = false) => {
+    try {
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setIsProductsLoading(true);
+      }
 
-            console.log('All products loaded:', transformedProducts.length);
+      if (selectedCategory.id === 'all') {
+        console.log('=== FETCHING ALL PRODUCTS ===');
+        const allProductsResponse = await apiService.getAllProducts(`page=${currentPage}&limit=10`);
+        console.log('All Products API Response:', allProductsResponse);
+
+        if (allProductsResponse.success && allProductsResponse.data?.data?.data) {
+          const transformedProducts: Product[] = allProductsResponse.data.data.data.map((apiProduct: any) => ({
+            id: apiProduct._id,
+            name: apiProduct.name,
+            description: apiProduct.description || 'No description available',
+            price: apiProduct.generalPrice || 0,
+            image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+            rating: apiProduct.rating || 4.0,
+            reviewCount: apiProduct.reviewCount || 0,
+            discount: apiProduct.discount || 0,
+            category: apiProduct.category || 'General',
+            subCategory: apiProduct.subCategory || '',
+            weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
+          }));
+
+          if (isLoadMore) {
+            setProducts((prevProducts: Product[]) => [...prevProducts, ...transformedProducts]);
+          } else {
             setProducts(transformedProducts);
-          } else {
-            console.log('No products found from API');
-            setProducts([]);
           }
-        } else {
-          console.log(`=== FETCHING PRODUCTS FOR CATEGORY: ${selectedCategory.name} (ID: ${selectedCategory.id}) ===`);
 
-          const subCategoriesResponse = await apiService.getSubCategoriesByCategory(selectedCategory.id);
-          console.log('SubCategories API Response:', subCategoriesResponse);
-
-          if (subCategoriesResponse.success && subCategoriesResponse.data?.data?.data) {
-            const subCategories: SubCategory[] = subCategoriesResponse.data.data.data;
-            console.log('Found subcategories:', subCategories);
-
-            let allProducts: Product[] = [];
-
-            for (const subCategory of subCategories) {
-              console.log(`Fetching products for subcategory: ${subCategory.name} (ID: ${subCategory._id})`);
-              const productsResponse = await apiService.getProductsBySubCategory(subCategory._id);
-              console.log(`Products response for ${subCategory.name}:`, productsResponse);
-
-              if (productsResponse.success && productsResponse.data?.data?.data) {
-                const transformedProducts: Product[] = productsResponse.data.data.data.map((apiProduct: any) => ({
-                  id: apiProduct._id,
-                  name: apiProduct.name,
-                  description: apiProduct.description || 'No description available',
-                  price: apiProduct.price || 0,
-                  image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
-                  rating: apiProduct.rating || 4.0,
-                  reviewCount: apiProduct.reviewCount || 0,
-                  discount: apiProduct.discount || 0,
-                  category: apiProduct.category || selectedCategory.name,
-                  subCategory: apiProduct.subCategory || subCategory.name,
-              weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
-
-                }));
-
-                allProducts = [...allProducts, ...transformedProducts];
-              }
-            }
-
-            console.log('Final transformed products:', allProducts);
-            setProducts(allProducts);
+          if (transformedProducts.length < 10) {
+            setHasMore(false);
           } else {
-            console.log('No subcategories found for category');
+            setHasMore(true);
+          }
+
+          console.log('All products loaded:', transformedProducts.length);
+        } else {
+          console.log('No products found from API');
+          if (!isLoadMore) {
             setProducts([]);
           }
         }
-      } catch (error) {
-        console.error('Error fetching products by category:', error);
-        setProducts([]);
-      } finally {
-        setIsProductsLoading(false);
-      }
-    };
+      } else {
+        console.log(`=== FETCHING PRODUCTS FOR CATEGORY: ${selectedCategory.name} (ID: ${selectedCategory.id}) ===`);
 
-    fetchProductsByCategory();
-  }, [selectedCategory]);
+        const subCategoriesResponse = await apiService.getSubCategoriesByCategory(selectedCategory.id);
+        console.log('SubCategories API Response:', subCategoriesResponse);
+
+        if (subCategoriesResponse.success && subCategoriesResponse.data?.data?.data) {
+          const subCategories: SubCategory[] = subCategoriesResponse.data.data.data;
+          console.log('Found subcategories:', subCategories);
+
+          let allProducts: Product[] = [];
+
+          for (const subCategory of subCategories) {
+            console.log(`Fetching products for subcategory: ${subCategory.name} (ID: ${subCategory._id})`);
+            const productsResponse = await apiService.getProductsBySubCategory(subCategory._id, `page=${currentPage}&limit=10`);
+            console.log(`Products response for ${subCategory.name}:`, productsResponse);
+
+            if (productsResponse.success && productsResponse.data?.data?.data) {
+              const transformedProducts: Product[] = productsResponse.data.data.data.map((apiProduct: any) => ({
+                id: apiProduct._id,
+                name: apiProduct.name,
+                description: apiProduct.description || 'No description available',
+                price: apiProduct.price || 0,
+                image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+                rating: apiProduct.rating || 4.0,
+                reviewCount: apiProduct.reviewCount || 0,
+                discount: apiProduct.discount || 0,
+                category: apiProduct.category || selectedCategory.name,
+                subCategory: apiProduct.subCategory || subCategory.name,
+            weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
+
+              }));
+
+              allProducts = [...allProducts, ...transformedProducts];
+            }
+          }
+
+          if (isLoadMore) {
+            setProducts((prevProducts: Product[]) => [...prevProducts, ...allProducts]);
+          } else {
+            setProducts(allProducts);
+          }
+
+          if (allProducts.length < 10) {
+            setHasMore(false);
+          } else {
+            setHasMore(true);
+          }
+
+          console.log('Final transformed products:', allProducts);
+        } else {
+          console.log('No subcategories found for category');
+          if (!isLoadMore) {
+            setProducts([]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching products by category:', error);
+      if (!isLoadMore) {
+        setProducts([]);
+      }
+    } finally {
+      setIsProductsLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
   // Filter products based on search query
   const filteredProducts = products.filter(product => {
@@ -614,6 +653,16 @@ const HomeScreen: React.FC = () => {
   const handleCategoryPress = (category: Category) => {
     setSelectedCategory(category);
     setSearchQuery('');
+    setPage(1);
+    setHasMore(true);
+  };
+
+  const loadMore = () => {
+    if (!loadingMore && hasMore && !isProductsLoading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchProductsByCategory(nextPage, true);
+    }
   };
 
   const renderCategory = ({ item }: { item: Category }) => (
@@ -741,6 +790,9 @@ const HomeScreen: React.FC = () => {
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             columnWrapperStyle={styles.row}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color={theme.colors.primary} /> : null}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Icon name="search-off" size={60} color={theme.colors.textSecondary} />

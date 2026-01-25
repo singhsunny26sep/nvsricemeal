@@ -520,8 +520,11 @@ class ApiService {
   }
 
   // Get all products using the correct endpoint
-  async getAllProducts(): Promise<ApiResponse<any>> {
-    const endpoint = API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL;
+  async getAllProducts(queryParams?: string): Promise<ApiResponse<any>> {
+    let endpoint = API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL;
+    if (queryParams) {
+      endpoint += `?${queryParams}`;
+    }
 
     return this.request<any>(endpoint, {
       method: 'GET',
@@ -538,8 +541,11 @@ class ApiService {
   }
 
   // Get products by subcategory ID
-  async getProductsBySubCategory(subCategoryId: string): Promise<ApiResponse<any>> {
-    const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL}?subCategoryId=${subCategoryId}`;
+  async getProductsBySubCategory(subCategoryId: string, queryParams?: string): Promise<ApiResponse<any>> {
+    let endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.GET_ALL}?subCategoryId=${subCategoryId}`;
+    if (queryParams) {
+      endpoint += `&${queryParams}`;
+    }
     return this.request<any>(endpoint, {
       method: 'GET',
     });
