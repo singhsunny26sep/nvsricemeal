@@ -24,6 +24,7 @@ import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
 import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
+import Statusbar from '../constants/Statusbar';
 
 const { width } = Dimensions.get('window');
 
@@ -275,6 +276,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
           
         <Text style={styles.productWeight}>Weight: {item.weight || 'N/A'}</Text>
         
+        
         <View style={styles.priceContainer}>
           <Text style={styles.productPrice}>₹{item.price}</Text>
           {item.originalPrice && item.originalPrice > item.price && (
@@ -308,7 +310,7 @@ const VideoBanner: React.FC<{ banner: any }> = ({ banner }) => {
     showControls: false,
   });
 
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<any>(null);
 
   // Fix Cloudinary URL function
   const getVideoUrl = (url: string) => {
@@ -348,8 +350,8 @@ const VideoBanner: React.FC<{ banner: any }> = ({ banner }) => {
     setVideoState(prev => ({ ...prev, loading: false, error: true, playing: false }));
   };
 
-  const handleVideoBuffer = (isBuffering: boolean) => {
-    console.log('Video buffering:', isBuffering);
+  const handleVideoBuffer = (e: { isBuffering: boolean }) => {
+    console.log('Video buffering:', e.isBuffering);
   };
 
   const handleVideoEnd = () => {
@@ -543,7 +545,8 @@ const HomeScreen: React.FC = () => {
             discount: apiProduct.discount || 0,
             category: apiProduct.category || 'General',
             subCategory: apiProduct.subCategory || '',
-            weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
+            weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A',
+            stock:apiProduct.stockQuantity
           }));
 
           if (isLoadMore) {
@@ -581,13 +584,13 @@ const HomeScreen: React.FC = () => {
             console.log(`Fetching products for subcategory: ${subCategory.name} (ID: ${subCategory._id})`);
             const productsResponse = await apiService.getProductsBySubCategory(subCategory._id, `page=${currentPage}&limit=10`);
             console.log(`Products response for ${subCategory.name}:`, productsResponse);
-
+console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
             if (productsResponse.success && productsResponse.data?.data?.data) {
               const transformedProducts: Product[] = productsResponse.data.data.data.map((apiProduct: any) => ({
                 id: apiProduct._id,
                 name: apiProduct.name,
                 description: apiProduct.description || 'No description available',
-                price: apiProduct.price || 0,
+                price: apiProduct.generalPrice || 0,
                 image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
                 rating: apiProduct.rating || 4.0,
                 reviewCount: apiProduct.reviewCount || 0,
@@ -689,7 +692,7 @@ const HomeScreen: React.FC = () => {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
+        <Statusbar backgroundColor={theme.colors.background} />
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           <HeaderSkeleton />
           <View style={styles.categorySection}>
@@ -719,7 +722,7 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
+      <Statusbar backgroundColor={theme.colors.background} />
       <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>

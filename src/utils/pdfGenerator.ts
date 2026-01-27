@@ -1,4 +1,4 @@
-import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import * as RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNFS from 'react-native-fs';
 import { Linking } from 'react-native';
 import { CartItem } from '../context/CartContext';
@@ -349,11 +349,17 @@ export class PDFGenerator {
 
   static async sharePDF(filePath: string, orderId: string): Promise<void> {
     try {
-      const url = `file://${filePath}`;
-      await Linking.openURL(url);
+      const shareOptions = {
+        title: `Invoice - ${orderId}`,
+        message: `Invoice for order ${orderId}`,
+        url: `file://${filePath}`,
+        type: 'application/pdf',
+      };
+
+      await Share.open(shareOptions);
     } catch (error) {
-      console.error('Error opening PDF:', error);
-      throw new Error('Failed to open PDF');
+      console.error('Error sharing PDF:', error);
+      throw new Error('Failed to share PDF');
     }
   }
 

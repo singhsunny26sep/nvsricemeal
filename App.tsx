@@ -42,6 +42,7 @@ import {
   LanguageProvider,
   useLanguage,
 } from './src/context/LanguageContext';
+import Statusbar from './src/constants/Statusbar';
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const ProfileStack = createStackNavigator();
@@ -369,6 +370,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <Statusbar backgroundColor="#79B45D" />
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>

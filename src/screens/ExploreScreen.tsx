@@ -22,6 +22,7 @@ import SkeletonLoader from '../components/SkeletonLoader'
 import HeaderSkeleton from '../components/HeaderSkeleton'
 import BannerSkeleton from '../components/BannerSkeleton'
 import AttractiveBanner from '../components/AttractiveBanner'
+import Statusbar from '../constants/Statusbar'
 
 export default function ExploreScreen() {
   const { addToCart, addOrUpdateToCart } = useCart()
@@ -373,7 +374,7 @@ export default function ExploreScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <Statusbar backgroundColor="#ffffff" />
         <HeaderSkeleton animatedValue={fadeAnim} />
         <BannerSkeleton animatedValue={fadeAnim} />
         <SkeletonLoader count={8} />
@@ -383,7 +384,7 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <Statusbar backgroundColor="#ffffff" />
 
       {/* Header */}
       <View style={styles.header}>
