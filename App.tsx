@@ -271,8 +271,8 @@ function MainTabs() {
           }
           return IconComponent;
         },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: '#9E9E9E',
+        tabBarActiveTintColor: "white",
+        tabBarInactiveTintColor: '#f4ededff',
         tabBarLabelStyle: {
           fontSize: 11,
           fontFamily: theme.fonts.family.medium,
@@ -280,10 +280,10 @@ function MainTabs() {
           marginBottom: 8,
         },
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor:theme.colors.primary,
           borderTopWidth: 0,
-          borderTopLeftRadius: 50,
-          borderTopRightRadius: 50,
+          borderTopLeftRadius: 10,
+          borderTopRightRadius: 10,
           height: 85,
           paddingBottom: 12,
           paddingTop: 8,
@@ -370,7 +370,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <Statusbar backgroundColor="#79B45D" />
+        <Statusbar backgroundColor={theme.colors.primary} />
         <LanguageProvider>
           <AuthProvider>
             <CartProvider>

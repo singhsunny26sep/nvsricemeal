@@ -727,6 +727,7 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
             <Image style={styles.imageBox} resizeMode='contain' source={require("../assets/img/logos.jpeg")} />
+            <Text style={styles.headerText}>Best Price & Best Quality</Text>
             <TouchableOpacity
               style={styles.cartIconContainer}
               onPress={() => navigation.navigate('CartScreen')}
@@ -739,6 +740,7 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
               )}
             </TouchableOpacity>
           </View>
+
           {/* Delivery Area Message */}
           <View style={styles.deliveryMessageContainer}>
             <Icon name="location-on" size={30} color="green" />
@@ -1230,6 +1232,12 @@ const styles = StyleSheet.create({
     justifyContent:"center",
     marginVertical:10,
     marginHorizontal:5
+  },
+  headerText:{
+    fontSize: 18,
+    fontWeight: 'bold',
+    color:theme.colors.primary,
+    marginLeft: 5
   }
 });
 
