@@ -374,7 +374,6 @@ export default function ExploreScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Statusbar backgroundColor="#ffffff" />
         <HeaderSkeleton animatedValue={fadeAnim} />
         <BannerSkeleton animatedValue={fadeAnim} />
         <SkeletonLoader count={8} />
@@ -384,7 +383,7 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Statusbar backgroundColor="#ffffff" />
+  
 
       {/* Header */}
       <View style={styles.header}>

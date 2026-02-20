@@ -282,8 +282,8 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 0,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
+          borderTopLeftRadius: 50,
+          borderTopRightRadius: 50,
           height: 85,
           paddingBottom: 12,
           paddingTop: 8,

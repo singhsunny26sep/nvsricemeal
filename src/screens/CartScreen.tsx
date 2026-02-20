@@ -532,7 +532,7 @@ const CartScreen: React.FC = () => {
 
   return (
     <ScrollView style={{marginBottom: 64}}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+   
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -717,7 +717,6 @@ const CartScreen: React.FC = () => {
             </View>
           </Animated.View>
         )}
-
       </View>
     </ScrollView>
   );

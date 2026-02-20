@@ -692,7 +692,7 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeContainer}>
-        <Statusbar backgroundColor={theme.colors.background} />
+        {/* <Statusbar backgroundColor={theme.colors.background} /> */}
         <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
           <HeaderSkeleton />
           <View style={styles.categorySection}>
@@ -722,7 +722,7 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <Statusbar backgroundColor={theme.colors.background} />
+     
       <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
@@ -739,6 +739,15 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
               )}
             </TouchableOpacity>
           </View>
+
+          {/* Delivery Area Message */}
+          <View style={styles.deliveryMessageContainer}>
+            <Icon name="location-on" size={16} color={theme.colors.primary} />
+            <Text style={styles.deliveryMessageText}>
+              Delivery available only in Davanagere: 577001, 577002, 577003, 577004, 577005, 577006
+            </Text>
+          </View>
+
           <View style={styles.searchContainer}>
             <Icon name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
@@ -1212,6 +1221,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.medium,
   },
+  deliveryMessageText:{
+    color:theme.colors.primary,
+    fontWeight:"800"
+  },
+  deliveryMessageContainer:{
+    flexDirection:"row",
+    alignItems:"center",
+    justifyContent:"center"
+  }
 });
 
 export default HomeScreen;
