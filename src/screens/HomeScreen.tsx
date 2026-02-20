@@ -739,10 +739,9 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
               )}
             </TouchableOpacity>
           </View>
-
           {/* Delivery Area Message */}
           <View style={styles.deliveryMessageContainer}>
-            <Icon name="location-on" size={16} color={theme.colors.primary} />
+            <Icon name="location-on" size={30} color="green" />
             <Text style={styles.deliveryMessageText}>
               Delivery available only in Davanagere: 577001, 577002, 577003, 577004, 577005, 577006
             </Text>
@@ -1222,13 +1221,15 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
   },
   deliveryMessageText:{
-    color:theme.colors.primary,
+    color:"green",
     fontWeight:"800"
   },
   deliveryMessageContainer:{
     flexDirection:"row",
-    alignItems:"center",
-    justifyContent:"center"
+    // alignItems:"center",
+    justifyContent:"center",
+    marginVertical:10,
+    marginHorizontal:5
   }
 });
 
