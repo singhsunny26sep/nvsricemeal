@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import {
 import { theme } from '../constants/theme';
 import { apiService } from '../utils/apiService';
 import { useNavigation } from '@react-navigation/native';
+import { locationService, LocationData } from '../utils/locationService';
 
 // Types for location creation
 interface CreateLocationRequest {
@@ -33,8 +34,9 @@ interface CreateLocationRequest {
 export default function CreateLocationScreen() {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
+  const [autoLoading, setAutoLoading] = useState(true);
   const [useCoordinates, setUseCoordinates] = useState(true);
-  
+
   // Form fields
   const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
   const [name, setName] = useState('');
@@ -46,6 +48,52 @@ export default function CreateLocationScreen() {
   const [state, setState] = useState('');
   const [area, setArea] = useState('');
   const [country, setCountry] = useState('India');
+
+  // Auto-fetch GPS location on screen load
+  useEffect(() => {
+    autoFetchLocation();
+  }, []);
+
+  // Auto-fetch current GPS location
+  const autoFetchLocation = async () => {
+    setAutoLoading(true);
+    try {
+      // Request location permission
+      const hasPermission = await locationService.requestLocationPermission('create_location');
+
+      if (hasPermission) {
+        // Get current position
+        const location: LocationData | null = await locationService.getCurrentPosition('create_location');
+
+        if (location) {
+          const coords: [number, number] = [location.latitude, location.longitude];
+          setCoordinates(coords);
+
+          console.log('📍 Auto GPS Coordinates obtained:');
+          console.log('   Latitude:', location.latitude);
+          console.log('   Longitude:', location.longitude);
+
+          Alert.alert(
+            '📍 GPS Location Found!',
+            `Your current location:
+
+      Latitude: ${location.latitude.toFixed(6)}
+       Longitude: ${location.longitude.toFixed(6)}
+
+          These coordinates will be sent to create your location.`
+          );
+        } else {
+          console.log('⚠️ Could not get GPS location');
+        }
+      } else {
+        console.log('⚠️ Location permission denied');
+      }
+    } catch (error) {
+      console.error('Error auto-fetching location:', error);
+    } finally {
+      setAutoLoading(false);
+    }
+  };
 
   // Handle coordinate input
   const handleCoordinatesChange = (text: string) => {
@@ -200,6 +248,32 @@ export default function CreateLocationScreen() {
             <Text style={styles.sectionDescription}>
               Enter coordinates in format: latitude, longitude (e.g., 22.3060, 74.3558)
             </Text>
+
+            {/* Auto-fetched coordinates display */}
+            {autoLoading ? (
+              <View style={styles.autoFetchContainer}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={styles.autoFetchText}>Getting GPS location...</Text>
+              </View>
+            ) : coordinates ? (
+              <View style={styles.coordinatesDisplay}>
+                <View style={styles.coordinateRow}>
+                  <Text style={styles.coordinateLabel}>Latitude:</Text>
+                  <Text style={styles.coordinateValue}>{coordinates[0].toFixed(6)}</Text>
+                </View>
+                <View style={styles.coordinateRow}>
+                  <Text style={styles.coordinateLabel}>Longitude:</Text>
+                  <Text style={styles.coordinateValue}>{coordinates[1].toFixed(6)}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.refreshButton}
+                  onPress={autoFetchLocation}
+                >
+                  <Text style={styles.refreshButtonText}>🔄 Refresh Location</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
             <TextInput
               style={styles.input}
               placeholder="22.3060, 74.3558"
@@ -214,7 +288,7 @@ export default function CreateLocationScreen() {
         {!useCoordinates && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location Details (Required)</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Address *</Text>
               <TextInput
@@ -276,7 +350,7 @@ export default function CreateLocationScreen() {
         {/* Optional Fields */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Optional Details</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Name/Title</Text>
             <TextInput
@@ -469,5 +543,53 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: theme.fonts.size.large,
     fontWeight: theme.fonts.weight.bold,
+  },
+  autoFetchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.medium,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.medium,
+  },
+  autoFetchText: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.primary,
+    marginLeft: theme.spacing.small,
+  },
+  coordinatesDisplay: {
+    padding: theme.spacing.medium,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: theme.borderRadius.medium,
+    marginBottom: theme.spacing.medium,
+  },
+  coordinateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.small,
+  },
+  coordinateLabel: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  coordinateValue: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.bold,
+  },
+  refreshButton: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.small,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
+    marginTop: theme.spacing.small,
+  },
+  refreshButtonText: {
+    color: 'white',
+    fontSize: theme.fonts.size.small,
+    fontWeight: theme.fonts.weight.medium,
   },
 });
