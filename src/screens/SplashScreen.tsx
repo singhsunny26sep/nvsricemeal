@@ -190,7 +190,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a4d3a" />
+      <StatusBar barStyle="light-content" backgroundColor="#1A237E" />
 
       {/* Animated Background Gradient */}
       <Animated.View style={[styles.background, { opacity: backgroundOpacity }]}>
@@ -277,7 +277,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
             },
           ]}
         >
-          NVS Rice Mall
+          NVS Rice Mart
         </Animated.Text>
 
         {/* Animated Subtitle */}
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     left: -width * 0.5,
     width: width * 2,
     height: height * 2,
-    backgroundColor: '#1a4d3a',
+    backgroundColor: '#1A237E',
     opacity: 0.8,
     transform: [{ rotate: '45deg' }],
   },
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     right: -width * 0.3,
     width: width * 1.5,
     height: height * 1.5,
-    backgroundColor: '#2d6b4f',
+    backgroundColor: '#15296b',
     opacity: 0.6,
     borderRadius: width * 0.75,
   },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     left: -width * 0.2,
     width: width * 1.2,
     height: height * 1.2,
-    backgroundColor: '#4a8b6b',
+    backgroundColor: '#1e3d8f',
     opacity: 0.4,
     borderRadius: width * 0.6,
   },

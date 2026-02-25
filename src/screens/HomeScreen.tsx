@@ -749,7 +749,7 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
           {/* Delivery Area Message */}
           <View style={styles.deliveryMessageContainer}>
-            <Icon name="location-on" size={30} color="green" />
+            <Icon name="location-on" size={30} color={theme.colors.primary} />
             <Text style={styles.deliveryMessageText}>
               Delivery available only in Davanagere: 577001, 577002, 577003, 577004, 577005, 577006
             </Text>
@@ -1311,19 +1311,19 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.medium,
   },
   deliveryMessageText:{
-    color:"#2E7D32",
+    color: theme.colors.primary,
     fontWeight:"700",
     fontSize: isSmallScreen ? 10 : 13,
-    textAlign: 'center',
+    // textAlign: 'center',
     flex: 1,
   },
   deliveryMessageContainer:{
     flexDirection:"row",
-    alignItems:"center",
-    justifyContent:"center",
+    // alignItems:"center",
+    // justifyContent:"center",
     marginVertical:12,
     marginHorizontal:-10,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E8F0FE',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,

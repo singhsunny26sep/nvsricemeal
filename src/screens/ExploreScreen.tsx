@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   categoryButtonActive: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#980747',
   },
   categoryButtonText: {
     fontSize: 14,
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#6366F1',
+    color: '#980747',
   },
   productWeight: {
     fontSize: 12,
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6366F1',
+    backgroundColor: '#980747',
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,

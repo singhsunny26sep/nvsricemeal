@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     height: STATUSBAR_HEIGHT,
   },
   appBar: {
-    backgroundColor: '#79B45D',
+    backgroundColor: '#1A237E',
   },
   content: {
     flex: 1,
