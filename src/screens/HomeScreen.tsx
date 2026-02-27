@@ -110,13 +110,13 @@ const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: n
 
 const ProductCardSkeleton: React.FC = () => (
   <View style={styles.productCard}>
-    <SkeletonLoader width={120} height={120} borderRadius={12} />
+    <SkeletonLoader width={90} height={90} borderRadius={12} />
     <View style={styles.productInfo}>
-      <SkeletonLoader width={100} height={16} />
-      <SkeletonLoader width={110} height={14} />
       <SkeletonLoader width={80} height={14} />
-      <SkeletonLoader width={90} height={20} />
-      <SkeletonLoader width={140} height={32} borderRadius={16} />
+      <SkeletonLoader width={70} height={12} />
+      <SkeletonLoader width={60} height={12} />
+      <SkeletonLoader width={70} height={16} borderRadius={14} />
+      <SkeletonLoader width={100} height={28} borderRadius={16} />
     </View>
   </View>
 );
@@ -278,18 +278,14 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
           <Text style={styles.ratingText}>
             {item.rating} ({item.reviewCount})
           </Text>
-        </View>
-          
+        </View>  
         <Text style={styles.productWeight}>Weight: {item.weight || 'N/A'}</Text>
-        
-        
         <View style={styles.priceContainer}>
           <Text style={styles.productPrice}>₹{item.price}</Text>
           {item.originalPrice && item.originalPrice > item.price && (
             <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
           )}
         </View>
-
         <Animated.View style={[styles.addButton, { transform: [{ scale: scaleValue }] }]}>
           <TouchableOpacity
             style={styles.addButtonTouchable}
@@ -307,8 +303,81 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
   );
 };
 
-// Video Banner Component
-const VideoBanner: React.FC<{ banner: any }> = ({ banner }) => {
+// Banner Carousel Component with auto-slide
+const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, banner }) => {
+  // If we have multiple banners, show carousel
+  if (banners && banners.length > 0) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const scrollRef = useRef<any>(null);
+
+    // Auto-slide every 3 seconds
+    useEffect(() => {
+      if (banners.length > 1) {
+        const interval = setInterval(() => {
+          setCurrentIndex((prevIndex) => {
+            const nextIndex = (prevIndex + 1) % banners.length;
+            return nextIndex;
+          });
+        }, 3000);
+        return () => clearInterval(interval);
+      }
+    }, [banners.length]);
+
+    // Scroll to current index when it changes
+    useEffect(() => {
+      if (scrollRef.current && banners.length > 1) {
+        try {
+          scrollRef.current.scrollTo({ x: currentIndex * width, animated: true });
+        } catch (e) {
+          console.log('Scroll error:', e);
+        }
+      }
+    }, [currentIndex, banners.length]);
+
+    const onScroll = (event: any) => {
+      const slideIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+      setCurrentIndex(slideIndex);
+    };
+
+    const renderBanner = ({ item }: { item: any }) => (
+      <View style={styles.bannerSlide}>
+        <Image
+          source={{ uri: item?.image || 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop' }}
+          style={styles.bannerImage}
+          resizeMode="contain"
+        />
+     
+      </View>
+    );
+
+    return (
+      <View style={styles.carouselContainer}>
+        <FlatList
+          data={banners}
+          renderItem={renderBanner}
+          keyExtractor={(item, index) => `banner-${index}`}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          ref={scrollRef}
+        />
+        {banners.length > 1 && (
+          <View style={styles.paginationContainer}>
+            {banners.map((_, index) => (
+              <View
+                key={index}
+                style={[styles.paginationDot, index === currentIndex ? styles.paginationDotActive : styles.paginationDotInactive]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // Single banner (fallback)
   const [videoState, setVideoState] = useState({
     playing: true,
     loading: true,
@@ -365,20 +434,30 @@ const VideoBanner: React.FC<{ banner: any }> = ({ banner }) => {
     setVideoState(prev => ({ ...prev, playing: false }));
   };
 
-  const videoUrl = getVideoUrl(banner?.video);
+  const videoUrl = banner?.video ? getVideoUrl(banner.video) : null;
   console.log(videoUrl, "%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 
-  // If no video URL or error, show image instead
+  // If no video, show image banner with overlay
   if (!videoUrl || videoState.error) {
     return (
       <View style={styles.videoContainer}>
         <Image
           source={{ uri: banner?.image || 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop' }}
           style={styles.videoFallbackImage}
-          resizeMode="cover"
+          resizeMode="contain"
         />
-
+        {(banner?.name || banner?.description) && (
+          <View style={styles.videoOverlay}>
+            <View style={styles.videoInfo}>
+              <Text style={styles.videoTitle}>{banner?.name || 'Welcome to Our Store'}</Text>
+              <Text style={styles.videoSubtitle}>{banner?.description || 'Discover amazing products at great prices'}</Text>
+              <TouchableOpacity style={styles.shopNowButton}>
+                <Text style={styles.shopNowText}>Shop Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
     );
   }
@@ -468,6 +547,9 @@ const HomeScreen: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [banner, setBanner] = useState<any>(null);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const bannerScrollRef = useRef<any>(null);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -506,9 +588,12 @@ const HomeScreen: React.FC = () => {
         console.log('=== FETCHING BANNER ===');
         const response = await apiService.getBanners();
         console.log('Banner API Response:', response);
-        if (response.success && response.data?.data) {
-          setBanner(response.data.data);
-          console.log('Banner data set:', response.data.data);
+        // New API returns: { success, message, data: { total, totalPages, page, limit, data: [...] } }
+        if (response.success && response.data?.data?.data && response.data.data.data.length > 0) {
+          const bannerList = response.data.data.data;
+          setBanners(bannerList);
+          setBanner(bannerList[0]);
+          console.log('Banners data set:', bannerList);
         } else {
           console.log('No banner data found');
         }
@@ -519,6 +604,23 @@ const HomeScreen: React.FC = () => {
 
     fetchBanner();
   }, []);
+
+  // Auto-slide banners every 3 seconds
+  useEffect(() => {
+    if (banners.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentBannerIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % banners.length;
+          if (bannerScrollRef.current) {
+            bannerScrollRef.current.scrollTo({ x: nextIndex * width, animated: true });
+          }
+          return nextIndex;
+        });
+      }, 3000);
+
+      return () => clearInterval(interval);
+    }
+  }, [banners.length]);
   // Fetch products when category changes
   useEffect(() => {
     setPage(1);
@@ -766,8 +868,8 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
             />
           </View>
 
-          {/* Video Banner Section */}
-          <VideoBanner banner={banner} />
+          {/* Banner Section */}
+          <VideoBanner banners={banners} banner={banner} />
         </View>
 
         <View style={styles.categorySection}>
@@ -989,13 +1091,13 @@ const styles = StyleSheet.create({
   },
   productCard: {
     backgroundColor: theme.colors.card,
-    borderRadius: 20,
-    padding: theme.spacing.medium,
-    marginBottom: theme.spacing.medium,
+    borderRadius: 16,
+    padding: theme.spacing.small + 2,
+    marginBottom: theme.spacing.small,
     width: productCardWidth,
     alignItems: 'center',
     position: 'relative',
-    marginTop: theme.spacing.medium,
+    marginTop: theme.spacing.small,
     elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -1044,11 +1146,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   productImage: {
-    width: isSmallScreen ? 100 : isLargeScreen ? 140 : 120,
-    height: isSmallScreen ? 100 : isLargeScreen ? 140 : 120,
-    borderRadius: 16,
-    marginBottom: theme.spacing.small,
-    resizeMode: 'cover',
+    width: isSmallScreen ? 80 : isLargeScreen ? 100 : 90,
+    height: isSmallScreen ? 80 : isLargeScreen ? 100 : 90,
+    borderRadius: 12,
+    marginBottom: theme.spacing.small - 2,
+    resizeMode: 'contain',
     borderWidth: 2,
     borderColor: 'rgba(164, 148, 61, 0.15)',
   },
@@ -1068,12 +1170,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   productDescription: {
-    fontSize: theme.fonts.size.small,
+    fontSize: theme.fonts.size.small - 1,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.small,
+    marginBottom: theme.spacing.small - 4,
     textAlign: 'center',
     width: '100%',
-    height: 32,
+    height: 24,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -1093,10 +1195,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   productPrice: {
-    fontSize: theme.fonts.size.large + 2,
+    fontSize: theme.fonts.size.medium + 2,
     fontWeight: 'bold',
     color: theme.colors.primary,
-    marginBottom: theme.spacing.medium,
+    marginBottom: theme.spacing.small,
     letterSpacing: 0.5,
   },
   productWeight: {
@@ -1109,11 +1211,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: theme.spacing.medium,
+    marginBottom: theme.spacing.small,
     backgroundColor: '#FFFEF5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   originalPrice: {
     fontSize: theme.fonts.size.small,
@@ -1128,9 +1230,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.small + 2,
-    paddingHorizontal: theme.spacing.medium,
-    borderRadius: 25,
+    paddingVertical: theme.spacing.small,
+    paddingHorizontal: theme.spacing.small + 4,
+    borderRadius: 20,
     width: '100%',
     justifyContent: 'center',
     shadowColor: theme.colors.primary,
@@ -1172,8 +1274,8 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.small,
   },
   imageBox: {
-    height: isSmallScreen ? 40 : isLargeScreen ? 60 : 50,
-    width: isSmallScreen ? 40 : isLargeScreen ? 60 : 50,
+    height: isSmallScreen ? 40 : isLargeScreen ? 80 : 50,
+    width: isSmallScreen ? 40 : isLargeScreen ? 80 : 50,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: 'rgba(164, 148, 61, 0.3)',
@@ -1183,7 +1285,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
     marginTop: 14,
-    borderRadius: 20,
+    borderRadius: 5,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#000',
@@ -1192,6 +1294,86 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
+  },
+  carouselContainer: {
+    height: isSmallScreen ? 160 : isLargeScreen ? 240 : 200,
+    width: width,
+    alignSelf: "center",
+    marginTop: 14,
+    borderRadius: 5,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#000',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  bannerSlide: {
+    width: width,
+    height: isSmallScreen ? 160 : isLargeScreen ? 240 : 200,
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  bannerInfo: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  bannerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 5,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  bannerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 3,
+  },
+  paginationDotActive: {
+    backgroundColor: theme.colors.primary,
+    width: 24,
+  },
+  paginationDotInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   videoPlayer: {
     width: '100%',

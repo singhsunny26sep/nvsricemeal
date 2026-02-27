@@ -49,10 +49,82 @@ export default function CreateLocationScreen() {
   const [area, setArea] = useState('');
   const [country, setCountry] = useState('India');
 
-  // Auto-fetch GPS location on screen load
+  // UseEffect to handle initial location setup with coordinates
   useEffect(() => {
-    autoFetchLocation();
+    // Automatically set the provided coordinates and create location
+    handleLocationWithCoordinates();
   }, []);
+
+  // Function to handle location with provided coordinates and create location via API
+  const handleLocationWithCoordinates = async () => {
+    console.log('========================================');
+    console.log('🌍 LOCATION CREATION PROCESS STARTED');
+    console.log('========================================');
+    
+    // Step 1: Request location permission
+    console.log('\n📋 Step 1: Requesting location permission...');
+    const hasPermission = await locationService.requestLocationPermission('create_location');
+    
+    console.log('📍 Permission Status:', hasPermission ? '✅ GRANTED' : '❌ DENIED');
+    
+    if (!hasPermission) {
+      console.log('⚠️ Location permission denied. Will still try with provided coordinates.');
+    }
+    
+    // Step 2: Use provided coordinates
+    const providedCoordinates: [number, number] = [23.399907222595825, 85.3436458825527];
+    
+    console.log('\n📍 Step 2: Using provided coordinates');
+    console.log('   Latitude:', providedCoordinates[0]);
+    console.log('   Longitude:', providedCoordinates[1]);
+    
+    setCoordinates(providedCoordinates);
+    
+    // Step 3: Create location via API
+    console.log('\n🚀 Step 3: Creating location via API...');
+    console.log('   API Endpoint: https://nvs-rice-mart.onrender.com/nvs-rice-mart/locations/create');
+    console.log('   Request Payload:', JSON.stringify({
+      coordinates: providedCoordinates,
+      name: 'Test Location',
+      country: 'India'
+    }, null, 2));
+    
+    try {
+      const response = await apiService.createLocation({
+        coordinates: providedCoordinates,
+        name: 'Test Location',
+        country: 'India'
+      });
+      
+      console.log('\n📥 API Response Received:');
+      console.log('   Success:', response.success);
+      console.log('   Data:', JSON.stringify(response.data, null, 2));
+      console.log('   Message:', response.message);
+      console.log('   Error:', response.error);
+      
+      if (response.success) {
+        console.log('\n✅ ✅ ✅ LOCATION CREATED SUCCESSFULLY! ✅ ✅ ✅');
+        Alert.alert(
+          'Success! 🎉',
+          `Location created successfully!\n\nCoordinates:\nLat: ${providedCoordinates[0]}\nLng: ${providedCoordinates[1]}`
+        );
+      } else {
+        console.log('\n❌ LOCATION CREATION FAILED');
+        Alert.alert('Error', response.error || 'Failed to create location');
+      }
+    } catch (error) {
+      console.log('\n🚨 EXCEPTION OCCURRED:');
+      console.log('   Error:', error);
+      console.log('   Error Message:', error instanceof Error ? error.message : 'Unknown error');
+      Alert.alert('Error', 'An unexpected error occurred');
+    }
+    
+    console.log('\n========================================');
+    console.log('🏁 LOCATION CREATION PROCESS COMPLETED');
+    console.log('========================================\n');
+    
+    setAutoLoading(false);
+  };
 
   // Auto-fetch current GPS location
   const autoFetchLocation = async () => {
@@ -100,6 +172,7 @@ export default function CreateLocationScreen() {
     try {
       const coords = text.split(',').map(coord => parseFloat(coord.trim()));
       if (coords.length === 2 && coords.every(coord => !isNaN(coord))) {
+        console.log('📝 Manual coordinates updated:', coords);
         setCoordinates([coords[0], coords[1]]);
       } else {
         setCoordinates(null);
@@ -135,6 +208,10 @@ export default function CreateLocationScreen() {
 
     setLoading(true);
 
+    console.log('========================================');
+    console.log('📤 SUBMITTING LOCATION FORM');
+    console.log('========================================');
+
     try {
       const locationData: CreateLocationRequest = {};
 
@@ -144,6 +221,9 @@ export default function CreateLocationScreen() {
         if (name.trim()) locationData.name = name.trim();
         if (shopOrBuildingNumber.trim()) locationData.shopOrBuildingNumber = shopOrBuildingNumber.trim();
         if (country.trim()) locationData.country = country.trim();
+        
+        console.log('📍 Using Coordinates Mode:');
+        console.log('   Coordinates:', coordinates);
       } else {
         // Required fields when not using coordinates
         locationData.address = address.trim();
@@ -156,13 +236,25 @@ export default function CreateLocationScreen() {
         if (shopOrBuildingNumber.trim()) locationData.shopOrBuildingNumber = shopOrBuildingNumber.trim();
         if (area.trim()) locationData.area = area.trim();
         if (country.trim()) locationData.country = country.trim();
+        
+        console.log('📝 Using Manual Entry Mode:');
+        console.log('   Address:', locationData.address);
+        console.log('   City:', locationData.city);
+        console.log('   District:', locationData.district);
       }
 
-      console.log('🆕 Creating location with data:', locationData);
+      console.log('\n📦 Full Form Data:', JSON.stringify(locationData, null, 2));
+      console.log('\n🚀 Calling createLocation API...');
 
       const response = await apiService.createLocation(locationData);
 
+      console.log('\n📥 API Response:');
+      console.log('   Success:', response.success);
+      console.log('   Data:', JSON.stringify(response.data, null, 2));
+      console.log('   Error:', response.error);
+
       if (response.success) {
+        console.log('\n✅ ✅ ✅ LOCATION CREATED SUCCESSFULLY! ✅ ✅ ✅');
         Alert.alert(
           'Success',
           'Location created successfully!',
@@ -196,6 +288,7 @@ export default function CreateLocationScreen() {
       Alert.alert('Error', 'An error occurred while creating location');
     } finally {
       setLoading(false);
+      console.log('========================================\n');
     }
   };
 

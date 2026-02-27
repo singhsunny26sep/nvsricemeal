@@ -18,7 +18,7 @@ export const API_CONFIG = {
     CATEGORIES: '/api/categories',
     ORDERS: {
       CREATE: '/orders/create',
-    },
+    } as const,
     USER: {
       PROFILE: '/users/get',
       UPDATE: '/users/update',
@@ -45,7 +45,7 @@ export const API_CONFIG = {
     },
 
     PRODUCTS_Banner: {
-      GET_ALL: '/banners/get/6920ad9e62df34d6535ffc58',
+      GET_ALL: '/banners/getAll',
     },
     CART: {
       ADD_OR_UPDATE: '/carts/add-or-update',
@@ -56,6 +56,7 @@ export const API_CONFIG = {
     },
     LOCATIONS: {
       GET_ALL: '/locations/getAll',
+      CREATE: '/locations/create',
     },
   },
 
@@ -89,7 +90,6 @@ export const buildUrl = (endpoint: string): string => {
 export const API_URLS = {
   PRODUCTS: buildUrl(API_CONFIG.ENDPOINTS.PRODUCTS),
   CATEGORIES: buildUrl(API_CONFIG.ENDPOINTS.CATEGORIES),
-  ORDERS: buildUrl(API_CONFIG.ENDPOINTS.ORDERS),
   ORDERS_CREATE: buildUrl(API_CONFIG.ENDPOINTS.ORDERS.CREATE),
   USER_PROFILE: buildUrl(API_CONFIG.ENDPOINTS.USER.PROFILE),
   USER_UPDATE: buildUrl(API_CONFIG.ENDPOINTS.USER.UPDATE),
