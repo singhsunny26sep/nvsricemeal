@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { theme } from '../constants/theme';
 import { apiService } from '../utils/apiService';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import Statusbar from '../constants/Statusbar';
 
 // Types for location data
@@ -34,16 +34,9 @@ interface Location {
   updatedAt: string;
 }
 
-interface LocationsResponse {
-  total: number;
-  totalPages: number;
-  page: number;
-  limit: number;
-  data: Location[];
-}
-
 export default function SaveLocationScreen() {
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,17 +102,36 @@ export default function SaveLocationScreen() {
     setSelectedLocation(location);
     console.log('📍 Location selected:', location.formattedAddress);
     
-    // Show confirmation alert
-    Alert.alert(
-      'Location Selected',
-      `You have selected:\n${location.formattedAddress}`,
-      [
-        {
-          text: 'OK',
-          onPress: () => console.log('Location selection confirmed')
-        }
-      ]
-    );
+    // Get route params from the route hook
+    const params = route?.params || {};
+    
+    // If there's a callback function passed from previous screen, use it
+    if (params.onLocationSelect) {
+      // @ts-ignore - TypeScript issue with navigation
+      params.onLocationSelect(location);
+      
+      // Navigate back to Cart tab directly
+      // @ts-ignore - TypeScript issue with navigation
+      navigation.getParent()?.navigate('Cart');
+    } else {
+      // Show confirmation alert for regular selection
+      Alert.alert(
+        'Location Selected',
+        `You have selected:\n${location.formattedAddress}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Also navigate to Cart if this is for checkout
+              if (params.isForCheckout) {
+                // @ts-ignore - TypeScript issue with navigation
+                navigation.getParent()?.navigate('Cart');
+              }
+            }
+          }
+        ]
+      );
+    }
   };
 
   // Handle navigation to create location page

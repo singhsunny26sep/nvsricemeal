@@ -13,8 +13,8 @@ import {
   Animated,
   Easing,
   ActivityIndicator,
-  StatusBar,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -23,7 +23,7 @@ import { apiService } from '../utils/apiService';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RazorpayCheckout from 'react-native-razorpay';
 
-const { width } = Dimensions.get('window');
+Dimensions.get('window'); // Keep dimensions available for potential future use
 
 interface CartItemProps {
   item: { product: any; quantity: number; addedAt: Date };
@@ -97,12 +97,29 @@ const CartItem: React.FC<CartItemProps> = ({ item, onUpdateQuantity, onRemove })
   );
 };
 
+// Location type interface
+interface SelectedLocation {
+  _id: string;
+  name: string | null;
+  address: string;
+  area: string;
+  city: string;
+  district: string;
+  state: string;
+  country: string;
+  formattedAddress: string;
+  zipcode: string;
+  coordinates: [number, number];
+}
+
 const CartScreen: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity, applyCoupon, setPincode, clearCart, syncCartFromServer, isSyncing } = useCart();
+  const { cart, removeFromCart, updateQuantity, setPincode, clearCart, syncCartFromServer, isSyncing } = useCart();
   const { auth } = useAuth();
   const { strings } = useLanguage();
+  const navigation = useNavigation<any>();
 
-  const [couponInput, setCouponInput] = useState('');
+  // Selected location state for checkout
+  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
   const [pincodeInput, setPincodeInput] = useState(cart.pincode || '');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessWave, setShowSuccessWave] = useState(false);
@@ -329,12 +346,35 @@ const CartScreen: React.FC = () => {
     }
   };
 
+  // Navigate to SaveLocationScreen for location selection
+  const handleSelectLocation = () => {
+    console.log('🗺️ Navigating to SaveLocationScreen for location selection');
+    // Navigate to Profile tab first, then to SaveLocation screen
+    navigation.navigate('Profile', {
+      screen: 'SaveLocation',
+      params: {
+        isForCheckout: true,
+        onLocationSelect: (location: SelectedLocation) => {
+          console.log('📍 Location selected from SaveLocationScreen:', location);
+          setSelectedLocation(location);
+        }
+      }
+    });
+  };
+
   // Cash on Delivery
   const handleCashOnDelivery = async () => {
     setIsLoading(true);
     try {
+      // Prepare order data with location if selected
+      const orderData: any = { paymentMethod: 'COD' };
+      if (selectedLocation) {
+        orderData.locationId = selectedLocation._id;
+        console.log('📍 Adding location ID to order:', selectedLocation._id);
+      }
+      
       // Call the orders/create API
-      const orderResponse = await apiService.createOrder({ paymentMethod: 'COD' });
+      const orderResponse = await apiService.createOrder(orderData);
       console.log('🛒 COD Order API Response:', orderResponse);
       if (orderResponse.success) {
         await saveOrderToHistory('Cash on Delivery');
@@ -385,8 +425,15 @@ const CartScreen: React.FC = () => {
 
     RazorpayCheckout.open(options)
       .then(async (data: any) => {
+        // Prepare order data with location if selected
+        const orderData: any = { paymentMethod: 'ONLINE' };
+        if (selectedLocation) {
+          orderData.locationId = selectedLocation._id;
+          console.log('📍 Adding location ID to online order:', selectedLocation._id);
+        }
+        
         // Payment successful - Call the orders/create API
-        const orderResponse = await apiService.createOrder({ paymentMethod: 'ONLINE' });
+        const orderResponse = await apiService.createOrder(orderData);
         console.log('🛒 Online Order API Response:', orderResponse);
         if (orderResponse.success) {
           await saveOrderToHistory('Online Payment', data.razorpay_payment_id);
@@ -425,6 +472,26 @@ const CartScreen: React.FC = () => {
       Alert.alert('Cart Empty', 'Your cart is empty. Please add some products.');
       return;
     }
+    
+    // Check if location is selected
+    if (!selectedLocation) {
+      Alert.alert(
+        'Select Delivery Location',
+        'Please select a delivery location before proceeding to payment.',
+        [
+          {
+            text: 'Select Location',
+            onPress: handleSelectLocation
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
+      return;
+    }
+    
     if (!cart.pincode) {
       Alert.alert('Delivery Check Required', 'Please check delivery availability for your area first.');
       return;
@@ -609,6 +676,26 @@ const CartScreen: React.FC = () => {
              {/* Delivery Section */}
              <View style={styles.deliveryContainer}>
                <Text style={styles.sectionTitle}>Delivery Information</Text>
+               
+               {/* Location Selection Button */}
+               <TouchableOpacity
+                 style={styles.locationButton}
+                 onPress={handleSelectLocation}
+               >
+                 <Icon name="location-on" size={24} color="#007bff" />
+                 <View style={styles.locationButtonContent}>
+                   <Text style={styles.locationButtonText}>
+                     {selectedLocation ? 'Change Location' : 'Select Delivery Location'}
+                   </Text>
+                   {selectedLocation && (
+                     <Text style={styles.selectedLocationAddress} numberOfLines={2}>
+                       {selectedLocation.formattedAddress}
+                     </Text>
+                   )}
+                 </View>
+                 <Icon name="chevron-right" size={24} color="#999" />
+               </TouchableOpacity>
+
                <View style={styles.pincodeContainer}>
                  <TextInput
                    style={styles.pincodeInput}
@@ -949,6 +1036,30 @@ const styles = StyleSheet.create({
     marginTop: 0,
     borderRadius: 12,
     padding: 16,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#bbdefb',
+  },
+  locationButtonContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  locationButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1976d2',
+  },
+  selectedLocationAddress: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
   pincodeContainer: {
     flexDirection: 'row',
