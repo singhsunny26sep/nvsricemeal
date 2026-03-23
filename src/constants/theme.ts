@@ -37,9 +37,9 @@ export const theme = {
   },
   fonts: {
     family: {
-      regular: 'Roboto-Regular',
-      medium: 'Roboto-Medium',
-      bold: 'Roboto-Bold',
+      regular: 'Iosevka Charon Mono',
+      medium: 'Iosevka Charon Mono',
+      bold: 'Iosevka Charon Mono',
     },
     size: {
       small: 12,

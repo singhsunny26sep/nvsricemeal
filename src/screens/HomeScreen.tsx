@@ -1564,7 +1564,7 @@ const styles = StyleSheet.create({
   headerText:{
     fontSize: isSmallScreen ? 12 : isLargeScreen ? 18 : 15,
     fontWeight:"bold",
-    fontStyle:'italic',
+   fontFamily:theme.fonts.family.bold,
     color: theme.colors.error,
     marginLeft: 8,
     textTransform: 'uppercase',
