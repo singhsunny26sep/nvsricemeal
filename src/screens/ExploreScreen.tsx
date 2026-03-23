@@ -21,8 +21,9 @@ import { Product } from '../constants/products'
 import SkeletonLoader from '../components/SkeletonLoader'
 import HeaderSkeleton from '../components/HeaderSkeleton'
 import BannerSkeleton from '../components/BannerSkeleton'
-import AttractiveBanner from '../components/AttractiveBanner'
-import Statusbar from '../constants/Statusbar'
+import { theme } from '../constants/theme'
+
+
 
 export default function ExploreScreen() {
   const { addToCart, addOrUpdateToCart } = useCart()
@@ -477,7 +478,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color:theme.colors.primary,
   },
   notificationButton: {
     padding: 8,
@@ -676,7 +677,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#980747',
+    color: theme.colors.primary,
   },
   productWeight: {
     fontSize: 12,
@@ -723,7 +724,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#980747',
+    backgroundColor:theme.colors.primary,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,

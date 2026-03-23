@@ -384,7 +384,7 @@ const CartScreen: React.FC = () => {
         setTimeout(() => {
           Alert.alert(
             'Order Placed Successfully! 🎉',
-            `Your order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\nPayment: Cash on Delivery\n\nThank you for shopping with NVS Rice Mall!`,
+            `Your order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 24hours\nPayment: Cash on Delivery\n\nThank you for shopping with NVS Rice Mart!`,
             [
               {
                 text: 'Continue Shopping',
@@ -442,7 +442,7 @@ const CartScreen: React.FC = () => {
 
           setTimeout(() => {
             Alert.alert(
-              'Payment Successful! 🎉',
+              'Order Successful! 🎉',
               `Payment ID: ${data.razorpay_payment_id}\n\nYour order has been placed successfully!\n\nTotal: ₹${finalTotal}\nDelivery: 1-2 days\n\nThank you for shopping with NVS Rice Mall!`,
               [
                 {
@@ -800,7 +800,7 @@ const CartScreen: React.FC = () => {
             />
             <View style={styles.successContent}>
               <Icon name="check-circle" size={60} color="#4CAF50" />
-              <Text style={styles.successText}>Payment Successful!</Text>
+              <Text style={styles.successText}>Order Successful!</Text>
             </View>
           </Animated.View>
         )}
