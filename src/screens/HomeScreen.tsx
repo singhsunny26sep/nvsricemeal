@@ -554,6 +554,32 @@ const HomeScreen: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const scrollViewRef = useRef<any>(null);
+  
+  // Animated text for scrolling effect
+  const animatedTextValue = useRef(new Animated.Value(0)).current;
+  const textRef = useRef<any>(null);
+  const [textWidth, setTextWidth] = useState(0);
+  
+  // Animate the scrolling text
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedTextValue, {
+          toValue: -textWidth,
+          duration: textWidth > 0 ? textWidth * 40 : 5000,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1000),
+        Animated.timing(animatedTextValue, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [animatedTextValue, textWidth]);
 
   // Fetch categories from API
   useEffect(() => {
@@ -835,7 +861,29 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
             <Image style={styles.imageBox} resizeMode='contain' source={require("../assets/img/logos.jpeg")} />
-            <Text style={styles.headerText}>Best Price & Best Quality</Text>
+            <View style={styles.headerTextContainer} onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)}>
+              <Animated.Text
+                ref={textRef}
+                style={[
+                  styles.headerText,
+                  {
+                    transform: [{ translateX: animatedTextValue }],
+                  },
+                ]}
+              >
+                Best Price & Best Quality 🎉  •  
+              </Animated.Text>
+              <Animated.Text
+                style={[
+                  styles.headerText,
+                  {
+                    transform: [{ translateX: animatedTextValue }],
+                  },
+                ]}
+              >
+                Best Price & Best Quality 🎉  •  
+              </Animated.Text>
+            </View>
             <TouchableOpacity
               style={styles.cartIconContainer}
               onPress={() => navigation.navigate('CartScreen')}
@@ -1515,13 +1563,23 @@ const styles = StyleSheet.create({
   },
   headerText:{
     fontSize: isSmallScreen ? 12 : isLargeScreen ? 18 : 15,
-    fontWeight: '700',
-    color: theme.colors.primary,
+    fontWeight:"bold",
+    fontStyle:'italic',
+    color: theme.colors.error,
     marginLeft: 8,
-    flex: 1,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  }
+    letterSpacing: 0.2,
+ 
+    borderRadius: 8,
+    padding: 4,
+    
+    
+  },
+  headerTextContainer: {
+    flexDirection: 'row',
+    overflow: 'hidden',
+    flex: 1,
+  },
 });
 
 export default HomeScreen;
