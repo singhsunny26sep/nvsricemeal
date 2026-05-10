@@ -33,7 +33,7 @@ export const API_CONFIG = {
       LOGOUT: '/auth/logout',
     },
     CATEGORIES_API: {
-      GET_ALL: '/categories/getAll',
+      GET_ALL: '/categories/getAll?limit=1000',
     },
     SUBCATEGORIES_API: {
       GET_ALL: '/subCategories/getAll',
@@ -42,6 +42,7 @@ export const API_CONFIG = {
       GET_ALL: '/products/getAll',
       GET_BY_ID: '/products/get',
       CHECK_DELIVERY: '/products/checkDelivery',
+      REVIEWS: '/products/reviews',
     },
 
     PRODUCTS_Banner: {
