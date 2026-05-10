@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,10 +29,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showOTPInput, setShowOTPInput] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [sessionId, setSessionId] = useState('');
-  const { login } = useAuth();
+const [showOTPInput, setShowOTPInput] = useState(false);
+   const [otp, setOtp] = useState('');
+   const [sessionId, setSessionId] = useState('');
+   const otpInputs = React.useRef<Array<TextInput | null>>([]);
+   const { login } = useAuth();
   const { strings } = useLanguage();
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
@@ -374,58 +375,79 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
         </View>
       </View>
 
-     {/* OTP Input Modal for Mobile Login */}
-     {showOTPInput && (
-       <View style={styles.otpModal}>
-         <View style={styles.otpContainer}>
-           <Text style={styles.otpTitle}>OTP ಪರಿಶೀಲನೆ</Text>
-           <Text style={styles.otpSubtitle}>
-             ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ ಕಳುಹಿಸಿದ 6 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ{'\n'}{phone}
-           </Text>
+{/* OTP Input Modal for Mobile Login */}
+      {showOTPInput && (
+        <View style={styles.otpModal}>
+          <View style={styles.otpContainer}>
+            <Text style={styles.otpTitle}>OTP ಪರಿಶೀಲನೆ</Text>
+            <Text style={styles.otpSubtitle}>
+              ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ ಕಳುಹಿಸಿದ 6 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ{'\n'}{phone}
+            </Text>
 
-           <View style={styles.otpInputContainer}>
-             <TextInput
-               style={styles.otpInput}
-               placeholder="000000"
-               value={otp}
-               onChangeText={setOtp}
-               keyboardType="numeric"
-               maxLength={6}
-               autoFocus
-             />
-           </View>
+            <View style={styles.otpInputContainer}>
+              {Array(6).fill(0).map((_, index) => (
+                <TextInput
+                  key={index}
+                  style={[styles.otpBox, otp[index] ? styles.otpBoxFilled : null]}
+                  value={otp[index] || ''}
+                  onChangeText={(text) => {
+                    if (text.length <= 1 && /^\d*$/.test(text)) {
+                      const newOtp = otp.padEnd(6, ' ').split('');
+                      newOtp[index] = text;
+                      setOtp(newOtp.join('').replace(/ /g, ''));
+                      if (text && index < 5) {
+                        otpInputs.current[index + 1]?.focus();
+                      }
+                    }
+                  }}
+                  onKeyPress={({ nativeEvent }) => {
+                    if (nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+                      otpInputs.current[index - 1]?.focus();
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={1}
+                  autoFocus={index === 0}
+                  ref={(ref) => {
+                    if (ref) {
+                      otpInputs.current[index] = ref;
+                    }
+                  }}
+                />
+              ))}
+            </View>
 
-           <TouchableOpacity
-             style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
-             onPress={handleVerifyMobileOTP}
-             disabled={isLoading}
-           >
-             {isLoading ? (
-               <ActivityIndicator size="small" color={theme.colors.card} />
-             ) : (
-               <Text style={styles.verifyButtonText}>
-                 {strings?.login?.verifyOTP || 'OTP ಪರಿಶೀಲಿಸಿ'}
-               </Text>
-             )}
-           </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
+              onPress={handleVerifyMobileOTP}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color={theme.colors.card} />
+              ) : (
+                <Text style={styles.verifyButtonText}>
+                  {strings?.login?.verifyOTP || 'OTP ಪರಿಶೀಲಿಸಿ'}
+                </Text>
+              )}
+            </TouchableOpacity>
 
-           <TouchableOpacity
-             style={styles.closeButton}
-             onPress={() => {
-               setShowOTPInput(false);
-               setOtp('');
-               setSessionId('');
-             }}
-           >
-             <Text style={styles.closeButtonText}>ರದ್ದುಗೊಳಿಸಿ</Text>
-           </TouchableOpacity>
-         </View>
-       </View>
-     )}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setShowOTPInput(false);
+                setOtp('');
+                setSessionId('');
+              }}
+            >
+              <Text style={styles.closeButtonText}>ರದ್ದುಗೊಳಿಸಿ</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
-    </ScrollView>
-  );
-};
+      </ScrollView>
+    );
+  };
 
 const styles = StyleSheet.create({
   container: {
@@ -629,24 +651,30 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.medium,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.xlarge,
+marginBottom: theme.spacing.xlarge,
     fontFamily: theme.fonts.family.regular,
   },
   otpInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: theme.spacing.xlarge,
+    gap:10
   },
-  otpInput: {
-    backgroundColor: theme.colors.background,
+  otpBox: {
+    width: 45,
+    height: 55,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
+    borderColor: 'rgba(76, 175, 80, 0.3)',
     borderRadius: theme.borderRadius.medium,
-    padding: theme.spacing.large,
     fontSize: theme.fonts.size.xlarge,
     color: theme.colors.text,
     fontFamily: theme.fonts.family.bold,
-    width: 200,
     textAlign: 'center',
-    letterSpacing: 4,
+    backgroundColor: theme.colors.background,
+  },
+  otpBoxFilled: {
+    borderColor: theme.colors.primary,
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
   },
   verifyButton: {
     backgroundColor: theme.colors.primary,
