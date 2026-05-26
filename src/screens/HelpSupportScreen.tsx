@@ -77,11 +77,11 @@ const HelpSupportScreen: React.FC = () => {
   };
 
   const handleCallSupport = () => {
-    Alert.alert('Call Support', 'Call us at +91-9876543210 for immediate assistance.');
+    Alert.alert('Call Support', 'Call us at +91-7337777705 for immediate assistance.');
   };
 
   const handleEmailSupport = () => {
-    Alert.alert('Email Support', 'Send us an email at support@nvsricemall.com');
+    Alert.alert('Email Support', 'Send us an email at ricemartnvs@gmail.com');
   };
 
   return (

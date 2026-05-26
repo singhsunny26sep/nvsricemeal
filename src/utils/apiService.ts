@@ -795,7 +795,7 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     });
   }
 
-  // Get all locations
+// Get all locations
   async getLocations(country?: string): Promise<ApiResponse<any>> {
     let endpoint = API_CONFIG.ENDPOINTS.LOCATIONS.GET_ALL;
     
@@ -806,6 +806,19 @@ console.log(endpoint,"++++++++++++++++++++++++++")
 
     console.log('=== GET LOCATIONS DEBUG ===');
     console.log('Country filter:', country || 'all countries');
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  // Get locations by user ID
+  async getLocationByUserId(userId: string): Promise<ApiResponse<any>> {
+    const endpoint = `${API_CONFIG.ENDPOINTS.LOCATIONS.GET_BY_ID}/${userId}`;
+
+    console.log('=== GET LOCATION BY USER ID DEBUG ===');
+    console.log('User ID:', userId);
     console.log('Full URL:', buildUrl(endpoint));
 
     return this.request<any>(endpoint, {

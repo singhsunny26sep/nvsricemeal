@@ -37,7 +37,7 @@ interface Location {
 export default function SaveLocationScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
-  const [locations, setLocations] = useState<Location[]>([]);
+const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,22 +54,37 @@ export default function SaveLocationScreen() {
       setError(null);
 
       console.log('🌍 Fetching locations from API...');
-      const response = await apiService.getLocations('india');
       
-      if (response.success && response.data) {
-        // Handle the nested response structure
-        const locationsData = response.data.data || response.data;
+      // Get user profile to fetch userId
+      const profileResponse = await apiService.getUserProfile();
+      
+      if (profileResponse.success && profileResponse.data) {
+        const userId = profileResponse.data.id;
+        console.log('🌍 User ID found:', userId);
         
-        if (locationsData && Array.isArray(locationsData.data)) {
-          setLocations(locationsData.data);
-          console.log('✅ Locations fetched successfully:', locationsData.data.length, 'locations');
+        const response = await apiService.getLocationByUserId(userId);
+        
+        if (response.success && response.data) {
+          // Handle the nested response structure
+          const locationsData = response.data.data || response.data;
+          
+          if (locationsData && Array.isArray(locationsData.data)) {
+            setLocations(locationsData.data);
+            console.log('✅ Locations fetched successfully:', locationsData.data.length, 'locations');
+          } else if (locationsData && Array.isArray(locationsData)) {
+            setLocations(locationsData);
+            console.log('✅ Locations fetched successfully:', locationsData.length, 'locations');
+          } else {
+            console.log('⚠️ No locations data found in response');
+            setLocations([]);
+          }
         } else {
-          console.log('⚠️ No locations data found in response');
-          setLocations([]);
+          console.log('❌ API call failed:', response.error);
+          setError(response.error || 'Failed to fetch locations');
         }
       } else {
-        console.log('❌ API call failed:', response.error);
-        setError(response.error || 'Failed to fetch locations');
+        console.log('❌ Failed to get user profile');
+        setError('Unable to fetch user profile. Please login again.');
       }
     } catch (err) {
       console.log('🚨 Error fetching locations:', err);
@@ -312,6 +327,12 @@ export default function SaveLocationScreen() {
             <Text style={styles.noDataSubtext}>
               Pull down to refresh or check your connection
             </Text>
+            <TouchableOpacity
+              style={styles.createButtonLarge}
+              onPress={handleCreateLocation}
+            >
+              <Text style={styles.createButtonText}>+ Create Location</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           locations.map(renderLocationItem)
@@ -568,5 +589,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: theme.fonts.size.medium,
     fontWeight: theme.fonts.weight.medium,
+  },
+  // Create button large for empty state
+  createButtonLarge: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.xlarge,
+    paddingVertical: theme.spacing.large,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
+    marginTop: theme.spacing.xlarge,
+    ...theme.shadows.card,
   },
 });

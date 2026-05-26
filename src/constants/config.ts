@@ -57,6 +57,7 @@ export const API_CONFIG = {
     },
     LOCATIONS: {
       GET_ALL: '/locations/getAll',
+      GET_BY_ID: '/locations/get',
       CREATE: '/locations/create',
     },
   },

@@ -51,6 +51,7 @@ import { theme } from './src/constants/theme';
 import LocationFillPage from './src/screens/LocationFillPage';
 import SaveLocationScreen from './src/screens/SaveLocationScreen';
 import CreateLocationScreen from './src/screens/CreateLocationScreen';
+import SharePage from './src/screens/SharePage';
 
 const styles = StyleSheet.create({
   iconContainer: {
@@ -185,6 +186,10 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen
         name="SaveLocation"
         component={SaveLocationScreen}
+      />
+      <ProfileStack.Screen
+        name="SharePage"
+        component={SharePage}
       />
 
     </ProfileStack.Navigator>

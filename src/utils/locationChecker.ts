@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, buildUrl } from '../constants/config';
 
 export interface SavedLocation {
   _id: string;
@@ -30,7 +31,9 @@ export class LocationChecker {
         return false;
       }
 
-      const response = await fetch('https://nvs-rice-mart.onrender.com/locations/getAll?country=india', {
+      let endpoint = API_CONFIG.ENDPOINTS.LOCATIONS.GET_ALL;
+      
+      const response = await fetch(buildUrl(endpoint), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +68,9 @@ export class LocationChecker {
         return null;
       }
 
-      const response = await fetch('https://nvs-rice-mart.onrender.com/locations/getAll?country=india', {
+      let endpoint = API_CONFIG.ENDPOINTS.LOCATIONS.GET_ALL;
+      
+      const response = await fetch(buildUrl(endpoint), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

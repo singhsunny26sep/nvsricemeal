@@ -29,6 +29,7 @@ const ProfileScreen: React.FC = () => {
   // Fetch user profile data
   useEffect(() => {
     fetchUserProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUserProfile = async () => {
@@ -133,6 +134,10 @@ const ProfileScreen: React.FC = () => {
     setShowLanguageSelector(true);
   };
 
+  const handleShareApp = () => {
+    navigation.navigate('SharePage' as never);
+  };
+
   const handleRefresh = () => {
     setIsLoading(true);
     fetchUserProfile();
@@ -158,9 +163,7 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
         <Image
-          source={{
-            uri: userProfile?.avatar || user.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face'
-          }}
+          source={require("../assets/img/logos.jpeg")}
           style={styles.avatar}
         />
         <Text style={styles.name}>{user.name}</Text>
@@ -251,6 +254,13 @@ const ProfileScreen: React.FC = () => {
           <View style={styles.menuItemLeft}>
             <Icon name="language" size={24} color={theme.colors.primary} />
             <Text style={styles.menuItemText}>{strings?.profile?.language || 'ಭಾಷೆ'}</Text>
+          </View>
+          <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={handleShareApp}>
+          <View style={styles.menuItemLeft}>
+            <Icon name="share" size={24} color={theme.colors.primary} />
+            <Text style={styles.menuItemText}>Share App</Text>
           </View>
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>

@@ -31,13 +31,20 @@ const { width, height } = Dimensions.get('window');
 // Responsive calculations
 const isSmallScreen = width < 350;
 const isLargeScreen = width > 400;
-const productCardWidth = isSmallScreen ? (width - 48) / 2 : isLargeScreen ? (width - 56) / 2 : (width - 52) / 2;
+const productCardWidth = isSmallScreen
+  ? (width - 48) / 2
+  : isLargeScreen
+  ? (width - 56) / 2
+  : (width - 52) / 2;
 const categoryButtonMinWidth = isSmallScreen ? 75 : isLargeScreen ? 100 : 90;
 
 interface ProductItemProps {
   item: Product;
   onAddToCart: (product: Product) => void;
-  onAddOrUpdateToCart: (productId: string, quantity: number) => Promise<boolean>;
+  onAddOrUpdateToCart: (
+    productId: string,
+    quantity: number,
+  ) => Promise<boolean>;
   onFavorite: (productId: string) => void;
   isFavorite: boolean;
 }
@@ -66,11 +73,11 @@ interface Product {
 }
 
 // Skeleton Components
-const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: number }> = ({
-  width,
-  height,
-  borderRadius = 8
-}) => {
+const SkeletonLoader: React.FC<{
+  width: number;
+  height: number;
+  borderRadius?: number;
+}> = ({ width, height, borderRadius = 8 }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const animation = Animated.loop(
@@ -85,7 +92,7 @@ const SkeletonLoader: React.FC<{ width: number; height: number; borderRadius?: n
           duration: 1000,
           useNativeDriver: false,
         }),
-      ])
+      ]),
     );
     animation.start();
     return () => animation.stop();
@@ -131,11 +138,21 @@ const HeaderSkeleton: React.FC = () => (
       <SkeletonLoader width={100} height={50} />
       <SkeletonLoader width={40} height={40} borderRadius={20} />
     </View>
-    <SkeletonLoader width={Dimensions.get('window').width - 32} height={50} borderRadius={25} />
+    <SkeletonLoader
+      width={Dimensions.get('window').width - 32}
+      height={50}
+      borderRadius={25}
+    />
   </View>
 );
 
-const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpdateToCart, onFavorite, isFavorite }) => {
+const ProductItem: React.FC<ProductItemProps> = ({
+  item,
+  onAddToCart,
+  onAddOrUpdateToCart,
+  onFavorite,
+  isFavorite,
+}) => {
   const navigation = useNavigation();
   const { strings } = useLanguage();
   const scaleValue = useRef(new Animated.Value(1)).current;
@@ -165,34 +182,30 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
 
       if (success) {
         console.log('✅ HomeScreen - Cart API call successful');
-        
+
         // Also update local cart for immediate UI feedback
         onAddToCart(item);
-        
+
         // Show success feedback
-        Alert.alert(
-          'Success! 🎉',
-          `${item.name} added to cart!`,
-          [
-            {
-              text: 'Continue Shopping',
-              style: 'cancel'
+        Alert.alert('Success! 🎉', `${item.name} added to cart!`, [
+          {
+            text: 'Continue Shopping',
+            style: 'cancel',
+          },
+          {
+            text: 'View Cart',
+            onPress: () => {
+              // Navigate to cart tab
+              (navigation as any).getParent()?.navigate('Cart');
             },
-            {
-              text: 'View Cart',
-              onPress: () => {
-                // Navigate to cart tab
-                (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
-        );
+          },
+        ]);
       } else {
         console.log('❌ HomeScreen - Cart API call failed');
-        
+
         // Still update local cart as fallback
         onAddToCart(item);
-        
+
         // Show partial success feedback
         Alert.alert(
           'Partial Success ⚠️',
@@ -200,38 +213,38 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
           [
             {
               text: 'Continue Shopping',
-              style: 'cancel'
+              style: 'cancel',
             },
             {
               text: 'View Cart',
               onPress: () => {
                 (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       }
     } catch (error) {
       console.error('❌ HomeScreen - Error in handleAddToCart:', error);
-      
+
       // Fallback to local cart update
       onAddToCart(item);
-      
+
       Alert.alert(
         'Network Error ⚠️',
         `${item.name} added locally. Server sync will happen when online.`,
         [
           {
             text: 'Continue Shopping',
-            style: 'cancel'
+            style: 'cancel',
           },
           {
             text: 'View Cart',
             onPress: () => {
               (navigation as any).getParent()?.navigate('Cart');
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     }
   };
@@ -247,29 +260,52 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
   const showDiscount = item.discount && item.discount > 0;
 
   return (
-    <TouchableOpacity style={styles.productCard} onPress={handleProductPress} activeOpacity={0.9}>
+    <TouchableOpacity
+      style={styles.productCard}
+      onPress={handleProductPress}
+      activeOpacity={0.9}
+    >
       {showDiscount && (
         <View style={styles.discountBadge}>
-          <Text style={styles.discountText}>{item.discount}{strings?.home?.discountOff || '% ರಿಯಾಯಿತಿ'}</Text>
+          <Text style={styles.discountText}>
+            {item.discount}
+            {strings?.home?.discountOff || '% ರಿಯಾಯಿತಿ'}
+          </Text>
         </View>
       )}
       <TouchableOpacity style={styles.favoriteButton} onPress={toggleFavorite}>
-        <Icon name={isFavorite ? 'favorite' : 'favorite-border'} size={20} color={isFavorite ? theme.colors.primary : theme.colors.textSecondary} />
+        <Icon
+          name={isFavorite ? 'favorite' : 'favorite-border'}
+          size={20}
+          color={isFavorite ? theme.colors.primary : theme.colors.textSecondary}
+        />
       </TouchableOpacity>
       <Image
         source={{ uri: item.image }}
         style={styles.productImage}
-        defaultSource={{ uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center' }}
+        defaultSource={{
+          uri: 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+        }}
       />
       <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.productDescription} numberOfLines={2}>{item.description}</Text>
+        <Text style={styles.productName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.productDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
         <View style={styles.ratingContainer}>
           <View style={styles.stars}>
             {Array.from({ length: 5 }, (_, i) => (
               <Icon
                 key={i}
-                name={i < Math.floor(item.rating) ? 'star' : i < item.rating ? 'star-half' : 'star-border'}
+                name={
+                  i < Math.floor(item.rating)
+                    ? 'star'
+                    : i < item.rating
+                    ? 'star-half'
+                    : 'star-border'
+                }
                 size={14}
                 color={theme.colors.primary}
               />
@@ -278,7 +314,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
           <Text style={styles.ratingText}>
             {item.rating} ({item.reviewCount})
           </Text>
-        </View>  
+        </View>
         <Text style={styles.productWeight}>Weight: {item.weight || 'N/A'}</Text>
         <View style={styles.priceContainer}>
           <Text style={styles.productPrice}>₹{item.price}</Text>
@@ -286,7 +322,9 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
             <Text style={styles.originalPrice}>₹{item.originalPrice}</Text>
           )}
         </View>
-        <Animated.View style={[styles.addButton, { transform: [{ scale: scaleValue }] }]}>
+        <Animated.View
+          style={[styles.addButton, { transform: [{ scale: scaleValue }] }]}
+        >
           <TouchableOpacity
             style={styles.addButtonTouchable}
             onPressIn={handlePressIn}
@@ -295,7 +333,9 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
             activeOpacity={0.8}
           >
             <Icon name="shopping-cart" size={18} color="white" />
-            <Text style={styles.addButtonText}>{strings?.home?.addToCart || 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ'}</Text>
+            <Text style={styles.addButtonText}>
+              {strings?.home?.addToCart || 'ಕಾರ್ಟ್‌ಗೆ ಸೇರಿಸಿ'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -304,7 +344,10 @@ const ProductItem: React.FC<ProductItemProps> = ({ item, onAddToCart, onAddOrUpd
 };
 
 // Banner Carousel Component with auto-slide
-const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, banner }) => {
+const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({
+  banners,
+  banner,
+}) => {
   // If we have multiple banners, show carousel
   if (banners && banners.length > 0) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -314,7 +357,7 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
     useEffect(() => {
       if (banners.length > 1) {
         const interval = setInterval(() => {
-          setCurrentIndex((prevIndex) => {
+          setCurrentIndex(prevIndex => {
             const nextIndex = (prevIndex + 1) % banners.length;
             return nextIndex;
           });
@@ -327,7 +370,10 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
     useEffect(() => {
       if (scrollRef.current && banners.length > 1) {
         try {
-          scrollRef.current.scrollTo({ x: currentIndex * width, animated: true });
+          scrollRef.current.scrollTo({
+            x: currentIndex * width,
+            animated: true,
+          });
         } catch (e) {
           console.log('Scroll error:', e);
         }
@@ -342,11 +388,14 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
     const renderBanner = ({ item }: { item: any }) => (
       <View style={styles.bannerSlide}>
         <Image
-          source={{ uri: item?.image || 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop' }}
+          source={{
+            uri:
+              item?.image ||
+              'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop',
+          }}
           style={styles.bannerImage}
           resizeMode="contain"
         />
-     
       </View>
     );
 
@@ -368,7 +417,12 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
             {banners.map((_, index) => (
               <View
                 key={index}
-                style={[styles.paginationDot, index === currentIndex ? styles.paginationDotActive : styles.paginationDotInactive]}
+                style={[
+                  styles.paginationDot,
+                  index === currentIndex
+                    ? styles.paginationDotActive
+                    : styles.paginationDotInactive,
+                ]}
               />
             ))}
           </View>
@@ -422,7 +476,12 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
 
   const handleVideoError = (error: any) => {
     console.log('Video error:', error);
-    setVideoState(prev => ({ ...prev, loading: false, error: true, playing: false }));
+    setVideoState(prev => ({
+      ...prev,
+      loading: false,
+      error: true,
+      playing: false,
+    }));
   };
 
   const handleVideoBuffer = (e: { isBuffering: boolean }) => {
@@ -435,23 +494,31 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
   };
 
   const videoUrl = banner?.video ? getVideoUrl(banner.video) : null;
-  console.log(videoUrl, "%%%%%%%%%%%%%%%%%%%%%%%%%")
-
+  console.log(videoUrl, '%%%%%%%%%%%%%%%%%%%%%%%%%');
 
   // If no video, show image banner with overlay
   if (!videoUrl || videoState.error) {
     return (
       <View style={styles.videoContainer}>
         <Image
-          source={{ uri: banner?.image || 'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop' }}
+          source={{
+            uri:
+              banner?.image ||
+              'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop',
+          }}
           style={styles.videoFallbackImage}
           resizeMode="contain"
         />
         {(banner?.name || banner?.description) && (
           <View style={styles.videoOverlay}>
             <View style={styles.videoInfo}>
-              <Text style={styles.videoTitle}>{banner?.name || 'Welcome to Our Store'}</Text>
-              <Text style={styles.videoSubtitle}>{banner?.description || 'Discover amazing products at great prices'}</Text>
+              <Text style={styles.videoTitle}>
+                {banner?.name || 'Welcome to Our Store'}
+              </Text>
+              <Text style={styles.videoSubtitle}>
+                {banner?.description ||
+                  'Discover amazing products at great prices'}
+              </Text>
               <TouchableOpacity style={styles.shopNowButton}>
                 <Text style={styles.shopNowText}>Shop Now</Text>
               </TouchableOpacity>
@@ -474,7 +541,7 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
         muted={false}
         playWhenInactive={false}
         playInBackground={false}
-        ignoreSilentSwitch={"ignore"}
+        ignoreSilentSwitch={'ignore'}
         onLoad={handleVideoLoad}
         onError={handleVideoError}
         onBuffer={handleVideoBuffer}
@@ -510,8 +577,12 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({ banners, ban
 
         {/* Video Info */}
         <View style={styles.videoInfo}>
-          <Text style={styles.videoTitle}>{banner?.name || 'Welcome to Our Store'}</Text>
-          <Text style={styles.videoSubtitle}>{banner?.description || 'Discover amazing products at great prices'}</Text>
+          <Text style={styles.videoTitle}>
+            {banner?.name || 'Welcome to Our Store'}
+          </Text>
+          <Text style={styles.videoSubtitle}>
+            {banner?.description || 'Discover amazing products at great prices'}
+          </Text>
           <TouchableOpacity style={styles.shopNowButton}>
             <Text style={styles.shopNowText}>Shop Now</Text>
           </TouchableOpacity>
@@ -540,7 +611,10 @@ const HomeScreen: React.FC = () => {
   const { strings } = useLanguage();
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category>({ id: 'all', name: 'All' });
+  const [selectedCategory, setSelectedCategory] = useState<Category>({
+    id: 'all',
+    name: 'All',
+  });
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -554,12 +628,12 @@ const HomeScreen: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const scrollViewRef = useRef<any>(null);
-  
+
   // Animated text for scrolling effect
   const animatedTextValue = useRef(new Animated.Value(0)).current;
   const textRef = useRef<any>(null);
   const [textWidth, setTextWidth] = useState(0);
-  
+
   // Animate the scrolling text
   useEffect(() => {
     const animation = Animated.loop(
@@ -575,7 +649,7 @@ const HomeScreen: React.FC = () => {
           duration: 0,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     animation.start();
     return () => animation.stop();
@@ -592,7 +666,7 @@ const HomeScreen: React.FC = () => {
         if (response.success && response.data?.data?.data) {
           const categoryData = response.data.data.data.map((category: any) => ({
             id: category._id,
-            name: category.name
+            name: category.name,
           }));
           setCategories([{ id: 'all', name: 'All' }, ...categoryData]);
         } else {
@@ -615,7 +689,11 @@ const HomeScreen: React.FC = () => {
         const response = await apiService.getBanners();
         console.log('Banner API Response:', response);
         // New API returns: { success, message, data: { total, totalPages, page, limit, data: [...] } }
-        if (response.success && response.data?.data?.data && response.data.data.data.length > 0) {
+        if (
+          response.success &&
+          response.data?.data?.data &&
+          response.data.data.data.length > 0
+        ) {
           const bannerList = response.data.data.data;
           setBanners(bannerList);
           setBanner(bannerList[0]);
@@ -635,10 +713,13 @@ const HomeScreen: React.FC = () => {
   useEffect(() => {
     if (banners.length > 1) {
       const interval = setInterval(() => {
-        setCurrentBannerIndex((prevIndex) => {
+        setCurrentBannerIndex(prevIndex => {
           const nextIndex = (prevIndex + 1) % banners.length;
           if (bannerScrollRef.current) {
-            bannerScrollRef.current.scrollTo({ x: nextIndex * width, animated: true });
+            bannerScrollRef.current.scrollTo({
+              x: nextIndex * width,
+              animated: true,
+            });
           }
           return nextIndex;
         });
@@ -654,7 +735,10 @@ const HomeScreen: React.FC = () => {
     fetchProductsByCategory(1, false);
   }, [selectedCategory]);
 
-  const fetchProductsByCategory = async (currentPage = 1, isLoadMore = false) => {
+  const fetchProductsByCategory = async (
+    currentPage = 1,
+    isLoadMore = false,
+  ) => {
     try {
       if (isLoadMore) {
         setLoadingMore(true);
@@ -664,27 +748,40 @@ const HomeScreen: React.FC = () => {
 
       if (selectedCategory.id === 'all') {
         console.log('=== FETCHING ALL PRODUCTS ===');
-        const allProductsResponse = await apiService.getAllProducts(`page=${currentPage}&limit=10`);
+        const allProductsResponse = await apiService.getAllProducts(
+          `page=${currentPage}&limit=10`,
+        );
         console.log('All Products API Response:', allProductsResponse);
 
-        if (allProductsResponse.success && allProductsResponse.data?.data?.data) {
-          const transformedProducts: Product[] = allProductsResponse.data.data.data.map((apiProduct: any) => ({
-            id: apiProduct._id,
-            name: apiProduct.name,
-            description: apiProduct.description || 'No description available',
-            price: apiProduct.generalPrice || 0,
-            image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
-            rating: apiProduct.rating || 4.0,
-            reviewCount: apiProduct.reviewCount || 0,
-            discount: apiProduct.discount || 0,
-            category: apiProduct.category || 'General',
-            subCategory: apiProduct.subCategory || '',
-            weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A',
-            stock:apiProduct.stockQuantity
-          }));
+        if (
+          allProductsResponse.success &&
+          allProductsResponse.data?.data?.data
+        ) {
+          const transformedProducts: Product[] =
+            allProductsResponse.data.data.data.map((apiProduct: any) => ({
+              id: apiProduct._id,
+              name: apiProduct.name,
+              description: apiProduct.description || 'No description available',
+              price: apiProduct.generalPrice || 0,
+              image:
+                apiProduct.image ||
+                'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+              rating: apiProduct.rating || 4.0,
+              reviewCount: apiProduct.reviewCount || 0,
+              discount: apiProduct.discount || 0,
+              category: apiProduct.category || 'General',
+              subCategory: apiProduct.subCategory || '',
+              weight: apiProduct.weightInKg
+                ? `${apiProduct.weightInKg}kg`
+                : 'N/A',
+              stock: apiProduct.stockQuantity,
+            }));
 
           if (isLoadMore) {
-            setProducts((prevProducts: Product[]) => [...prevProducts, ...transformedProducts]);
+            setProducts((prevProducts: Product[]) => [
+              ...prevProducts,
+              ...transformedProducts,
+            ]);
           } else {
             setProducts(transformedProducts);
           }
@@ -703,44 +800,67 @@ const HomeScreen: React.FC = () => {
           }
         }
       } else {
-        console.log(`=== FETCHING PRODUCTS FOR CATEGORY: ${selectedCategory.name} (ID: ${selectedCategory.id}) ===`);
+        console.log(
+          `=== FETCHING PRODUCTS FOR CATEGORY: ${selectedCategory.name} (ID: ${selectedCategory.id}) ===`,
+        );
 
-        const subCategoriesResponse = await apiService.getSubCategoriesByCategory(selectedCategory.id);
+        const subCategoriesResponse =
+          await apiService.getSubCategoriesByCategory(selectedCategory.id);
         console.log('SubCategories API Response:', subCategoriesResponse);
 
-        if (subCategoriesResponse.success && subCategoriesResponse.data?.data?.data) {
-          const subCategories: SubCategory[] = subCategoriesResponse.data.data.data;
+        if (
+          subCategoriesResponse.success &&
+          subCategoriesResponse.data?.data?.data
+        ) {
+          const subCategories: SubCategory[] =
+            subCategoriesResponse.data.data.data;
           console.log('Found subcategories:', subCategories);
 
           let allProducts: Product[] = [];
 
           for (const subCategory of subCategories) {
-            console.log(`Fetching products for subcategory: ${subCategory.name} (ID: ${subCategory._id})`);
-            const productsResponse = await apiService.getProductsBySubCategory(subCategory._id, `page=${currentPage}&limit=10`);
-            console.log(`Products response for ${subCategory.name}:`, productsResponse);
-console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+            console.log(
+              `Fetching products for subcategory: ${subCategory.name} (ID: ${subCategory._id})`,
+            );
+            const productsResponse = await apiService.getProductsBySubCategory(
+              subCategory._id,
+              `page=${currentPage}&limit=10`,
+            );
+            console.log(
+              `Products response for ${subCategory.name}:`,
+              productsResponse,
+            );
+            console.log(productsResponse, '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
             if (productsResponse.success && productsResponse.data?.data?.data) {
-              const transformedProducts: Product[] = productsResponse.data.data.data.map((apiProduct: any) => ({
-                id: apiProduct._id,
-                name: apiProduct.name,
-                description: apiProduct.description || 'No description available',
-                price: apiProduct.generalPrice || 0,
-                image: apiProduct.image || 'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
-                rating: apiProduct.rating || 4.0,
-                reviewCount: apiProduct.reviewCount || 0,
-                discount: apiProduct.discount || 0,
-                category: apiProduct.category || selectedCategory.name,
-                subCategory: apiProduct.subCategory || subCategory.name,
-            weight: apiProduct.weightInKg ? `${apiProduct.weightInKg}kg` : 'N/A'
-
-              }));
+              const transformedProducts: Product[] =
+                productsResponse.data.data.data.map((apiProduct: any) => ({
+                  id: apiProduct._id,
+                  name: apiProduct.name,
+                  description:
+                    apiProduct.description || 'No description available',
+                  price: apiProduct.generalPrice || 0,
+                  image:
+                    apiProduct.image ||
+                    'https://images.unsplash.com/photo-1559054663-e431ec5e6e13?w=300&h=300&fit=crop&crop=center',
+                  rating: apiProduct.rating || 4.0,
+                  reviewCount: apiProduct.reviewCount || 0,
+                  discount: apiProduct.discount || 0,
+                  category: apiProduct.category || selectedCategory.name,
+                  subCategory: apiProduct.subCategory || subCategory.name,
+                  weight: apiProduct.weightInKg
+                    ? `${apiProduct.weightInKg}kg`
+                    : 'N/A',
+                }));
 
               allProducts = [...allProducts, ...transformedProducts];
             }
           }
 
           if (isLoadMore) {
-            setProducts((prevProducts: Product[]) => [...prevProducts, ...allProducts]);
+            setProducts((prevProducts: Product[]) => [
+              ...prevProducts,
+              ...allProducts,
+            ]);
           } else {
             setProducts(allProducts);
           }
@@ -772,7 +892,8 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
   // Filter products based on search query
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
@@ -827,7 +948,10 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
     return (
       <SafeAreaView style={styles.safeContainer}>
         {/* <Statusbar backgroundColor={theme.colors.background} /> */}
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
           <HeaderSkeleton />
           <View style={styles.categorySection}>
             <FlatList
@@ -856,60 +980,77 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-     
-      <ScrollView ref={scrollViewRef} style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerContainer}>
-          <View style={styles.headerTop}>
-            <Image style={styles.imageBox} resizeMode='contain' source={require("../assets/img/logos.jpeg")} />
-            <View style={styles.headerTextContainer} onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)}>
-              <Animated.Text
-                ref={textRef}
-                style={[
-                  styles.headerText,
-                  {
-                    transform: [{ translateX: animatedTextValue }],
-                  },
-                ]}
-              >
-                Best Price & Best Quality 🎉  •  
-              </Animated.Text>
-              <Animated.Text
-                style={[
-                  styles.headerText,
-                  {
-                    transform: [{ translateX: animatedTextValue }],
-                  },
-                ]}
-              >
-                Best Price & Best Quality 🎉  •  
-              </Animated.Text>
+      <View style={styles.headerTop}>
+        <Image
+          style={styles.imageBox}
+          resizeMode="contain"
+          source={require('../assets/img/logos.jpeg')}
+        />
+        <View
+          style={styles.headerTextContainer}
+          onLayout={e => setTextWidth(e.nativeEvent.layout.width)}
+        >
+          <Animated.Text
+            ref={textRef}
+            style={[
+              styles.headerText,
+              {
+                transform: [{ translateX: animatedTextValue }],
+              },
+            ]}
+          >
+            Best Price & Best Quality 🎉 •
+          </Animated.Text>
+          <Animated.Text
+            style={[
+              styles.headerText,
+              {
+                transform: [{ translateX: animatedTextValue }],
+              },
+            ]}
+          >
+            Best Price & Best Quality 🎉 •
+          </Animated.Text>
+        </View>
+        <TouchableOpacity
+          style={styles.cartIconContainer}
+          onPress={() => navigation.navigate('CartScreen')}
+        >
+          <Icon name="shopping-cart" size={24} color={theme.colors.primary} />
+          {cart.items.length > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cart.items.length}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.cartIconContainer}
-              onPress={() => navigation.navigate('CartScreen')}
-            >
-              <Icon name="shopping-cart" size={24} color={theme.colors.primary} />
-              {cart.items.length > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>{cart.items.length}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
+          )}
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerContainer}>
           {/* Delivery Area Message */}
           <View style={styles.deliveryMessageContainer}>
             <Icon name="location-on" size={30} color={theme.colors.primary} />
             <Text style={styles.deliveryMessageText}>
-              Delivery available only in Davanagere: 577001, 577002, 577003, 577004, 577005, 577006
+              Delivery available only in Davanagere: 577001, 577002, 577003,
+              577004, 577005, 577006
             </Text>
           </View>
 
           <View style={styles.searchContainer}>
-            <Icon name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
+            <Icon
+              name="search"
+              size={20}
+              color={theme.colors.textSecondary}
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
-              placeholder={strings?.home?.searchPlaceholder || 'ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ...'}
+              placeholder={
+                strings?.home?.searchPlaceholder || 'ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ...'
+              }
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholderTextColor={theme.colors.textSecondary}
@@ -925,7 +1066,7 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
             horizontal
             data={categories}
             renderItem={renderCategory}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             style={styles.categoryList}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryContainer}
@@ -954,19 +1095,33 @@ console.log(productsResponse,"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
                 isFavorite={favorites.has(item.id)}
               />
             )}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             numColumns={2}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             columnWrapperStyle={styles.row}
             onEndReached={loadMore}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color={theme.colors.primary} /> : null}
+            ListFooterComponent={
+              loadingMore ? (
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+              ) : null
+            }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Icon name="search-off" size={60} color={theme.colors.textSecondary} />
-                <Text style={styles.emptyText}>{strings?.home?.noProductsFound || 'ಯಾವುದೇ ಉತ್ಪನ್ನಗಳು ಕಂಡುಬಂದಿಲ್ಲ'}</Text>
-                <Text style={styles.emptySubtext}>{strings?.home?.tryDifferentSearch || 'ವಿಭಿನ್ನ ಹುಡುಕಾಟ ಅಥವಾ ವರ್ಗವನ್ನು ಪ್ರಯತ್ನಿಸಿ'}</Text>
+                <Icon
+                  name="search-off"
+                  size={60}
+                  color={theme.colors.textSecondary}
+                />
+                <Text style={styles.emptyText}>
+                  {strings?.home?.noProductsFound ||
+                    'ಯಾವುದೇ ಉತ್ಪನ್ನಗಳು ಕಂಡುಬಂದಿಲ್ಲ'}
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  {strings?.home?.tryDifferentSearch ||
+                    'ವಿಭಿನ್ನ ಹುಡುಕಾಟ ಅಥವಾ ವರ್ಗವನ್ನು ಪ್ರಯತ್ನಿಸಿ'}
+                </Text>
               </View>
             }
           />
@@ -986,6 +1141,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     padding: isSmallScreen ? theme.spacing.medium : theme.spacing.large,
+   
     backgroundColor: theme.colors.card,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -1091,7 +1247,9 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.small,
   },
   categoryButton: {
-    paddingHorizontal: isSmallScreen ? theme.spacing.small : theme.spacing.medium,
+    paddingHorizontal: isSmallScreen
+      ? theme.spacing.small
+      : theme.spacing.medium,
     paddingVertical: theme.spacing.small + 2,
     marginRight: theme.spacing.small,
     borderRadius: 25,
@@ -1120,7 +1278,7 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.small,
     color: theme.colors.textSecondary,
     fontFamily: theme.fonts.family.medium,
-    textTransform: "capitalize",
+    textTransform: 'capitalize',
   },
   categoryTextActive: {
     color: theme.colors.card,
@@ -1153,7 +1311,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     borderWidth: 1,
     borderColor: 'rgba(164, 148, 61, 0.1)',
- 
   },
   discountBadge: {
     position: 'absolute',
@@ -1330,8 +1487,8 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     height: isSmallScreen ? 160 : isLargeScreen ? 240 : 200,
-    width: "100%",
-    alignSelf: "center",
+    width: '100%',
+    alignSelf: 'center',
     marginTop: 14,
     borderRadius: 5,
     overflow: 'hidden',
@@ -1346,7 +1503,7 @@ const styles = StyleSheet.create({
   carouselContainer: {
     height: isSmallScreen ? 160 : isLargeScreen ? 240 : 200,
     width: width,
-    alignSelf: "center",
+    alignSelf: 'center',
     marginTop: 14,
     borderRadius: 5,
     overflow: 'hidden',
@@ -1540,40 +1697,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.medium,
   },
-  deliveryMessageText:{
+  deliveryMessageText: {
     color: theme.colors.primary,
-    fontWeight:"700",
+    fontWeight: '700',
     fontSize: isSmallScreen ? 10 : 13,
     // textAlign: 'center',
     flex: 1,
   },
-  deliveryMessageContainer:{
-    flexDirection:"row",
+  deliveryMessageContainer: {
+    flexDirection: 'row',
     // alignItems:"center",
     // justifyContent:"center",
-    marginVertical:12,
-    marginHorizontal:-10,
+    marginVertical: 12,
+    marginHorizontal: -10,
     backgroundColor: '#E8F0FE',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.3)',
-   
   },
-  headerText:{
+  headerText: {
     fontSize: isSmallScreen ? 12 : isLargeScreen ? 18 : 15,
-    fontWeight:"bold",
-   fontFamily:theme.fonts.family.bold,
+    fontWeight: 'bold',
+    fontFamily: theme.fonts.family.bold,
     color: theme.colors.error,
     marginLeft: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.2,
- 
+
     borderRadius: 8,
     padding: 4,
-    
-    
   },
   headerTextContainer: {
     flexDirection: 'row',
