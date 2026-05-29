@@ -375,10 +375,8 @@ class ApiService {
       role: request.role || 'user',
       loginType: 'mobile'
     };
-
     console.log('Final verify request:', verifyRequest);
     console.log('Request body being sent to API:', JSON.stringify(verifyRequest, null, 2));
-
     const response = await this.request<{ user: User; token: string }>(endpoint, {
       method: 'PUT',
       headers: {
