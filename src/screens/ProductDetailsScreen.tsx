@@ -52,7 +52,8 @@ interface ProductDetailsRouteParams {
 const ProductDetailsScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { addToCart, setUserLocation, setPincode, addOrUpdateToCart } = useCart();
+  const { addToCart, setUserLocation, setPincode, addOrUpdateToCart } =
+    useCart();
   const routeParams = route.params as ProductDetailsRouteParams;
   const { product } = routeParams;
   // Extract _id from product for API calls
@@ -61,27 +62,31 @@ const ProductDetailsScreen: React.FC = () => {
   console.log('ProductDetails - Full product:', product);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
+  const [activeTab, setActiveTab] = useState<
+    'description' | 'specifications' | 'reviews'
+  >('description');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiProduct, setApiProduct] = useState<Product | null>(null);
-  const [relatedProductsData, setRelatedProductsData] = useState<RelatedProduct[]>([]);
+  const [relatedProductsData, setRelatedProductsData] = useState<
+    RelatedProduct[]
+  >([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [hasCheckedLocations, setHasCheckedLocations] = useState(false);
   const [showAddToCartModal, setShowAddToCartModal] = useState(false);
-  
+
   // Fetch product details from API
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Get product ID from route params or use the product from navigation
         let productId = '';
-        
+
         // Check if product ID is passed directly in route params
         if (routeParams.productId) {
           productId = routeParams.productId;
@@ -94,59 +99,93 @@ const ProductDetailsScreen: React.FC = () => {
         else if (product.id) {
           productId = product.id;
         }
-        
+
         console.log('Fetching product details for ID:', productId);
-        
+
         if (productId) {
           const response = await apiService.getProductById(productId);
-          
+
           if (response.success && response.data) {
             console.log('🎯 Product details API Response:', response.data);
-            
+
             // Transform API response to match Product interface
             // Handle both single product and paginated response
-            const apiProductData = response.data.data?.data?.[0] || response.data.data || response.data;
+            let apiProductData: any = null;
+            
+            // Try different data structures
+            if (response.data.data?.data?.[0]) {
+              apiProductData = response.data.data.data[0];
+            } else if (response.data.data && !Array.isArray(response.data.data)) {
+              apiProductData = response.data.data;
+            } else if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+              apiProductData = response.data.data[0];
+            } else if (response.data._id || response.data.name) {
+              apiProductData = response.data;
+            }
+            
             console.log('🎯 Product data from API:', apiProductData);
             console.log('🎯 API Product structure:', {
-              hasId: !!apiProductData._id,
-              hasName: !!apiProductData.name,
-              hasPrice: !!apiProductData.generalPrice,
-              hasImage: !!apiProductData.image,
-              stockQuantity: apiProductData.stockQuantity,
-              isActive: apiProductData.isActive,
-              isArray: Array.isArray(response.data.data?.data)
+              hasId: !!apiProductData?._id,
+              hasName: !!apiProductData?.name,
+              hasPrice: !!apiProductData?.generalPrice,
+              hasImage: !!apiProductData?.image,
+              stockQuantity: apiProductData?.stockQuantity,
+              isActive: apiProductData?.isActive,
+              rawData: response.data,
             });
-            
+
+            if (!apiProductData) {
+              setError('No product data found in API response');
+              return;
+            }
+
             const transformedProduct: Product = {
               id: apiProductData._id || apiProductData.id || productId,
               name: apiProductData.name || apiProductData.productName || '',
               price: apiProductData.generalPrice || apiProductData.price || 0,
-              originalPrice: apiProductData.generalPrice || apiProductData.originalPrice || apiProductData.mrp,
+              originalPrice:
+                apiProductData.generalPrice ||
+                apiProductData.originalPrice ||
+                apiProductData.mrp,
               discount: apiProductData.discount || 0,
               image: apiProductData.image || apiProductData.images?.[0] || '',
               images: [apiProductData.image].filter(Boolean),
-              rating: apiProductData.rating || apiProductData.averageRating || 4.5,
-              reviewCount: apiProductData.reviewCount || apiProductData.totalReviews || 0,
-              description: apiProductData.description || apiProductData.productDescription || '',
-              inStock: (apiProductData.stockQuantity || 0) > 0 && apiProductData.isActive !== false,
-              category: product?.category || apiProductData.category || apiProductData.categoryName || '',
+              rating:
+                apiProductData.rating || apiProductData.averageRating || 4.5,
+              reviewCount:
+                apiProductData.reviewCount || apiProductData.totalReviews || 0,
+              description:
+                apiProductData.description ||
+                apiProductData.productDescription ||
+                '',
+              inStock:
+                (apiProductData.stockQuantity || 0) > 0 &&
+                apiProductData.isActive !== false,
+              category:
+                typeof apiProductData.category === 'object'
+                  ? (apiProductData.category as any)?.name ||
+                    apiProductData.categoryName ||
+                    ''
+                  : apiProductData.category ||
+                    apiProductData.categoryName ||
+                    '',
               brand: apiProductData.brand || '',
               weight: `${apiProductData.weightInKg || 1} kg`,
               specifications: {
                 origin: apiProductData.origin || 'India',
                 processing: apiProductData.processing || 'Premium',
                 shelfLife: apiProductData.shelfLife || '18 months',
-                storage: apiProductData.storage || 'Store in cool, dry place'
+                storage: apiProductData.storage || 'Store in cool, dry place',
               },
               nutritionInfo: apiProductData.nutritionInfo || {
                 calories: '130 kcal',
                 protein: '2.7 g',
                 carbs: '28 g',
                 fat: '0.3 g',
-                fiber: '0.4 g'
-              }
+                fiber: '0.4 g',
+              },
             };
-            
+
             console.log('🎯 Transformed product:', transformedProduct);
             setApiProduct(transformedProduct);
           } else {
@@ -165,7 +204,12 @@ const ProductDetailsScreen: React.FC = () => {
     };
 
     fetchProductDetails();
-  }, [routeParams.productId, routeParams.categoryId, product.id, (product as any)._id]);
+  }, [
+    routeParams.productId,
+    routeParams.categoryId,
+    product.id,
+    (product as any)._id,
+  ]);
 
   // Mock reviews data
   const reviews: Review[] = [
@@ -173,21 +217,24 @@ const ProductDetailsScreen: React.FC = () => {
       id: '1',
       user: 'Rajesh K.',
       rating: 5,
-      comment: 'Excellent quality basmati rice. Perfect for biryani! The aroma and grain length are exceptional.',
+      comment:
+        'Excellent quality basmati rice. Perfect for biryani! The aroma and grain length are exceptional.',
       date: '2024-01-10',
     },
     {
       id: '2',
       user: 'Priya M.',
       rating: 4,
-      comment: 'Good rice, nice aroma. Will buy again. Delivery was prompt and packaging was secure.',
+      comment:
+        'Good rice, nice aroma. Will buy again. Delivery was prompt and packaging was secure.',
       date: '2024-01-08',
     },
     {
       id: '3',
       user: 'Amit S.',
       rating: 5,
-      comment: 'Best basmati rice I have tried. Highly recommended for daily cooking and special occasions.',
+      comment:
+        'Best basmati rice I have tried. Highly recommended for daily cooking and special occasions.',
       date: '2024-01-05',
     },
     {
@@ -204,22 +251,22 @@ const ProductDetailsScreen: React.FC = () => {
     console.log('🔍 fetchRelatedProducts called with category:', category);
     console.log('🔍 Current productId:', productId);
     console.log('🔍 Route params:', routeParams);
-    
+
     try {
       setRelatedLoading(true);
-      
+
       // Use the API to get all products, then filter by category
       const response = await apiService.getAllProducts();
-      
+
       if (response.success && response.data) {
         console.log('📦 Related products API response:', response.data);
-        
+
         // Handle the actual API response structure
         // response.data contains: {success: true, message: "...", data: {total: 4, data: [...]}}
         const apiResponse = response.data;
         const dataContainer = apiResponse.data; // This contains pagination info
         const products = dataContainer.data || []; // This is the actual products array
-        
+
         console.log('📦 API Response structure:', {
           hasSuccess: !!apiResponse.success,
           message: apiResponse.message,
@@ -227,64 +274,85 @@ const ProductDetailsScreen: React.FC = () => {
           total: dataContainer.total,
           totalPages: dataContainer.totalPages,
           productsLength: products.length,
-          firstProductName: products[0]?.name
+          firstProductName: products[0]?.name,
         });
-        
+
         // Transform API response to match RelatedProduct interface
-        const transformedProducts: RelatedProduct[] = products.map((product: any, index: number) => {
-          const transformed = {
-            id: product._id || '',
-            name: product.name || product.productName || '',
-            price: product.generalPrice || product.price || 0,
-            originalPrice: product.generalPrice || product.mrp || product.price || 0,
-            discount: product.discount || 0,
-            image: product.image || product.images?.[0] || '',
-            rating: product.rating || product.averageRating || 4.5,
-            reviewCount: product.reviewCount || product.totalReviews || 0,
-            category: product.category || product.categoryName || category || '',
-            inStock: (product.stockQuantity || 0) > 0 && product.isActive !== false,
-          };
-          
-          console.log(`🎯 Transform Product ${index}:`, {
-            originalName: product.name,
-            transformedName: transformed.name,
-            originalPrice: product.generalPrice,
-            transformedPrice: transformed.price,
-            stockQuantity: product.stockQuantity,
-            isActive: product.isActive,
-            inStock: transformed.inStock
-          });
-          
-          return transformed;
-        });
-        
+        const transformedProducts: RelatedProduct[] = products.map(
+          (product: any, index: number) => {
+            const transformed = {
+              id: product._id || '',
+              name: product.name || product.productName || '',
+              price: product.generalPrice || product.price || 0,
+              originalPrice:
+                product.generalPrice || product.mrp || product.price || 0,
+              discount: product.discount || 0,
+              image: product.image || product.images?.[0] || '',
+              rating: product.rating || product.averageRating || 4.5,
+              reviewCount: product.reviewCount || product.totalReviews || 0,
+              category: typeof product.category === 'object'
+                ? (product.category as any)?.name ||
+                  product.categoryName ||
+                  category ||
+                  ''
+                : product.category || product.categoryName || category || '',
+              inStock:
+                (product.stockQuantity || 0) > 0 && product.isActive !== false,
+            };
+
+            console.log(`🎯 Transform Product ${index}:`, {
+              originalName: product.name,
+              transformedName: transformed.name,
+              originalPrice: product.generalPrice,
+              transformedPrice: transformed.price,
+              stockQuantity: product.stockQuantity,
+              isActive: product.isActive,
+              inStock: transformed.inStock,
+            });
+
+            return transformed;
+          },
+        );
+
         console.log('🎯 Current Product ID to filter out:', productId);
-        console.log('🎯 All transformed products before filtering:', transformedProducts.map(p => ({ id: p.id, name: p.name })));
-        
+        console.log(
+          '🎯 All transformed products before filtering:',
+          transformedProducts.map(p => ({ id: p.id, name: p.name })),
+        );
+
         // Filter out the current product from related products
         const filteredProducts = transformedProducts.filter(product => {
           const shouldExclude = product.id !== productId;
-          console.log(`🎯 Filter check - Product ${product.name} (${product.id}):`, {
-            productId,
-            currentProductId: product.id,
-            shouldExclude
-          });
+          console.log(
+            `🎯 Filter check - Product ${product.name} (${product.id}):`,
+            {
+              productId,
+              currentProductId: product.id,
+              shouldExclude,
+            },
+          );
           return shouldExclude;
         });
-        
+
         // Limit to 5 products
         const limitedProducts = filteredProducts.slice(0, 5);
-        
+
         setRelatedProductsData(limitedProducts);
-        
-        console.log('🎯 Final related products after filtering:', limitedProducts);
-        console.log('🎯 Product IDs in final related products:', limitedProducts.map(p => p.id));
+
+        console.log(
+          '🎯 Final related products after filtering:',
+          limitedProducts,
+        );
+        console.log(
+          '🎯 Product IDs in final related products:',
+          limitedProducts.map(p => p.id),
+        );
       } else {
         console.warn('❌ Failed to fetch related products:', response.error);
         console.warn('❌ Response details:', {
           success: response.success,
           hasData: !!response.data,
-          dataContent: response.data
+          dataContent: response.data,
         });
         // Fallback to empty array if API fails
         setRelatedProductsData([]);
@@ -305,7 +373,7 @@ const ProductDetailsScreen: React.FC = () => {
     console.log('🔄 API product category:', apiProduct?.category);
     console.log('🔄 Navigation product category:', product?.category);
     console.log('🔄 Final category to use:', category);
-    
+
     if (category) {
       console.log('🔄 Calling fetchRelatedProducts with category:', category);
       fetchRelatedProducts(category);
@@ -317,6 +385,10 @@ const ProductDetailsScreen: React.FC = () => {
   // Related products from API
   const relatedProducts: RelatedProduct[] = relatedProductsData;
 
+  // Use API product data only - no static fallback
+  const displayProduct = apiProduct;
+  const images = displayProduct?.images || [displayProduct?.image];
+
   // Check for saved locations when user first views the page
   useEffect(() => {
     const checkUserLocations = async () => {
@@ -326,13 +398,17 @@ const ProductDetailsScreen: React.FC = () => {
         setSavedLocations(locations || []);
       }
     };
-    
+
     checkUserLocations();
   }, [hasCheckedLocations]);
 
   const handleAddToCart = async () => {
+    if (!displayProduct) return;
     try {
-      console.log('🛒 ProductDetails - Add to Cart clicked for product:', displayProduct.name);
+      console.log(
+        '🛒 ProductDetails - Add to Cart clicked for product:',
+        displayProduct.name,
+      );
       console.log('🛒 ProductDetails - Product ID:', displayProduct.id);
       console.log('🛒 ProductDetails - Quantity:', quantity);
 
@@ -352,16 +428,16 @@ const ProductDetailsScreen: React.FC = () => {
           [
             {
               text: 'Continue Shopping',
-              style: 'cancel'
+              style: 'cancel',
             },
             {
               text: 'View Cart',
               onPress: () => {
                 // Navigate to cart tab
                 (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       } else {
         console.log('❌ ProductDetails - Cart API call failed');
@@ -376,16 +452,16 @@ const ProductDetailsScreen: React.FC = () => {
           [
             {
               text: 'Continue Shopping',
-              style: 'cancel'
+              style: 'cancel',
             },
             {
               text: 'View Cart',
               onPress: () => {
                 // Navigate to cart tab
                 (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       }
     } catch (error) {
@@ -399,16 +475,16 @@ const ProductDetailsScreen: React.FC = () => {
         [
           {
             text: 'Continue Shopping',
-            style: 'cancel'
+            style: 'cancel',
           },
           {
             text: 'View Cart',
             onPress: () => {
               // Navigate to cart tab
               (navigation as any).getParent()?.navigate('Cart');
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     }
   };
@@ -421,7 +497,8 @@ const ProductDetailsScreen: React.FC = () => {
         setUserLocation({
           coordinates: primaryLocation.coordinates,
           address: formatLocationDisplay(primaryLocation),
-          name: primaryLocation.name || primaryLocation.address || 'Saved Location'
+          name:
+            primaryLocation.name || primaryLocation.address || 'Saved Location',
         });
       }
 
@@ -434,10 +511,10 @@ const ProductDetailsScreen: React.FC = () => {
 
       if (success) {
         console.log('✅ Cart API call successful');
-        
+
         // Also update local cart for immediate UI feedback
         addToCart(displayProduct);
-        
+
         // Show success message and navigate to cart
         Alert.alert(
           'Success! 🎉',
@@ -448,16 +525,16 @@ const ProductDetailsScreen: React.FC = () => {
               onPress: () => {
                 // Navigate to Cart tab for payment
                 (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       } else {
         console.log('❌ Cart API call failed');
-        
+
         // Still update local cart as fallback
         addToCart(displayProduct);
-        
+
         // Show error message
         Alert.alert(
           'Partial Success ⚠️',
@@ -468,17 +545,17 @@ const ProductDetailsScreen: React.FC = () => {
               onPress: () => {
                 // Still navigate to cart
                 (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       }
     } catch (error) {
       console.error('❌ Error in proceedWithAddToCart:', error);
-      
+
       // Fallback to local cart update
       addToCart(displayProduct);
-      
+
       Alert.alert(
         'Network Error ⚠️',
         `Item added locally. Server sync will happen when you're back online.`,
@@ -487,16 +564,16 @@ const ProductDetailsScreen: React.FC = () => {
             text: 'OK',
             onPress: () => {
               (navigation as any).getParent()?.navigate('Cart');
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     }
   };
 
   const handleLocationPromptResponse = (action: 'add' | 'skip') => {
     setShowLocationPrompt(false);
-    
+
     if (action === 'add') {
       // Navigate to location fill page
       (navigation as any).navigate('Location');
@@ -508,7 +585,7 @@ const ProductDetailsScreen: React.FC = () => {
 
   const handleAddToCartModalConfirm = async (zipCode: string) => {
     setShowAddToCartModal(false);
-    
+
     try {
       console.log('🛒 Add to Cart with zipcode:', zipCode);
       console.log('🛒 Product:', displayProduct.name);
@@ -522,10 +599,10 @@ const ProductDetailsScreen: React.FC = () => {
 
       if (success) {
         console.log('✅ Cart API call successful');
-        
+
         // Also update local cart for immediate UI feedback
         addToCart(displayProduct);
-        
+
         // Show success message and navigate to cart
         Alert.alert(
           'Success! 🎉',
@@ -536,16 +613,16 @@ const ProductDetailsScreen: React.FC = () => {
               onPress: () => {
                 // Navigate to Cart tab for payment
                 (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       } else {
         console.log('❌ Cart API call failed');
-        
+
         // Still update local cart as fallback
         addToCart(displayProduct);
-        
+
         // Show error message
         Alert.alert(
           'Partial Success ⚠️',
@@ -556,17 +633,17 @@ const ProductDetailsScreen: React.FC = () => {
               onPress: () => {
                 // Still navigate to cart
                 (navigation as any).getParent()?.navigate('Cart');
-              }
-            }
-          ]
+              },
+            },
+          ],
         );
       }
     } catch (error) {
       console.error('❌ Error in handleAddToCartModalConfirm:', error);
-      
+
       // Fallback to local cart update
       addToCart(displayProduct);
-      
+
       Alert.alert(
         'Network Error ⚠️',
         `Item added locally. Server sync will happen when you're back online.`,
@@ -575,9 +652,9 @@ const ProductDetailsScreen: React.FC = () => {
             text: 'OK',
             onPress: () => {
               (navigation as any).getParent()?.navigate('Cart');
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     }
   };
@@ -588,16 +665,17 @@ const ProductDetailsScreen: React.FC = () => {
 
   const formatLocationDisplay = (location: SavedLocation) => {
     const parts = [];
-    
+
     if (location.name) parts.push(location.name);
-    if (location.shopOrBuildingNumber) parts.push(location.shopOrBuildingNumber);
+    if (location.shopOrBuildingNumber)
+      parts.push(location.shopOrBuildingNumber);
     if (location.address) parts.push(location.address);
     if (location.area) parts.push(location.area);
     if (location.city) parts.push(location.city);
     if (location.district) parts.push(location.district);
     if (location.zipCode) parts.push(location.zipCode);
     if (location.state) parts.push(location.state);
-    
+
     return parts.filter(Boolean).join(', ');
   };
 
@@ -610,7 +688,7 @@ const ProductDetailsScreen: React.FC = () => {
 
   const handleRelatedProductPress = (relatedProduct: RelatedProduct) => {
     // Navigate to the related product details
-    (navigation as any).navigate('ProductDetails', { 
+    (navigation as any).navigate('ProductDetails', {
       product: {
         id: relatedProduct.id,
         name: relatedProduct.name,
@@ -630,16 +708,16 @@ const ProductDetailsScreen: React.FC = () => {
           origin: 'India',
           processing: 'Polished',
           shelfLife: '18 months',
-          storage: 'Store in cool, dry place'
+          storage: 'Store in cool, dry place',
         },
         nutritionInfo: {
           calories: '130 kcal',
           protein: '2.7 g',
           carbs: '28 g',
           fat: '0.3 g',
-          fiber: '0.4 g'
-        }
-      }
+          fiber: '0.4 g',
+        },
+      },
     });
   };
 
@@ -650,27 +728,43 @@ const ProductDetailsScreen: React.FC = () => {
 
     for (let i = 0; i < fullStars; i++) {
       stars.push(
-        <Icon key={i} name="star" size={16} color={theme.colors.primary} />
+        <Icon key={i} name="star" size={16} color={theme.colors.primary} />,
       );
     }
 
     if (hasHalfStar) {
       stars.push(
-        <Icon key="half" name="star-half" size={16} color={theme.colors.primary} />
+        <Icon
+          key="half"
+          name="star-half"
+          size={16}
+          color={theme.colors.primary}
+        />,
       );
     }
 
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(
-        <Icon key={`empty-${i}`} name="star-border" size={16} color={theme.colors.textSecondary} />
+        <Icon
+          key={`empty-${i}`}
+          name="star-border"
+          size={16}
+          color={theme.colors.textSecondary}
+        />,
       );
     }
 
     return stars;
   };
 
-  const renderImageThumbnail = ({ item, index }: { item: string; index: number }) => (
+  const renderImageThumbnail = ({
+    item,
+    index,
+  }: {
+    item: string;
+    index: number;
+  }) => (
     <TouchableOpacity
       style={[
         styles.thumbnail,
@@ -686,9 +780,7 @@ const ProductDetailsScreen: React.FC = () => {
     <View style={styles.reviewItem}>
       <View style={styles.reviewHeader}>
         <Text style={styles.reviewUser}>{item.user}</Text>
-        <View style={styles.reviewRating}>
-          {renderStars(item.rating)}
-        </View>
+        <View style={styles.reviewRating}>{renderStars(item.rating)}</View>
       </View>
       <Text style={styles.reviewComment}>{item.comment}</Text>
       <Text style={styles.reviewDate}>{item.date}</Text>
@@ -696,15 +788,20 @@ const ProductDetailsScreen: React.FC = () => {
   );
 
   const renderRelatedProduct = ({ item }: { item: RelatedProduct }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.relatedProduct}
       onPress={() => handleRelatedProductPress(item)}
     >
       <View style={styles.relatedProductImageContainer}>
-        <Image source={{ uri: item.image }} style={styles.relatedProductImage} />
+        <Image
+          source={{ uri: item.image }}
+          style={styles.relatedProductImage}
+        />
         {item.discount && (
           <View style={styles.relatedProductDiscount}>
-            <Text style={styles.relatedProductDiscountText}>{item.discount}% OFF</Text>
+            <Text style={styles.relatedProductDiscountText}>
+              {item.discount}% OFF
+            </Text>
           </View>
         )}
         {!item.inStock && (
@@ -713,56 +810,67 @@ const ProductDetailsScreen: React.FC = () => {
           </View>
         )}
       </View>
-      
-      <Text style={styles.relatedProductName} numberOfLines={2}>{item.name}</Text>
-      
+
+      <Text style={styles.relatedProductName} numberOfLines={2}>
+        {item.name}
+      </Text>
+
       <View style={styles.relatedProductPriceContainer}>
         <Text style={styles.relatedProductPrice}>₹{item.price}</Text>
         {item.originalPrice && (
-          <Text style={styles.relatedProductOriginalPrice}>₹{item.originalPrice}</Text>
+          <Text style={styles.relatedProductOriginalPrice}>
+            ₹{item.originalPrice}
+          </Text>
         )}
       </View>
-      
+
       <View style={styles.relatedProductRatingContainer}>
         <View style={styles.relatedProductStars}>
           {renderStars(item.rating)}
         </View>
-        <Text style={styles.relatedProductRatingText}>({item.reviewCount})</Text>
+        <Text style={styles.relatedProductRatingText}>
+          ({item.reviewCount})
+        </Text>
       </View>
-      
+
       <Text style={styles.relatedProductCategory}>{item.category}</Text>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={[
           styles.relatedProductAddButton,
-          !item.inStock && styles.relatedProductAddButtonDisabled
+          !item.inStock && styles.relatedProductAddButtonDisabled,
         ]}
         disabled={!item.inStock}
       >
-        <Icon 
-          name="add-shopping-cart" 
-          size={16} 
-          color={item.inStock ? "white" : theme.colors.textSecondary} 
+        <Icon
+          name="add-shopping-cart"
+          size={16}
+          color={item.inStock ? 'white' : theme.colors.textSecondary}
         />
-        <Text style={[
-          styles.relatedProductAddButtonText,
-          !item.inStock && styles.relatedProductAddButtonTextDisabled
-        ]}>
+        <Text
+          style={[
+            styles.relatedProductAddButtonText,
+            !item.inStock && styles.relatedProductAddButtonTextDisabled,
+          ]}
+        >
           {item.inStock ? 'Add' : 'Out of Stock'}
         </Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
 
-  // Use API product data if available, otherwise fall back to navigation product
-  const displayProduct = apiProduct || product;
-  const images = displayProduct.images || [displayProduct.image];
-
   // Show loading state
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ fontSize: theme.fonts.size.large, color: theme.colors.text }}>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: 'center', alignItems: 'center' },
+        ]}
+      >
+        <Text
+          style={{ fontSize: theme.fonts.size.large, color: theme.colors.text }}
+        >
           Loading product details...
         </Text>
       </View>
@@ -772,91 +880,185 @@ const ProductDetailsScreen: React.FC = () => {
   // Show error state
   if (error) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: 'center', alignItems: 'center' },
+        ]}
+      >
         <Icon name="error-outline" size={48} color={theme.colors.error} />
-        <Text style={{ fontSize: theme.fonts.size.large, color: theme.colors.text, marginTop: theme.spacing.medium }}>
+        <Text
+          style={{
+            fontSize: theme.fonts.size.large,
+            color: theme.colors.text,
+            marginTop: theme.spacing.medium,
+          }}
+        >
           Error: {error}
         </Text>
-        <TouchableOpacity 
-          style={{ marginTop: theme.spacing.medium, padding: theme.spacing.medium }}
+        <TouchableOpacity
+          style={{
+            marginTop: theme.spacing.medium,
+            padding: theme.spacing.medium,
+          }}
           onPress={() => {
             setLoading(true);
             setError(null);
             // Trigger re-fetch
             const fetchProductDetails = async () => {
               try {
-                let productId = '';
-                
+                let retryProductId = '';
+
                 if (routeParams.productId) {
-                  productId = routeParams.productId;
+                  retryProductId = routeParams.productId;
+                } else if ((product as any)._id) {
+                  retryProductId = (product as any)._id;
+                } else if (product.id) {
+                  retryProductId = product.id;
                 }
-                else if ((product as any)._id) {
-                  productId = (product as any)._id;
-                }
-                else if (product.id) {
-                  productId = product.id;
-                }
-                
-                if (productId) {
-                  const response = await apiService.getProductById(productId);
-                  
+
+                if (retryProductId) {
+                  const response = await apiService.getProductById(retryProductId);
+
                   if (response.success && response.data) {
-                    const apiProductData = response.data.data || response.data;
-                    console.log('🔄 Retry - Product data from API:', apiProductData);
+                    // Transform API response to match Product interface
+                    let apiProductData: any = null;
                     
+                    if (response.data.data?.data?.[0]) {
+                      apiProductData = response.data.data.data[0];
+                    } else if (response.data.data && !Array.isArray(response.data.data)) {
+                      apiProductData = response.data.data;
+                    } else if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+                      apiProductData = response.data.data[0];
+                    } else if (response.data._id || response.data.name) {
+                      apiProductData = response.data;
+                    }
+
+                    console.log(
+                      '🔄 Retry - Product data from API:',
+                      apiProductData,
+                    );
+
+                    if (!apiProductData) {
+                      setError('No product data found in API response');
+                      return;
+                    }
+
                     const transformedProduct: Product = {
-                      id: apiProductData._id || apiProductData.id || productId,
-                      name: apiProductData.name || apiProductData.productName || '',
-                      price: apiProductData.generalPrice || apiProductData.price || 0,
-                      originalPrice: apiProductData.generalPrice || apiProductData.originalPrice || apiProductData.mrp,
+                      id: apiProductData._id || apiProductData.id || retryProductId,
+                      name:
+                        apiProductData.name || apiProductData.productName || '',
+                      price:
+                        apiProductData.generalPrice ||
+                        apiProductData.price ||
+                        0,
+                      originalPrice:
+                        apiProductData.generalPrice ||
+                        apiProductData.originalPrice ||
+                        apiProductData.mrp,
                       discount: apiProductData.discount || 0,
-                      image: apiProductData.image || apiProductData.images?.[0] || '',
+                      image:
+                        apiProductData.image ||
+                        apiProductData.images?.[0] ||
+                        '',
                       images: [apiProductData.image].filter(Boolean),
-                      rating: apiProductData.rating || apiProductData.averageRating || 4.5,
-                      reviewCount: apiProductData.reviewCount || apiProductData.totalReviews || 0,
-                      description: apiProductData.description || apiProductData.productDescription || '',
-                      inStock: (apiProductData.stockQuantity || 0) > 0 && apiProductData.isActive !== false,
-                      category: product?.category || apiProductData.category || apiProductData.categoryName || '',
+                      rating:
+                        apiProductData.rating ||
+                        apiProductData.averageRating ||
+                        4.5,
+                      reviewCount:
+                        apiProductData.reviewCount ||
+                        apiProductData.totalReviews ||
+                        0,
+                      description:
+                        apiProductData.description ||
+                        apiProductData.productDescription ||
+                        '',
+                      inStock:
+                        (apiProductData.stockQuantity || 0) > 0 &&
+                        apiProductData.isActive !== false,
+                      category:
+                        typeof apiProductData.category === 'object'
+                          ? (apiProductData.category as any)?.name ||
+                            apiProductData.categoryName ||
+                            ''
+                          : apiProductData.category ||
+                            apiProductData.categoryName ||
+                            '',
                       brand: apiProductData.brand || '',
                       weight: `${apiProductData.weightInKg || 1} kg`,
                       specifications: {
                         origin: apiProductData.origin || 'India',
                         processing: apiProductData.processing || 'Premium',
                         shelfLife: apiProductData.shelfLife || '18 months',
-                        storage: apiProductData.storage || 'Store in cool, dry place'
+                        storage:
+                          apiProductData.storage || 'Store in cool, dry place',
                       },
                       nutritionInfo: apiProductData.nutritionInfo || {
                         calories: '130 kcal',
                         protein: '2.7 g',
                         carbs: '28 g',
                         fat: '0.3 g',
-                        fiber: '0.4 g'
-                      }
+                        fiber: '0.4 g',
+                      },
                     };
-                    
-                    console.log('🔄 Retry - Transformed product:', transformedProduct);
+
+                    console.log(
+                      '🔄 Retry - Transformed product:',
+                      transformedProduct,
+                    );
                     setApiProduct(transformedProduct);
                   } else {
-                    setError(response.error || 'Failed to fetch product details');
+                    setError(
+                      response.error || 'Failed to fetch product details',
+                    );
                   }
                 } else {
                   setError('Product ID not found');
                 }
-              } catch (error) {
-                console.error('Error fetching product details:', error);
+              } catch (err) {
+                console.error('Error fetching product details:', err);
                 setError('Network error occurred');
               } finally {
                 setLoading(false);
               }
             };
-            
+
             fetchProductDetails();
           }}
         >
-          <Text style={{ color: theme.colors.primary, fontSize: theme.fonts.size.medium }}>
+          <Text
+            style={{
+              color: theme.colors.primary,
+              fontSize: theme.fonts.size.medium,
+            }}
+          >
             Retry
           </Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Show error if no product data available
+  if (!displayProduct) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: 'center', alignItems: 'center' },
+        ]}
+      >
+        <Icon name="error-outline" size={48} color={theme.colors.error} />
+        <Text
+          style={{
+            fontSize: theme.fonts.size.large,
+            color: theme.colors.text,
+            marginTop: theme.spacing.medium,
+          }}
+        >
+          No product data available
+        </Text>
       </View>
     );
   }
@@ -865,7 +1067,10 @@ const ProductDetailsScreen: React.FC = () => {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Image Gallery */}
       <View style={styles.imageSection}>
-        <Image source={{ uri: images[selectedImageIndex] }} style={styles.mainImage} />
+        <Image
+          source={{ uri: images[selectedImageIndex] }}
+          style={styles.mainImage}
+        />
         <FlatList
           horizontal
           data={images}
@@ -882,15 +1087,15 @@ const ProductDetailsScreen: React.FC = () => {
           <Text style={styles.productName}>{displayProduct.name}</Text>
           {displayProduct.discount && (
             <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{displayProduct.discount}% OFF</Text>
+              <Text style={styles.discountText}>
+                {displayProduct.discount}% OFF
+              </Text>
             </View>
           )}
         </View>
 
         <View style={styles.ratingRow}>
-          <View style={styles.stars}>
-            {renderStars(displayProduct.rating)}
-          </View>
+          <View style={styles.stars}>{renderStars(displayProduct.rating)}</View>
           <Text style={styles.ratingText}>
             {displayProduct.rating} ({displayProduct.reviewCount} reviews)
           </Text>
@@ -907,14 +1112,22 @@ const ProductDetailsScreen: React.FC = () => {
 
         <View style={styles.stockInfo}>
           <Icon
-            name={displayProduct.inStock ? "check-circle" : "cancel"}
+            name={displayProduct.inStock ? 'check-circle' : 'cancel'}
             size={16}
-            color={displayProduct.inStock ? theme.colors.success : theme.colors.error}
+            color={
+              displayProduct.inStock ? theme.colors.success : theme.colors.error
+            }
           />
-          <Text style={[
-            styles.stockText,
-            { color: displayProduct.inStock ? theme.colors.success : theme.colors.error }
-          ]}>
+          <Text
+            style={[
+              styles.stockText,
+              {
+                color: displayProduct.inStock
+                  ? theme.colors.success
+                  : theme.colors.error,
+              },
+            ]}
+          >
             {displayProduct.inStock ? 'In Stock' : 'Out of Stock'}
           </Text>
         </View>
@@ -943,17 +1156,20 @@ const ProductDetailsScreen: React.FC = () => {
 
         {/* Add to Cart Button */}
         <TouchableOpacity
-          style={[styles.addToCartButton, !displayProduct.inStock && styles.disabledButton]}
+          style={[
+            styles.addToCartButton,
+            !displayProduct.inStock && styles.disabledButton,
+          ]}
           onPress={handleAddToCart}
           disabled={!displayProduct.inStock}
         >
           <Icon name="shopping-cart" size={20} color="white" />
           <Text style={styles.addToCartText}>
-            {displayProduct.inStock ? `Add ${quantity} to Cart - ₹${displayProduct.price * quantity}` : 'Out of Stock'}
+            {displayProduct.inStock
+              ? `Add ${quantity} to Cart - ₹${displayProduct.price * quantity}`
+              : 'Out of Stock'}
           </Text>
         </TouchableOpacity>
-
-    
       </View>
       {/* Tabs */}
       <View style={styles.tabs}>
@@ -961,13 +1177,18 @@ const ProductDetailsScreen: React.FC = () => {
           { key: 'description', label: 'Description' },
           { key: 'specifications', label: 'Specifications' },
           { key: 'reviews', label: `Reviews (${reviews.length})` },
-        ].map((tab) => (
+        ].map(tab => (
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key as any)}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab.key && styles.activeTabText,
+              ]}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -980,57 +1201,97 @@ const ProductDetailsScreen: React.FC = () => {
           <View style={styles.tabSection}>
             <Text style={styles.sectionTitle}>Product Details</Text>
             <Text style={styles.sectionContent}>
-              {displayProduct.description}{'\n\n'}
-              Our premium basmati rice is carefully selected from the finest grains, ensuring exceptional quality and aroma. Each grain is long, slender, and aromatic, perfect for biryanis, pulao, and other traditional dishes.
+              {displayProduct.description}
+              {'\n\n'}
+              Our premium basmati rice is carefully selected from the finest
+              grains, ensuring exceptional quality and aroma. Each grain is
+              long, slender, and aromatic, perfect for biryanis, pulao, and
+              other traditional dishes.
             </Text>
 
             <View style={styles.featuresList}>
               <Text style={styles.featuresTitle}>Key Features:</Text>
               <View style={styles.featureListItem}>
-                <Icon name="check-circle" size={16} color={theme.colors.success} />
-                <Text style={styles.featureListText}>100% Pure Basmati Rice</Text>
+                <Icon
+                  name="check-circle"
+                  size={16}
+                  color={theme.colors.success}
+                />
+                
               </View>
               <View style={styles.featureListItem}>
-                <Icon name="check-circle" size={16} color={theme.colors.success} />
-                <Text style={styles.featureListText}>Aged for Enhanced Flavor</Text>
+                <Icon
+                  name="check-circle"
+                  size={16}
+                  color={theme.colors.success}
+                />
+                <Text style={styles.featureListText}>
+                  Aged for Enhanced Flavor
+                </Text>
               </View>
               <View style={styles.featureListItem}>
-                <Icon name="check-circle" size={16} color={theme.colors.success} />
+                <Icon
+                  name="check-circle"
+                  size={16}
+                  color={theme.colors.success}
+                />
                 <Text style={styles.featureListText}>Extra Long Grains</Text>
               </View>
               <View style={styles.featureListItem}>
-                <Icon name="check-circle" size={16} color={theme.colors.success} />
+                <Icon
+                  name="check-circle"
+                  size={16}
+                  color={theme.colors.success}
+                />
                 <Text style={styles.featureListText}>Natural Aroma</Text>
               </View>
               <View style={styles.featureListItem}>
-                <Icon name="check-circle" size={16} color={theme.colors.success} />
-                <Text style={styles.featureListText}>No Artificial Additives</Text>
+                <Icon
+                  name="check-circle"
+                  size={16}
+                  color={theme.colors.success}
+                />
+                <Text style={styles.featureListText}>
+                  No Artificial Additives
+                </Text>
               </View>
             </View>
 
             {displayProduct.nutritionInfo && (
               <View style={styles.nutritionSection}>
-                <Text style={styles.sectionTitle}>Nutrition Information (per 100g)</Text>
+                <Text style={styles.sectionTitle}>
+                  Nutrition Information (per 100g)
+                </Text>
                 <View style={styles.nutritionGrid}>
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionLabel}>Calories</Text>
-                    <Text style={styles.nutritionValue}>{displayProduct.nutritionInfo.calories}</Text>
+                    <Text style={styles.nutritionValue}>
+                      {displayProduct.nutritionInfo.calories}
+                    </Text>
                   </View>
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionLabel}>Protein</Text>
-                    <Text style={styles.nutritionValue}>{displayProduct.nutritionInfo.protein}</Text>
+                    <Text style={styles.nutritionValue}>
+                      {displayProduct.nutritionInfo.protein}
+                    </Text>
                   </View>
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionLabel}>Carbohydrates</Text>
-                    <Text style={styles.nutritionValue}>{displayProduct.nutritionInfo.carbs}</Text>
+                    <Text style={styles.nutritionValue}>
+                      {displayProduct.nutritionInfo.carbs}
+                    </Text>
                   </View>
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionLabel}>Fat</Text>
-                    <Text style={styles.nutritionValue}>{displayProduct.nutritionInfo.fat}</Text>
+                    <Text style={styles.nutritionValue}>
+                      {displayProduct.nutritionInfo.fat}
+                    </Text>
                   </View>
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionLabel}>Fiber</Text>
-                    <Text style={styles.nutritionValue}>{displayProduct.nutritionInfo.fiber}</Text>
+                    <Text style={styles.nutritionValue}>
+                      {displayProduct.nutritionInfo.fiber}
+                    </Text>
                   </View>
                   <View style={styles.nutritionItem}>
                     <Text style={styles.nutritionLabel}>Sugar</Text>
@@ -1048,16 +1309,23 @@ const ProductDetailsScreen: React.FC = () => {
             <View style={styles.specsContainer}>
               <View style={styles.specItem}>
                 <Text style={styles.specLabel}>Brand:</Text>
-                <Text style={styles.specValue}>{displayProduct.brand || 'Premium Grains'}</Text>
+                <Text style={styles.specValue}>
+                  {displayProduct.brand || 'Premium Grains'}
+                </Text>
               </View>
               <View style={styles.specItem}>
                 <Text style={styles.specLabel}>Weight:</Text>
-                <Text style={styles.specValue}>{displayProduct.weight || '1 kg'}</Text>
+                <Text style={styles.specValue}>
+                  {displayProduct.weight || '1 kg'}
+                </Text>
               </View>
-              <View style={styles.specItem}>
-                <Text style={styles.specLabel}>Type:</Text>
-                <Text style={styles.specValue}>Basmati Rice</Text>
-              </View>
+                {displayProduct.category && 
+                  displayProduct.category.toLowerCase() !== 'grocery' && (
+                    <View style={styles.specItem}>
+                      <Text style={styles.specLabel}>Type:</Text>
+                      <Text style={styles.specValue}>{displayProduct.category}</Text>
+                    </View>
+                  )}
               <View style={styles.specItem}>
                 <Text style={styles.specLabel}>Grain Length:</Text>
                 <Text style={styles.specValue}>Extra Long (8.3mm+)</Text>
@@ -1070,19 +1338,27 @@ const ProductDetailsScreen: React.FC = () => {
                 <>
                   <View style={styles.specItem}>
                     <Text style={styles.specLabel}>Origin:</Text>
-                    <Text style={styles.specValue}>{displayProduct.specifications.origin}</Text>
+                    <Text style={styles.specValue}>
+                      {displayProduct.specifications.origin}
+                    </Text>
                   </View>
                   <View style={styles.specItem}>
                     <Text style={styles.specLabel}>Processing:</Text>
-                    <Text style={styles.specValue}>{displayProduct.specifications.processing}</Text>
+                    <Text style={styles.specValue}>
+                      {displayProduct.specifications.processing}
+                    </Text>
                   </View>
                   <View style={styles.specItem}>
                     <Text style={styles.specLabel}>Shelf Life:</Text>
-                    <Text style={styles.specValue}>{displayProduct.specifications.shelfLife}</Text>
+                    <Text style={styles.specValue}>
+                      {displayProduct.specifications.shelfLife}
+                    </Text>
                   </View>
                   <View style={styles.specItem}>
                     <Text style={styles.specLabel}>Storage:</Text>
-                    <Text style={styles.specValue}>{displayProduct.specifications.storage}</Text>
+                    <Text style={styles.specValue}>
+                      {displayProduct.specifications.storage}
+                    </Text>
                   </View>
                 </>
               )}
@@ -1096,11 +1372,15 @@ const ProductDetailsScreen: React.FC = () => {
               <View>
                 <Text style={styles.sectionTitle}>Customer Reviews</Text>
                 <View style={styles.overallRating}>
-                  <Text style={styles.overallRatingNumber}>{displayProduct.rating}</Text>
+                  <Text style={styles.overallRatingNumber}>
+                    {displayProduct.rating}
+                  </Text>
                   <View style={styles.overallRatingStars}>
                     {renderStars(displayProduct.rating)}
                   </View>
-                  <Text style={styles.totalReviews}>{displayProduct.reviewCount} reviews</Text>
+                  <Text style={styles.totalReviews}>
+                    {displayProduct.reviewCount} reviews
+                  </Text>
                 </View>
               </View>
               <TouchableOpacity style={styles.writeReviewButton}>
@@ -1112,7 +1392,7 @@ const ProductDetailsScreen: React.FC = () => {
             <FlatList
               data={reviews}
               renderItem={renderReview}
-              keyExtractor={(item) => item.id}
+              keyExtractor={item => item.id}
               scrollEnabled={false}
             />
           </View>
@@ -1132,33 +1412,39 @@ const ProductDetailsScreen: React.FC = () => {
         </Text>
         {relatedLoading ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <Text style={{ color: theme.colors.textSecondary }}>Loading related products...</Text>
+            <Text style={{ color: theme.colors.textSecondary }}>
+              Loading related products...
+            </Text>
           </View>
         ) : relatedProducts.length > 0 ? (
           <FlatList
             horizontal
             data={relatedProducts}
             renderItem={renderRelatedProduct}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.relatedList}
           />
         ) : (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <Text style={{ color: theme.colors.textSecondary }}>No related products found</Text>
+            <Text style={{ color: theme.colors.textSecondary }}>
+              No related products found
+            </Text>
           </View>
         )}
       </View>
 
       {/* Recently Viewed */}
-    
+
       {/* Location Prompt Modal */}
       {showLocationPrompt && (
         <View style={styles.locationPromptOverlay}>
           <View style={styles.locationPromptContainer}>
             <View style={styles.locationPromptHeader}>
               <Icon name="location-on" size={48} color={theme.colors.primary} />
-              <Text style={styles.locationPromptTitle}>Add Delivery Location</Text>
+              <Text style={styles.locationPromptTitle}>
+                Add Delivery Location
+              </Text>
               <Text style={styles.locationPromptSubtitle}>
                 Please add your delivery location for better service
               </Text>
@@ -1170,7 +1456,9 @@ const ProductDetailsScreen: React.FC = () => {
                 onPress={() => handleLocationPromptResponse('add')}
               >
                 <Icon name="add-location" size={24} color="white" />
-                <Text style={styles.locationPromptButtonText}>Add Location Now</Text>
+                <Text style={styles.locationPromptButtonText}>
+                  Add Location Now
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1201,7 +1489,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    marginBottom:50,
+    marginBottom: 50,
   },
   imageSection: {
     backgroundColor: theme.colors.card,
@@ -1262,6 +1550,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: theme.spacing.medium,
     fontFamily: theme.fonts.family.bold,
+    textTransform: 'capitalize',
   },
   discountBadge: {
     backgroundColor: theme.colors.error,
@@ -1332,6 +1621,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: theme.spacing.large,
     fontFamily: theme.fonts.family.regular,
+    textTransform: 'capitalize',
   },
   quantitySection: {
     flexDirection: 'row',
@@ -1548,6 +1838,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
+    textTransform: 'uppercase',
   },
   reviewsHeader: {
     flexDirection: 'row',
@@ -1628,7 +1919,6 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     ...theme.shadows.card,
     elevation: 3,
-    
   },
   relatedSectionHeader: {
     flexDirection: 'row',

@@ -387,15 +387,15 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({
 
     const renderBanner = ({ item }: { item: any }) => (
       <View style={styles.bannerSlide}>
-        <Image
-          source={{
-            uri:
-              item?.image ||
-              'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop',
-          }}
-          style={styles.bannerImage}
-          resizeMode="contain"
-        />
+<Image
+           source={{
+             uri:
+               item?.image ||
+               'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop',
+           }}
+           style={styles.bannerImage}
+           resizeMode="stretch"
+         />
       </View>
     );
 
@@ -507,7 +507,7 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({
               'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop',
           }}
           style={styles.videoFallbackImage}
-          resizeMode="contain"
+          resizeMode="stretch"
         />
         {(banner?.name || banner?.description) && (
           <View style={styles.videoOverlay}>
