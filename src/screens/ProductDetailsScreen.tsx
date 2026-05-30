@@ -139,52 +139,57 @@ const ProductDetailsScreen: React.FC = () => {
               return;
             }
 
-            const transformedProduct: Product = {
-              id: apiProductData._id || apiProductData.id || productId,
-              name: apiProductData.name || apiProductData.productName || '',
-              price: apiProductData.generalPrice || apiProductData.price || 0,
-              originalPrice:
-                apiProductData.generalPrice ||
-                apiProductData.originalPrice ||
-                apiProductData.mrp,
-              discount: apiProductData.discount || 0,
-              image: apiProductData.image || apiProductData.images?.[0] || '',
-              images: [apiProductData.image].filter(Boolean),
-              rating:
-                apiProductData.rating || apiProductData.averageRating || 4.5,
-              reviewCount:
-                apiProductData.reviewCount || apiProductData.totalReviews || 0,
-              description:
-                apiProductData.description ||
-                apiProductData.productDescription ||
-                '',
-              inStock:
-                (apiProductData.stockQuantity || 0) > 0 &&
-                apiProductData.isActive !== false,
-              category:
-                typeof apiProductData.category === 'object'
-                  ? (apiProductData.category as any)?.name ||
-                    apiProductData.categoryName ||
-                    ''
-                  : apiProductData.category ||
-                    apiProductData.categoryName ||
-                    '',
-              brand: apiProductData.brand || '',
-              weight: `${apiProductData.weightInKg || 1} kg`,
-              specifications: {
-                origin: apiProductData.origin || 'India',
-                processing: apiProductData.processing || 'Premium',
-                shelfLife: apiProductData.shelfLife || '18 months',
-                storage: apiProductData.storage || 'Store in cool, dry place',
-              },
-              nutritionInfo: apiProductData.nutritionInfo || {
-                calories: '130 kcal',
-                protein: '2.7 g',
-                carbs: '28 g',
-                fat: '0.3 g',
-                fiber: '0.4 g',
-              },
-            };
+const transformedProduct: Product = {
+               id: apiProductData._id || apiProductData.id || productId,
+               name: apiProductData.name || apiProductData.productName || '',
+               price: apiProductData.generalPrice || apiProductData.price || 0,
+               originalPrice:
+                 apiProductData.generalPrice ||
+                 apiProductData.originalPrice ||
+                 apiProductData.mrp,
+               discount: apiProductData.discount || 0,
+               image: apiProductData.image || apiProductData.images?.[0] || '',
+               images: [apiProductData.image].filter(Boolean),
+               rating:
+                 apiProductData.rating || apiProductData.averageRating || 4.5,
+               reviewCount:
+                 apiProductData.reviewCount || apiProductData.totalReviews || 0,
+               description:
+                 apiProductData.description ||
+                 apiProductData.productDescription ||
+                 '',
+               inStock:
+                 (apiProductData.stockQuantity || 0) > 0 &&
+                 apiProductData.isActive !== false,
+               category:
+                 typeof apiProductData.category === 'object'
+                   ? (apiProductData.category as any)?.name ||
+                     apiProductData.categoryName ||
+                     ''
+                   : apiProductData.category ||
+                     apiProductData.categoryName ||
+                     '',
+               subCategory:
+                 typeof apiProductData.subCategory === 'object'
+                   ? (apiProductData.subCategory as any)?.name ||
+                     ''
+                   : apiProductData.subCategory || '',
+               brand: apiProductData.brand || '',
+               weight: `${apiProductData.weightInKg || 1} kg`,
+               specifications: {
+                 origin: apiProductData.origin || 'India',
+                 processing: apiProductData.processing || 'Premium',
+                 shelfLife: apiProductData.shelfLife || '18 months',
+                 storage: apiProductData.storage || 'Store in cool, dry place',
+               },
+               nutritionInfo: apiProductData.nutritionInfo || {
+                 calories: '130 kcal',
+                 protein: '2.7 g',
+                 carbs: '28 g',
+                 fat: '0.3 g',
+                 fiber: '0.4 g',
+               },
+             };
 
             console.log('🎯 Transformed product:', transformedProduct);
             setApiProduct(transformedProduct);
@@ -382,12 +387,12 @@ const ProductDetailsScreen: React.FC = () => {
     }
   }, [apiProduct?.category, product?.category]);
 
-  // Related products from API
-  const relatedProducts: RelatedProduct[] = relatedProductsData;
+// Related products from API
+   const relatedProducts: RelatedProduct[] = relatedProductsData;
 
-  // Use API product data only - no static fallback
-  const displayProduct = apiProduct;
-  const images = displayProduct?.images || [displayProduct?.image];
+   // Use API product data only - no static fallback
+   const displayProduct = apiProduct;
+   const images = (displayProduct?.images || [displayProduct?.image]).filter(Boolean) as string[];
 
   // Check for saved locations when user first views the page
   useEffect(() => {
@@ -489,87 +494,88 @@ const ProductDetailsScreen: React.FC = () => {
     }
   };
 
-  const proceedWithAddToCart = async () => {
-    try {
-      // Set user location if available
-      if (savedLocations.length > 0) {
-        const primaryLocation = savedLocations[0]; // Use the first (most recent) location
-        setUserLocation({
-          coordinates: primaryLocation.coordinates,
-          address: formatLocationDisplay(primaryLocation),
-          name:
-            primaryLocation.name || primaryLocation.address || 'Saved Location',
-        });
-      }
+const proceedWithAddToCart = async () => {
+     if (!displayProduct) return;
+     try {
+       // Set user location if available
+       if (savedLocations.length > 0) {
+         const primaryLocation = savedLocations[0]; // Use the first (most recent) location
+         setUserLocation({
+           coordinates: primaryLocation.coordinates,
+           address: formatLocationDisplay(primaryLocation),
+           name:
+             primaryLocation.name || primaryLocation.address || 'Saved Location',
+         });
+       }
 
-      console.log('🛒 Add to Cart clicked for product:', displayProduct.name);
-      console.log('🛒 Product ID:', displayProduct.id);
-      console.log('🛒 Quantity:', quantity);
+       console.log('🛒 Add to Cart clicked for product:', displayProduct.name);
+       console.log('🛒 Product ID:', displayProduct.id);
+       console.log('🛒 Quantity:', quantity);
 
-      // Call the cart API to add/update item
-      const success = await addOrUpdateToCart(displayProduct.id, quantity);
+       // Call the cart API to add/update item
+       const success = await addOrUpdateToCart(displayProduct.id, quantity);
 
-      if (success) {
-        console.log('✅ Cart API call successful');
+       if (success) {
+         console.log('✅ Cart API call successful');
 
-        // Also update local cart for immediate UI feedback
-        addToCart(displayProduct);
+         // Also update local cart for immediate UI feedback
+         addToCart(displayProduct);
 
-        // Show success message and navigate to cart
-        Alert.alert(
-          'Success! 🎉',
-          `${quantity} ${displayProduct.name} added to cart!\n\nRedirecting to payment...`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate to Cart tab for payment
-                (navigation as any).getParent()?.navigate('Cart');
-              },
-            },
-          ],
-        );
-      } else {
-        console.log('❌ Cart API call failed');
+         // Show success message and navigate to cart
+         Alert.alert(
+           'Success! 🎉',
+           `${quantity} ${displayProduct.name} added to cart!\n\nRedirecting to payment...`,
+           [
+             {
+               text: 'OK',
+               onPress: () => {
+                 // Navigate to Cart tab for payment
+                 (navigation as any).getParent()?.navigate('Cart');
+               },
+             },
+           ],
+         );
+       } else {
+         console.log('❌ Cart API call failed');
 
-        // Still update local cart as fallback
-        addToCart(displayProduct);
+         // Still update local cart as fallback
+         addToCart(displayProduct);
 
-        // Show error message
-        Alert.alert(
-          'Partial Success ⚠️',
-          `Item added locally but server sync failed.\nPlease check your internet connection.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Still navigate to cart
-                (navigation as any).getParent()?.navigate('Cart');
-              },
-            },
-          ],
-        );
-      }
-    } catch (error) {
-      console.error('❌ Error in proceedWithAddToCart:', error);
+         // Show error message
+         Alert.alert(
+           'Partial Success ⚠️',
+           `Item added locally but server sync failed.\nPlease check your internet connection.`,
+           [
+             {
+               text: 'OK',
+               onPress: () => {
+                 // Still navigate to cart
+                 (navigation as any).getParent()?.navigate('Cart');
+               },
+             },
+           ],
+         );
+       }
+     } catch (error) {
+       console.error('❌ Error in proceedWithAddToCart:', error);
 
-      // Fallback to local cart update
-      addToCart(displayProduct);
+       // Fallback to local cart update
+       addToCart(displayProduct);
 
-      Alert.alert(
-        'Network Error ⚠️',
-        `Item added locally. Server sync will happen when you're back online.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              (navigation as any).getParent()?.navigate('Cart');
-            },
-          },
-        ],
-      );
-    }
-  };
+       Alert.alert(
+         'Network Error ⚠️',
+         `Item added locally. Server sync will happen when you're back online.`,
+         [
+           {
+             text: 'OK',
+             onPress: () => {
+               (navigation as any).getParent()?.navigate('Cart');
+             },
+           },
+         ],
+       );
+     }
+   };
 
   const handleLocationPromptResponse = (action: 'add' | 'skip') => {
     setShowLocationPrompt(false);
@@ -583,81 +589,82 @@ const ProductDetailsScreen: React.FC = () => {
     }
   };
 
-  const handleAddToCartModalConfirm = async (zipCode: string) => {
-    setShowAddToCartModal(false);
+const handleAddToCartModalConfirm = async (zipCode: string) => {
+     if (!displayProduct) return;
+     setShowAddToCartModal(false);
 
-    try {
-      console.log('🛒 Add to Cart with zipcode:', zipCode);
-      console.log('🛒 Product:', displayProduct.name);
-      console.log('🛒 Quantity:', quantity);
+     try {
+       console.log('🛒 Add to Cart with zipcode:', zipCode);
+       console.log('🛒 Product:', displayProduct.name);
+       console.log('🛒 Quantity:', quantity);
 
-      // Set the pincode in cart context
-      setPincode(zipCode, true); // Assume delivery is available for now
+       // Set the pincode in cart context
+       setPincode(zipCode, true); // Assume delivery is available for now
 
-      // Call the cart API to add/update item
-      const success = await addOrUpdateToCart(displayProduct.id, quantity);
+       // Call the cart API to add/update item
+       const success = await addOrUpdateToCart(displayProduct.id, quantity);
 
-      if (success) {
-        console.log('✅ Cart API call successful');
+       if (success) {
+         console.log('✅ Cart API call successful');
 
-        // Also update local cart for immediate UI feedback
-        addToCart(displayProduct);
+         // Also update local cart for immediate UI feedback
+         addToCart(displayProduct);
 
-        // Show success message and navigate to cart
-        Alert.alert(
-          'Success! 🎉',
-          `${quantity} ${displayProduct.name} added to cart!\nDelivery to ${zipCode} confirmed.\n\nRedirecting to cart...`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate to Cart tab for payment
-                (navigation as any).getParent()?.navigate('Cart');
-              },
-            },
-          ],
-        );
-      } else {
-        console.log('❌ Cart API call failed');
+         // Show success message and navigate to cart
+         Alert.alert(
+           'Success! 🎉',
+           `${quantity} ${displayProduct.name} added to cart!\nDelivery to ${zipCode} confirmed.\n\nRedirecting to cart...`,
+           [
+             {
+               text: 'OK',
+               onPress: () => {
+                 // Navigate to Cart tab for payment
+                 (navigation as any).getParent()?.navigate('Cart');
+               },
+             },
+           ],
+         );
+       } else {
+         console.log('❌ Cart API call failed');
 
-        // Still update local cart as fallback
-        addToCart(displayProduct);
+         // Still update local cart as fallback
+         addToCart(displayProduct);
 
-        // Show error message
-        Alert.alert(
-          'Partial Success ⚠️',
-          `Item added locally but server sync failed.\nPlease check your internet connection.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Still navigate to cart
-                (navigation as any).getParent()?.navigate('Cart');
-              },
-            },
-          ],
-        );
-      }
-    } catch (error) {
-      console.error('❌ Error in handleAddToCartModalConfirm:', error);
+         // Show error message
+         Alert.alert(
+           'Partial Success ⚠️',
+           `Item added locally but server sync failed.\nPlease check your internet connection.`,
+           [
+             {
+               text: 'OK',
+               onPress: () => {
+                 // Still navigate to cart
+                 (navigation as any).getParent()?.navigate('Cart');
+               },
+             },
+           ],
+         );
+       }
+     } catch (error) {
+       console.error('❌ Error in handleAddToCartModalConfirm:', error);
 
-      // Fallback to local cart update
-      addToCart(displayProduct);
+       // Fallback to local cart update
+       addToCart(displayProduct);
 
-      Alert.alert(
-        'Network Error ⚠️',
-        `Item added locally. Server sync will happen when you're back online.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              (navigation as any).getParent()?.navigate('Cart');
-            },
-          },
-        ],
-      );
-    }
-  };
+       Alert.alert(
+         'Network Error ⚠️',
+         `Item added locally. Server sync will happen when you're back online.`,
+         [
+           {
+             text: 'OK',
+             onPress: () => {
+               (navigation as any).getParent()?.navigate('Cart');
+             },
+           },
+         ],
+       );
+     }
+   };
 
   const handleAddToCartModalClose = () => {
     setShowAddToCartModal(false);
@@ -944,64 +951,69 @@ const ProductDetailsScreen: React.FC = () => {
                       return;
                     }
 
-                    const transformedProduct: Product = {
-                      id: apiProductData._id || apiProductData.id || retryProductId,
-                      name:
-                        apiProductData.name || apiProductData.productName || '',
-                      price:
-                        apiProductData.generalPrice ||
-                        apiProductData.price ||
-                        0,
-                      originalPrice:
-                        apiProductData.generalPrice ||
-                        apiProductData.originalPrice ||
-                        apiProductData.mrp,
-                      discount: apiProductData.discount || 0,
-                      image:
-                        apiProductData.image ||
-                        apiProductData.images?.[0] ||
-                        '',
-                      images: [apiProductData.image].filter(Boolean),
-                      rating:
-                        apiProductData.rating ||
-                        apiProductData.averageRating ||
-                        4.5,
-                      reviewCount:
-                        apiProductData.reviewCount ||
-                        apiProductData.totalReviews ||
-                        0,
-                      description:
-                        apiProductData.description ||
-                        apiProductData.productDescription ||
-                        '',
-                      inStock:
-                        (apiProductData.stockQuantity || 0) > 0 &&
-                        apiProductData.isActive !== false,
-                      category:
-                        typeof apiProductData.category === 'object'
-                          ? (apiProductData.category as any)?.name ||
-                            apiProductData.categoryName ||
-                            ''
-                          : apiProductData.category ||
-                            apiProductData.categoryName ||
-                            '',
-                      brand: apiProductData.brand || '',
-                      weight: `${apiProductData.weightInKg || 1} kg`,
-                      specifications: {
-                        origin: apiProductData.origin || 'India',
-                        processing: apiProductData.processing || 'Premium',
-                        shelfLife: apiProductData.shelfLife || '18 months',
-                        storage:
-                          apiProductData.storage || 'Store in cool, dry place',
-                      },
-                      nutritionInfo: apiProductData.nutritionInfo || {
-                        calories: '130 kcal',
-                        protein: '2.7 g',
-                        carbs: '28 g',
-                        fat: '0.3 g',
-                        fiber: '0.4 g',
-                      },
-                    };
+const transformedProduct: Product = {
+                       id: apiProductData._id || apiProductData.id || retryProductId,
+                       name:
+                         apiProductData.name || apiProductData.productName || '',
+                       price:
+                         apiProductData.generalPrice ||
+                         apiProductData.price ||
+                         0,
+                       originalPrice:
+                         apiProductData.generalPrice ||
+                         apiProductData.originalPrice ||
+                         apiProductData.mrp,
+                       discount: apiProductData.discount || 0,
+                       image:
+                         apiProductData.image ||
+                         apiProductData.images?.[0] ||
+                         '',
+                       images: [apiProductData.image].filter(Boolean),
+                       rating:
+                         apiProductData.rating ||
+                         apiProductData.averageRating ||
+                         4.5,
+                       reviewCount:
+                         apiProductData.reviewCount ||
+                         apiProductData.totalReviews ||
+                         0,
+                       description:
+                         apiProductData.description ||
+                         apiProductData.productDescription ||
+                         '',
+                       inStock:
+                         (apiProductData.stockQuantity || 0) > 0 &&
+                         apiProductData.isActive !== false,
+                       category:
+                         typeof apiProductData.category === 'object'
+                           ? (apiProductData.category as any)?.name ||
+                             apiProductData.categoryName ||
+                             ''
+                           : apiProductData.category ||
+                             apiProductData.categoryName ||
+                             '',
+                       subCategory:
+                         typeof apiProductData.subCategory === 'object'
+                           ? (apiProductData.subCategory as any)?.name ||
+                             ''
+                           : apiProductData.subCategory || '',
+                       brand: apiProductData.brand || '',
+                       weight: `${apiProductData.weightInKg || 1} kg`,
+                       specifications: {
+                         origin: apiProductData.origin || 'India',
+                         processing: apiProductData.processing || 'Premium',
+                         shelfLife: apiProductData.shelfLife || '18 months',
+                         storage:
+                           apiProductData.storage || 'Store in cool, dry place',
+                       },
+                       nutritionInfo: apiProductData.nutritionInfo || {
+                         calories: '130 kcal',
+                         protein: '2.7 g',
+                         carbs: '28 g',
+                         fat: '0.3 g',
+                         fiber: '0.4 g',
+                       },
+                     };
 
                     console.log(
                       '🔄 Retry - Transformed product:',
@@ -1197,111 +1209,58 @@ const ProductDetailsScreen: React.FC = () => {
 
       {/* Tab Content */}
       <View style={styles.tabContent}>
-        {activeTab === 'description' && (
-          <View style={styles.tabSection}>
-            <Text style={styles.sectionTitle}>Product Details</Text>
-            <Text style={styles.sectionContent}>
-              {displayProduct.description}
-              {'\n\n'}
-              Our premium basmati rice is carefully selected from the finest
-              grains, ensuring exceptional quality and aroma. Each grain is
-              long, slender, and aromatic, perfect for biryanis, pulao, and
-              other traditional dishes.
-            </Text>
+{activeTab === 'description' && (
+           <View style={styles.tabSection}>
+             <Text style={styles.sectionTitle}>Product Details</Text>
+             <Text style={styles.sectionContent}>
+               {displayProduct.description || 'No description available for this product.'}
+             </Text>
 
-            <View style={styles.featuresList}>
-              <Text style={styles.featuresTitle}>Key Features:</Text>
-              <View style={styles.featureListItem}>
-                <Icon
-                  name="check-circle"
-                  size={16}
-                  color={theme.colors.success}
-                />
-                
-              </View>
-              <View style={styles.featureListItem}>
-                <Icon
-                  name="check-circle"
-                  size={16}
-                  color={theme.colors.success}
-                />
-                <Text style={styles.featureListText}>
-                  Aged for Enhanced Flavor
-                </Text>
-              </View>
-              <View style={styles.featureListItem}>
-                <Icon
-                  name="check-circle"
-                  size={16}
-                  color={theme.colors.success}
-                />
-                <Text style={styles.featureListText}>Extra Long Grains</Text>
-              </View>
-              <View style={styles.featureListItem}>
-                <Icon
-                  name="check-circle"
-                  size={16}
-                  color={theme.colors.success}
-                />
-                <Text style={styles.featureListText}>Natural Aroma</Text>
-              </View>
-              <View style={styles.featureListItem}>
-                <Icon
-                  name="check-circle"
-                  size={16}
-                  color={theme.colors.success}
-                />
-                <Text style={styles.featureListText}>
-                  No Artificial Additives
-                </Text>
-              </View>
-            </View>
-
-            {displayProduct.nutritionInfo && (
-              <View style={styles.nutritionSection}>
-                <Text style={styles.sectionTitle}>
-                  Nutrition Information (per 100g)
-                </Text>
-                <View style={styles.nutritionGrid}>
-                  <View style={styles.nutritionItem}>
-                    <Text style={styles.nutritionLabel}>Calories</Text>
-                    <Text style={styles.nutritionValue}>
-                      {displayProduct.nutritionInfo.calories}
-                    </Text>
-                  </View>
-                  <View style={styles.nutritionItem}>
-                    <Text style={styles.nutritionLabel}>Protein</Text>
-                    <Text style={styles.nutritionValue}>
-                      {displayProduct.nutritionInfo.protein}
-                    </Text>
-                  </View>
-                  <View style={styles.nutritionItem}>
-                    <Text style={styles.nutritionLabel}>Carbohydrates</Text>
-                    <Text style={styles.nutritionValue}>
-                      {displayProduct.nutritionInfo.carbs}
-                    </Text>
-                  </View>
-                  <View style={styles.nutritionItem}>
-                    <Text style={styles.nutritionLabel}>Fat</Text>
-                    <Text style={styles.nutritionValue}>
-                      {displayProduct.nutritionInfo.fat}
-                    </Text>
-                  </View>
-                  <View style={styles.nutritionItem}>
-                    <Text style={styles.nutritionLabel}>Fiber</Text>
-                    <Text style={styles.nutritionValue}>
-                      {displayProduct.nutritionInfo.fiber}
-                    </Text>
-                  </View>
-                  <View style={styles.nutritionItem}>
-                    <Text style={styles.nutritionLabel}>Sugar</Text>
-                    <Text style={styles.nutritionValue}>0.1g</Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-        )}
+             {displayProduct.nutritionInfo && (
+               <View style={styles.nutritionSection}>
+                 <Text style={styles.sectionTitle}>
+                   Nutrition Information (per 100g)
+                 </Text>
+                 <View style={styles.nutritionGrid}>
+                   <View style={styles.nutritionItem}>
+                     <Text style={styles.nutritionLabel}>Calories</Text>
+                     <Text style={styles.nutritionValue}>
+                       {displayProduct.nutritionInfo.calories}
+                     </Text>
+                   </View>
+                   <View style={styles.nutritionItem}>
+                     <Text style={styles.nutritionLabel}>Protein</Text>
+                     <Text style={styles.nutritionValue}>
+                       {displayProduct.nutritionInfo.protein}
+                     </Text>
+                   </View>
+                   <View style={styles.nutritionItem}>
+                     <Text style={styles.nutritionLabel}>Carbohydrates</Text>
+                     <Text style={styles.nutritionValue}>
+                       {displayProduct.nutritionInfo.carbs}
+                     </Text>
+                   </View>
+                   <View style={styles.nutritionItem}>
+                     <Text style={styles.nutritionLabel}>Fat</Text>
+                     <Text style={styles.nutritionValue}>
+                       {displayProduct.nutritionInfo.fat}
+                     </Text>
+                   </View>
+                   <View style={styles.nutritionItem}>
+                     <Text style={styles.nutritionLabel}>Fiber</Text>
+                     <Text style={styles.nutritionValue}>
+                       {displayProduct.nutritionInfo.fiber}
+                     </Text>
+                   </View>
+                   <View style={styles.nutritionItem}>
+                     <Text style={styles.nutritionLabel}>Sugar</Text>
+                     <Text style={styles.nutritionValue}>0.1g</Text>
+                   </View>
+                 </View>
+               </View>
+             )}
+           </View>
+         )}
 
         {activeTab === 'specifications' && (
           <View style={styles.tabSection}>
@@ -1319,49 +1278,41 @@ const ProductDetailsScreen: React.FC = () => {
                   {displayProduct.weight || '1 kg'}
                 </Text>
               </View>
-                {displayProduct.category && 
-                  displayProduct.category.toLowerCase() !== 'grocery' && (
-                    <View style={styles.specItem}>
-                      <Text style={styles.specLabel}>Type:</Text>
-                      <Text style={styles.specValue}>{displayProduct.category}</Text>
-                    </View>
-                  )}
-              <View style={styles.specItem}>
-                <Text style={styles.specLabel}>Grain Length:</Text>
-                <Text style={styles.specValue}>Extra Long (8.3mm+)</Text>
-              </View>
-              <View style={styles.specItem}>
-                <Text style={styles.specLabel}>Aging:</Text>
-                <Text style={styles.specValue}>1 Year Aged</Text>
-              </View>
-              {displayProduct.specifications && (
-                <>
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Origin:</Text>
-                    <Text style={styles.specValue}>
-                      {displayProduct.specifications.origin}
-                    </Text>
-                  </View>
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Processing:</Text>
-                    <Text style={styles.specValue}>
-                      {displayProduct.specifications.processing}
-                    </Text>
-                  </View>
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Shelf Life:</Text>
-                    <Text style={styles.specValue}>
-                      {displayProduct.specifications.shelfLife}
-                    </Text>
-                  </View>
-                  <View style={styles.specItem}>
-                    <Text style={styles.specLabel}>Storage:</Text>
-                    <Text style={styles.specValue}>
-                      {displayProduct.specifications.storage}
-                    </Text>
-                  </View>
-                </>
-              )}
+{displayProduct.category && 
+                   displayProduct.category.toLowerCase() !== 'grocery' && (
+                     <View style={styles.specItem}>
+                       <Text style={styles.specLabel}>Type:</Text>
+                       <Text style={styles.specValue}>{displayProduct.category}</Text>
+                     </View>
+                   )}
+               {displayProduct.specifications && (
+                 <>
+                   <View style={styles.specItem}>
+                     <Text style={styles.specLabel}>Origin:</Text>
+                     <Text style={styles.specValue}>
+                       {displayProduct.specifications.origin}
+                     </Text>
+                   </View>
+                   <View style={styles.specItem}>
+                     <Text style={styles.specLabel}>Processing:</Text>
+                     <Text style={styles.specValue}>
+                       {displayProduct.specifications.processing}
+                     </Text>
+                   </View>
+                   <View style={styles.specItem}>
+                     <Text style={styles.specLabel}>Shelf Life:</Text>
+                     <Text style={styles.specValue}>
+                       {displayProduct.specifications.shelfLife}
+                     </Text>
+                   </View>
+                   <View style={styles.specItem}>
+                     <Text style={styles.specLabel}>Storage:</Text>
+                     <Text style={styles.specValue}>
+                       {displayProduct.specifications.storage}
+                     </Text>
+                   </View>
+                 </>
+               )}
             </View>
           </View>
         )}

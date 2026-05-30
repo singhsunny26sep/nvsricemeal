@@ -8,8 +8,10 @@ import {
   Alert,
   TouchableOpacity,
   RefreshControl,
-  
+  Modal,
+  Pressable,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
 import { apiService } from '../utils/apiService';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
@@ -43,57 +45,58 @@ const [locations, setLocations] = useState<Location[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
-  // Fetch locations from API
-  const fetchLocations = async (showRefreshIndicator = false) => {
-    try {
-      if (showRefreshIndicator) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setError(null);
+// Fetch locations from API
+   const fetchLocations = async (showRefreshIndicator = false) => {
+     try {
+       if (showRefreshIndicator) {
+         setRefreshing(true);
+       } else {
+         setLoading(true);
+       }
+       setError(null);
 
-      console.log('🌍 Fetching locations from API...');
-      
-      // Get user profile to fetch userId
-      const profileResponse = await apiService.getUserProfile();
-      
-      if (profileResponse.success && profileResponse.data) {
-        const userId = profileResponse.data.id;
-        console.log('🌍 User ID found:', userId);
-        
-        const response = await apiService.getLocationByUserId(userId);
-        
-        if (response.success && response.data) {
-          // Handle the nested response structure
-          const locationsData = response.data.data || response.data;
-          
-          if (locationsData && Array.isArray(locationsData.data)) {
-            setLocations(locationsData.data);
-            console.log('✅ Locations fetched successfully:', locationsData.data.length, 'locations');
-          } else if (locationsData && Array.isArray(locationsData)) {
-            setLocations(locationsData);
-            console.log('✅ Locations fetched successfully:', locationsData.length, 'locations');
-          } else {
-            console.log('⚠️ No locations data found in response');
-            setLocations([]);
-          }
-        } else {
-          console.log('❌ API call failed:', response.error);
-          setError(response.error || 'Failed to fetch locations');
-        }
-      } else {
-        console.log('❌ Failed to get user profile');
-        setError('Unable to fetch user profile. Please login again.');
-      }
-    } catch (err) {
-      console.log('🚨 Error fetching locations:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+       console.log('🌍 Fetching locations from API...');
+       
+       // Get user profile to fetch userId
+       const profileResponse = await apiService.getUserProfile();
+       
+       if (profileResponse.success && profileResponse.data) {
+         const userId = profileResponse.data.id;
+         console.log('🌍 User ID found:', userId);
+         
+         // Use getAll endpoint with userId as query parameter
+         const response = await apiService.getLocations(userId, 'india');
+         
+         if (response.success && response.data) {
+           // Handle the nested response structure
+           const locationsData = response.data.data || response.data;
+           
+           if (locationsData && Array.isArray(locationsData.data)) {
+             setLocations(locationsData.data);
+             console.log('✅ Locations fetched successfully:', locationsData.data.length, 'locations');
+           } else if (locationsData && Array.isArray(locationsData)) {
+             setLocations(locationsData);
+             console.log('✅ Locations fetched successfully:', locationsData.length, 'locations');
+           } else {
+             console.log('⚠️ No locations data found in response');
+             setLocations([]);
+           }
+         } else {
+           console.log('❌ API call failed:', response.error);
+           setError(response.error || 'Failed to fetch locations');
+         }
+       } else {
+         console.log('❌ Failed to get user profile');
+         setError('Unable to fetch user profile. Please login again.');
+       }
+     } catch (err) {
+       console.log('🚨 Error fetching locations:', err);
+       setError(err instanceof Error ? err.message : 'An error occurred');
+     } finally {
+       setLoading(false);
+       setRefreshing(false);
+     }
+   };
 
   // Load locations on component mount
   useEffect(() => {
@@ -149,14 +152,12 @@ const [locations, setLocations] = useState<Location[]>([]);
     }
   };
 
-  // Handle navigation to create location page
-  const handleCreateLocation = () => {
-    console.log('🆕 Navigating to Create Location page');
-    // @ts-ignore - TypeScript issue with navigation
-    navigation.navigate('CreateLocationScreen');
-  };
-
-  // Format date for display
+// Handle navigation to create location page
+   const handleCreateLocation = (initialLocationData?: any) => {
+     console.log('🆕 Navigating to Create Location page');
+     // @ts-ignore - TypeScript issue with navigation
+     navigation.navigate('CreateLocationScreen', { initialLocationData });
+   };
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -172,91 +173,170 @@ const [locations, setLocations] = useState<Location[]>([]);
     }
   };
 
-  // Render location item
-  const renderLocationItem = (location: Location) => {
-    const isSelected = selectedLocation?._id === location._id;
-    
-    return (
-      <TouchableOpacity
-        key={location._id}
-        style={[
-          styles.locationCard,
-          isSelected && styles.selectedLocationCard
-        ]}
-        onPress={() => selectLocation(location)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.locationHeader}>
-          <View style={styles.locationTitleContainer}>
-            <Text style={[
-              styles.locationName,
-              isSelected && styles.selectedLocationName
-            ]}>
-              {location.name || 'Unnamed Location'}
-            </Text>
-            <View style={[
-              styles.statusBadge,
-              { backgroundColor: location.isActive ? theme.colors.success : theme.colors.error }
-            ]}>
-              <Text style={styles.statusBadgeText}>
-                {location.isActive ? 'Active' : 'Inactive'}
-              </Text>
-            </View>
-            {isSelected && (
-              <View style={styles.selectedBadge}>
-                <Text style={styles.selectedBadgeText}>✓ Selected</Text>
-              </View>
-            )}
-          </View>
-          {location.address && (
-            <Text style={styles.locationAddress}>{location.address}</Text>
-          )}
-        </View>
+// Handle location deletion
+   const [showDeleteModal, setShowDeleteModal] = useState(false);
+   const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
 
-        <View style={styles.locationDetails}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Area:</Text>
-            <Text style={styles.detailValue}>{location.area}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>City:</Text>
-            <Text style={styles.detailValue}>{location.city}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>District:</Text>
-            <Text style={styles.detailValue}>{location.district}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>State:</Text>
-            <Text style={styles.detailValue}>{location.state}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Country:</Text>
-            <Text style={styles.detailValue}>{location.country}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>ZIP Code:</Text>
-            <Text style={styles.detailValue}>{location.zipcode}</Text>
-          </View>
-          {location.coordinates && location.coordinates.length === 2 && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Coordinates:</Text>
-              <Text style={styles.detailValue}>
-                {location.coordinates[0].toFixed(6)}, {location.coordinates[1].toFixed(6)}
-              </Text>
-            </View>
-          )}
-        </View>
+   const handleDeleteLocation = async (location: Location) => {
+     setLocationToDelete(location);
+     setShowDeleteModal(true);
+   };
 
-        <View style={styles.locationFooter}>
-          <Text style={styles.formattedAddress}>{location.formattedAddress}</Text>
-          <Text style={styles.createdDate}>
-            Created: {formatDate(location.createdAt)}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+   const confirmDeleteLocation = async () => {
+     if (!locationToDelete) return;
+
+     try {
+       console.log('🗑️ Deleting location:', locationToDelete._id);
+       const response = await apiService.deleteLocation(locationToDelete._id);
+
+       if (response.success) {
+         console.log('✅ Location deleted successfully');
+         // Remove from local state
+         setLocations(prev => prev.filter(loc => loc._id !== locationToDelete._id));
+         if (selectedLocation?._id === locationToDelete._id) {
+           setSelectedLocation(null);
+         }
+         Alert.alert('Success', 'Location deleted successfully');
+       } else {
+         console.log('❌ Failed to delete location:', response.error);
+         Alert.alert('Error', response.error || 'Failed to delete location');
+       }
+     } catch (error) {
+       console.error('❌ Error deleting location:', error);
+       Alert.alert('Error', 'An error occurred while deleting the location');
+     } finally {
+       setShowDeleteModal(false);
+       setLocationToDelete(null);
+     }
+   };
+
+   // Render location item
+   const renderLocationItem = (location: Location) => {
+     const isSelected = selectedLocation?._id === location._id;
+     
+     return (
+       <TouchableOpacity
+         key={location._id}
+         style={[
+           styles.locationCard,
+           isSelected && styles.selectedLocationCard
+         ]}
+         onPress={() => selectLocation(location)}
+         activeOpacity={0.7}
+       >
+         <View style={styles.locationHeader}>
+           <View style={styles.locationTitleContainer}>
+             <Text style={[
+               styles.locationName,
+               isSelected && styles.selectedLocationName
+             ]}>
+               {location.name || 'Unnamed Location'}
+             </Text>
+             <View style={[
+               styles.statusBadge,
+               { backgroundColor: location.isActive ? theme.colors.success : theme.colors.error }
+             ]}>
+               <Text style={styles.statusBadgeText}>
+                 {location.isActive ? 'Active' : 'Inactive'}
+               </Text>
+             </View>
+             {isSelected && (
+               <View style={styles.selectedBadge}>
+                 <Text style={styles.selectedBadgeText}>✓ Selected</Text>
+               </View>
+             )}
+           </View>
+           <TouchableOpacity onPress={() => handleDeleteLocation(location)}>
+             <Icon name="delete" size={24} color={theme.colors.error} />
+           </TouchableOpacity>
+           {location.address && (
+             <Text style={styles.locationAddress}>{location.address}</Text>
+           )}
+         </View>
+
+         <View style={styles.locationDetails}>
+           <View style={styles.detailRow}>
+             <Text style={styles.detailLabel}>Area:</Text>
+             <Text style={styles.detailValue}>{location.area}</Text>
+           </View>
+           <View style={styles.detailRow}>
+             <Text style={styles.detailLabel}>City:</Text>
+             <Text style={styles.detailValue}>{location.city}</Text>
+           </View>
+           <View style={styles.detailRow}>
+             <Text style={styles.detailLabel}>District:</Text>
+             <Text style={styles.detailValue}>{location.district}</Text>
+           </View>
+           <View style={styles.detailRow}>
+             <Text style={styles.detailLabel}>State:</Text>
+             <Text style={styles.detailValue}>{location.state}</Text>
+           </View>
+           <View style={styles.detailRow}>
+             <Text style={styles.detailLabel}>Country:</Text>
+             <Text style={styles.detailValue}>{location.country}</Text>
+           </View>
+           <View style={styles.detailRow}>
+             <Text style={styles.detailLabel}>ZIP Code:</Text>
+             <Text style={styles.detailValue}>{location.zipcode}</Text>
+           </View>
+           {location.coordinates && location.coordinates.length === 2 && (
+             <View style={styles.detailRow}>
+               <Text style={styles.detailLabel}>Coordinates:</Text>
+               <Text style={styles.detailValue}>
+                 {location.coordinates[0].toFixed(6)}, {location.coordinates[1].toFixed(6)}
+               </Text>
+             </View>
+           )}
+         </View>
+
+         <View style={styles.locationFooter}>
+           <Text style={styles.formattedAddress}>{location.formattedAddress}</Text>
+           <Text style={styles.createdDate}>
+             Created: {formatDate(location.createdAt)}
+           </Text>
+         </View>
+       </TouchableOpacity>
+     );
+   };
+
+   // Render delete confirmation modal
+   const renderDeleteModal = () => (
+     <Modal
+       animationType="fade"
+       transparent={true}
+       visible={showDeleteModal}
+       onRequestClose={() => setShowDeleteModal(false)}
+     >
+       <Pressable
+         style={styles.modalOverlay}
+         onPress={() => setShowDeleteModal(false)}
+       >
+         <View style={styles.deleteModalContainer}>
+           <Text style={styles.deleteModalTitle}>Delete Location</Text>
+           <Text style={styles.deleteModalMessage}>
+             Are you sure you want to delete "{locationToDelete?.name || 'this location'}"?
+           </Text>
+           <Text style={styles.deleteModalSubtext}>
+             This action cannot be undone.
+           </Text>
+           <View style={styles.deleteModalButtons}>
+             <TouchableOpacity
+               style={[styles.deleteModalButton, styles.cancelButton]}
+               onPress={() => setShowDeleteModal(false)}
+             >
+               <Text style={styles.cancelButtonText}>Cancel</Text>
+             </TouchableOpacity>
+             <TouchableOpacity
+               style={[styles.deleteModalButton, styles.confirmDeleteButton]}
+               onPress={confirmDeleteLocation}
+             >
+               <Text style={styles.confirmDeleteButtonText}>Delete</Text>
+             </TouchableOpacity>
+           </View>
+         </View>
+       </Pressable>
+     </Modal>
+   );
 
   // Render loading state
   if (loading && !refreshing) {
@@ -339,27 +419,28 @@ const [locations, setLocations] = useState<Location[]>([]);
         )}
       </ScrollView>
 
-      {locations.length > 0 && (
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            style={styles.refreshButton}
-            onPress={() => fetchLocations()}
-          >
-            <Text style={styles.refreshButtonText}>Refresh Locations</Text>
-          </TouchableOpacity>
-          {selectedLocation && (
-            <TouchableOpacity 
-              style={styles.clearSelectionButton}
-              onPress={() => setSelectedLocation(null)}
-            >
-              <Text style={styles.clearSelectionButtonText}>Clear Selection</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </View>
-  );
-}
+{locations.length > 0 && (
+         <View style={styles.footer}>
+           <TouchableOpacity 
+             style={styles.refreshButton}
+             onPress={() => fetchLocations()}
+           >
+             <Text style={styles.refreshButtonText}>Refresh Locations</Text>
+           </TouchableOpacity>
+           {selectedLocation && (
+             <TouchableOpacity 
+               style={styles.clearSelectionButton}
+               onPress={() => setSelectedLocation(null)}
+             >
+               <Text style={styles.clearSelectionButtonText}>Clear Selection</Text>
+             </TouchableOpacity>
+           )}
+         </View>
+       )}
+       {renderDeleteModal()}
+     </View>
+   );
+ }
 
 const styles = StyleSheet.create({
   container: {
@@ -599,5 +680,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: theme.spacing.xlarge,
     ...theme.shadows.card,
+  },
+  // Delete modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteModalContainer: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.medium,
+    padding: theme.spacing.large,
+    marginHorizontal: theme.spacing.medium,
+    minWidth: 280,
+  },
+  deleteModalTitle: {
+    fontSize: theme.fonts.size.large,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.small,
+    textAlign: 'center',
+  },
+  deleteModalMessage: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.small,
+    textAlign: 'center',
+  },
+  deleteModalSubtext: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.large,
+    textAlign: 'center',
+  },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: theme.spacing.medium,
+  },
+  deleteModalButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.medium,
+    borderRadius: theme.borderRadius.medium,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#E0E0E0',
+  },
+  cancelButtonText: {
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.text,
+  },
+  confirmDeleteButton: {
+    backgroundColor: theme.colors.error,
+  },
+  confirmDeleteButtonText: {
+    fontSize: theme.fonts.size.medium,
+    fontWeight: theme.fonts.weight.medium,
+    color: 'white',
   },
 });

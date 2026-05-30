@@ -793,62 +793,84 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     });
   }
 
-// Get all locations
-  async getLocations(country?: string): Promise<ApiResponse<any>> {
-    let endpoint = API_CONFIG.ENDPOINTS.LOCATIONS.GET_ALL;
+// Get all locations with optional filters
+   async getLocations(userId?: string, country?: string): Promise<ApiResponse<any>> {
+     let endpoint = API_CONFIG.ENDPOINTS.LOCATIONS.GET_ALL;
+     const params: string[] = [];
     
-    // Add country query parameter if provided
-    if (country) {
-      endpoint += `?country=${encodeURIComponent(country)}`;
-    }
+     // Add userId query parameter if provided
+     if (userId) {
+       params.push(`userId=${userId}`);
+     }
+    
+     // Add country query parameter if provided
+     if (country) {
+       params.push(`country=${encodeURIComponent(country)}`);
+     }
+    
+     if (params.length > 0) {
+       endpoint += `?${params.join('&')}`;
+     }
 
-    console.log('=== GET LOCATIONS DEBUG ===');
-    console.log('Country filter:', country || 'all countries');
-    console.log('Full URL:', buildUrl(endpoint));
+     console.log('=== GET LOCATIONS DEBUG ===');
+     console.log('User ID filter:', userId || 'none');
+     console.log('Country filter:', country || 'all countries');
+     console.log('Full URL:', buildUrl(endpoint));
+     console.log('Full URL with query params:', endpoint);
 
-    return this.request<any>(endpoint, {
-      method: 'GET',
-    });
-  }
-
+     return this.request<any>(endpoint, {
+       method: 'GET',
+     });
+   }
   // Get locations by user ID
   async getLocationByUserId(userId: string): Promise<ApiResponse<any>> {
     const endpoint = `${API_CONFIG.ENDPOINTS.LOCATIONS.GET_BY_ID}/${userId}`;
-
     console.log('=== GET LOCATION BY USER ID DEBUG ===');
     console.log('User ID:', userId);
     console.log('Full URL:', buildUrl(endpoint));
-
     return this.request<any>(endpoint, {
       method: 'GET',
     });
   }
 
-  // Create new location
-  async createLocation(locationData: {
-    coordinates?: [number, number];
-    userId?: string;
-    name?: string;
-    shopOrBuildingNumber?: string;
-    address?: string;
-    city?: string;
-    district?: string;
-    zipcode?: string;
-    state?: string;
-    area?: string;
-    country?: string;
-  }): Promise<ApiResponse<any>> {
-    const endpoint = '/locations/create';
+ // Create new location
+    async createLocation(locationData: {
+      userId?: string;
+      name?: string;
+      shopOrBuildingNumber?: string;
+      address?: string;
+      city?: string;
+      district?: string;
+      zipcode?: string;
+      state?: string;
+      area?: string;
+      country?: string;
+      coordinates?: [number, number];
+    }): Promise<ApiResponse<any>> {
+      const endpoint = '/locations/create';
 
-    console.log('=== CREATE LOCATION DEBUG ===');
-    console.log('Location data:', locationData);
-    console.log('Full URL:', buildUrl(endpoint));
+      console.log('=== CREATE LOCATION DEBUG ===');
+      console.log('Location data:', locationData);
+      console.log('Full URL:', buildUrl(endpoint));
 
-    return this.request<any>(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(locationData),
-    });
-  }
+      return this.request<any>(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(locationData),
+      });
+    }
+
+   // Delete location
+   async deleteLocation(locationId: string): Promise<ApiResponse<any>> {
+     const endpoint = `${API_CONFIG.ENDPOINTS.LOCATIONS.DELETE}/${locationId}`;
+
+     console.log('=== DELETE LOCATION DEBUG ===');
+     console.log('Location ID:', locationId);
+     console.log('Full URL:', buildUrl(endpoint));
+
+     return this.request<any>(endpoint, {
+       method: 'DELETE',
+     });
+   }
 
   // Create order
   async createOrder(request: CreateOrderRequest): Promise<ApiResponse<any>> {

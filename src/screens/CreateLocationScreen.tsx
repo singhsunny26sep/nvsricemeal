@@ -6,504 +6,373 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
-  Switch,
-  StatusBar,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
 import { apiService } from '../utils/apiService';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import Statusbar from '../constants/Statusbar';
 import { locationService, LocationData } from '../utils/locationService';
 
-// Types for location creation
-interface CreateLocationRequest {
-  coordinates?: [number, number];
-  userId?: string;
-  name?: string;
-  shopOrBuildingNumber?: string;
-  address?: string;
-  city?: string;
-  district?: string;
-  zipcode?: string;
-  state?: string;
-  area?: string;
-  country?: string;
+interface LocationFormData {
+  name: string;
+  shopOrBuildingNumber: string;
+  address: string;
+  city: string;
+  district: string;
+  zipcode: string;
+  state: string;
+  area: string;
+  country: string;
+  coordinates: [number, number] | null;
 }
 
 export default function CreateLocationScreen() {
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const [loading, setLoading] = useState(false);
-  const [autoLoading, setAutoLoading] = useState(true);
-  const [useCoordinates, setUseCoordinates] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<LocationFormData>({
+    name: '',
+    shopOrBuildingNumber: '',
+    address: '',
+    city: '',
+    district: '',
+    zipcode: '',
+    state: '',
+    area: '',
+    country: 'India',
+    coordinates: null,
+  });
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
 
-  // Form fields
-  const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
-  const [name, setName] = useState('');
-  const [shopOrBuildingNumber, setShopOrBuildingNumber] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [district, setDistrict] = useState('');
-  const [zipcode, setZipcode] = useState('');
-  const [state, setState] = useState('');
-  const [area, setArea] = useState('');
-  const [country, setCountry] = useState('India');
-
-  // UseEffect to handle initial location setup with coordinates
   useEffect(() => {
-    // Automatically set the provided coordinates and create location
-    handleLocationWithCoordinates();
-  }, []);
-
-  // Function to handle location with provided coordinates and create location via API
-  const handleLocationWithCoordinates = async () => {
-    console.log('========================================');
-    console.log('🌍 LOCATION CREATION PROCESS STARTED');
-    console.log('========================================');
-    
-    // Step 1: Request location permission
-    console.log('\n📋 Step 1: Requesting location permission...');
-    const hasPermission = await locationService.requestLocationPermission('create_location');
-    
-    console.log('📍 Permission Status:', hasPermission ? '✅ GRANTED' : '❌ DENIED');
-    
-    if (!hasPermission) {
-      console.log('⚠️ Location permission denied. Will still try with provided coordinates.');
-    }
-    
-    // Step 2: Use provided coordinates
-    const providedCoordinates: [number, number] = [23.399907222595825, 85.3436458825527];
-    
-    console.log('\n📍 Step 2: Using provided coordinates');
-    console.log('   Latitude:', providedCoordinates[0]);
-    console.log('   Longitude:', providedCoordinates[1]);
-    
-    setCoordinates(providedCoordinates);
-    
-    // Step 3: Create location via API
-    console.log('\n🚀 Step 3: Creating location via API...');
-    console.log('   API Endpoint: https://nvs-rice-mart.onrender.com/nvs-rice-mart/locations/create');
-    console.log('   Request Payload:', JSON.stringify({
-      coordinates: providedCoordinates,
-      name: 'Test Location',
-      country: 'India'
-    }, null, 2));
-    
-    try {
-      const response = await apiService.createLocation({
-        coordinates: providedCoordinates,
-        name: 'Test Location',
-        country: 'India'
+    const initialData = route.params?.initialLocationData;
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        shopOrBuildingNumber: initialData.shopOrBuildingNumber || '',
+        address: initialData.address || '',
+        city: initialData.city || '',
+        district: initialData.district || '',
+        zipcode: initialData.zipcode || '',
+        state: initialData.state || '',
+        area: initialData.area || '',
+        country: initialData.country || 'India',
+        coordinates: initialData.coordinates || null,
       });
-      
-      console.log('\n📥 API Response Received:');
-      console.log('   Success:', response.success);
-      console.log('   Data:', JSON.stringify(response.data, null, 2));
-      console.log('   Message:', response.message);
-      console.log('   Error:', response.error);
-      
-      if (response.success) {
-        console.log('\n✅ ✅ ✅ LOCATION CREATED SUCCESSFULLY! ✅ ✅ ✅');
-        Alert.alert(
-          'Success! 🎉',
-          `Location created successfully!\n\nCoordinates:\nLat: ${providedCoordinates[0]}\nLng: ${providedCoordinates[1]}`
-        );
-      } else {
-        console.log('\n❌ LOCATION CREATION FAILED');
-        Alert.alert('Error', response.error || 'Failed to create location');
+      if (initialData.coordinates) {
+        setLatitude(initialData.coordinates[0].toString());
+        setLongitude(initialData.coordinates[1].toString());
       }
-    } catch (error) {
-      console.log('\n🚨 EXCEPTION OCCURRED:');
-      console.log('   Error:', error);
-      console.log('   Error Message:', error instanceof Error ? error.message : 'Unknown error');
-      Alert.alert('Error', 'An unexpected error occurred');
     }
-    
-    console.log('\n========================================');
-    console.log('🏁 LOCATION CREATION PROCESS COMPLETED');
-    console.log('========================================\n');
-    
-    setAutoLoading(false);
-  };
+  }, [route.params?.initialLocationData]);
 
-  // Auto-fetch current GPS location
-  const autoFetchLocation = async () => {
-    setAutoLoading(true);
-    try {
-      // Request location permission
-      const hasPermission = await locationService.requestLocationPermission('create_location');
-
-      if (hasPermission) {
-        // Get current position
-        const location: LocationData | null = await locationService.getCurrentPosition('create_location');
-
-        if (location) {
-          const coords: [number, number] = [location.latitude, location.longitude];
-          setCoordinates(coords);
-
-          console.log('📍 Auto GPS Coordinates obtained:');
-          console.log('   Latitude:', location.latitude);
-          console.log('   Longitude:', location.longitude);
-
-          Alert.alert(
-            '📍 GPS Location Found!',
-            `Your current location:
-
-      Latitude: ${location.latitude.toFixed(6)}
-       Longitude: ${location.longitude.toFixed(6)}
-
-          These coordinates will be sent to create your location.`
-          );
-        } else {
-          console.log('⚠️ Could not get GPS location');
-        }
+  // Update formData.coordinates when latitude or longitude changes
+  useEffect(() => {
+    if (latitude && longitude) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setFormData(prev => ({ ...prev, coordinates: [lat, lng] }));
       } else {
-        console.log('⚠️ Location permission denied');
-      }
-    } catch (error) {
-      console.error('Error auto-fetching location:', error);
-    } finally {
-      setAutoLoading(false);
-    }
-  };
-
-  // Handle coordinate input
-  const handleCoordinatesChange = (text: string) => {
-    try {
-      const coords = text.split(',').map(coord => parseFloat(coord.trim()));
-      if (coords.length === 2 && coords.every(coord => !isNaN(coord))) {
-        console.log('📝 Manual coordinates updated:', coords);
-        setCoordinates([coords[0], coords[1]]);
-      } else {
-        setCoordinates(null);
-      }
-    } catch {
-      setCoordinates(null);
-    }
-  };
-
-  // Validate form
-  const validateForm = (): string | null => {
-    if (useCoordinates) {
-      if (!coordinates) {
-        return 'Please enter valid coordinates (format: latitude, longitude)';
+        setFormData(prev => ({ ...prev, coordinates: null }));
       }
     } else {
-      if (!address.trim()) return 'Address is required';
-      if (!city.trim()) return 'City is required';
-      if (!district.trim()) return 'District is required';
-      if (!zipcode.trim()) return 'ZIP code is required';
-      if (!state.trim()) return 'State is required';
+      setFormData(prev => ({ ...prev, coordinates: null }));
     }
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    fetchUserId();
+  }, []);
+
+  const fetchUserId = async () => {
+    try {
+      const profileResponse = await apiService.getUserProfile();
+      if (profileResponse.success && profileResponse.data) {
+        const uid = profileResponse.data.id;
+        setUserId(uid);
+        console.log('✅ User ID fetched:', uid);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch user ID:', error);
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    setLoading(true);
+    try {
+      console.log('Getting current location...');
+      
+      // Request permission and get location
+      const hasPermission = await locationService.requestLocationPermission('create_location');
+      
+      if (!hasPermission) {
+        Alert.alert(
+          'Location Permission Required',
+          'Location permission is required to set your location. Please enable location services.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Retry', onPress: getCurrentLocation }
+          ]
+        );
+        return;
+      }
+
+      // Get current position
+      const location: LocationData | null = await locationService.getCurrentPosition('create_location');
+      
+      if (location) {
+        // Set latitude and longitude
+        setLatitude(location.latitude.toString());
+        setLongitude(location.longitude.toString());
+        
+        Alert.alert(
+          'Location Found! 📍',
+          `GPS coordinates obtained successfully!\n\nLatitude: ${location.latitude.toFixed(6)}\nLongitude: ${location.longitude.toFixed(6)}`
+        );
+        
+        console.log('Location obtained:', {
+          latitude: location.latitude,
+          longitude: location.longitude,
+        });
+      } else {
+        Alert.alert(
+          'Location Error',
+          'Unable to get your location. Please check your location services and try again.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Retry', onPress: getCurrentLocation }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert(
+        'Location Error',
+        'Failed to get location. Please ensure location services are enabled.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof LocationFormData, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const validateForm = (): string | null => {
+    if (!formData.name.trim()) return 'Location name is required';
+    if (!formData.shopOrBuildingNumber.trim()) return 'Shop/Building number is required';
+    if (!formData.address.trim()) return 'Address is required';
+    if (!formData.city.trim()) return 'City is required';
+    if (!formData.district.trim()) return 'District is required';
+    if (!formData.zipcode.trim()) return 'Zipcode is required';
+    if (!formData.state.trim()) return 'State is required';
+    if (!formData.coordinates) return 'Coordinates are required. Use "Get Current Location" or enter latitude/longitude manually.';
     return null;
   };
 
-  // Handle form submission
-  const handleSubmit = async () => {
+   const handleCreateLocation = async () => {
     const validationError = validateForm();
     if (validationError) {
       Alert.alert('Validation Error', validationError);
       return;
     }
 
+    const effectiveUserId = route.params?.userId || userId;
+
+    if (!effectiveUserId) {
+      Alert.alert('Error', 'User ID not found. Please login again.');
+      return;
+    }
+
     setLoading(true);
 
-    console.log('========================================');
-    console.log('📤 SUBMITTING LOCATION FORM');
-    console.log('========================================');
-
     try {
-      const locationData: CreateLocationRequest = {};
+      console.log('=== CREATE LOCATION REQUEST ===');
+      console.log('Form data:', formData);
+      console.log('User ID:', userId);
 
-      if (useCoordinates && coordinates) {
-        locationData.coordinates = coordinates;
-        // Optional fields when using coordinates
-        if (name.trim()) locationData.name = name.trim();
-        if (shopOrBuildingNumber.trim()) locationData.shopOrBuildingNumber = shopOrBuildingNumber.trim();
-        if (country.trim()) locationData.country = country.trim();
-        
-        console.log('📍 Using Coordinates Mode:');
-        console.log('   Coordinates:', coordinates);
-      } else {
-        // Required fields when not using coordinates
-        locationData.address = address.trim();
-        locationData.city = city.trim();
-        locationData.district = district.trim();
-        locationData.zipcode = zipcode.trim();
-        locationData.state = state.trim();
-        // Optional fields
-        if (name.trim()) locationData.name = name.trim();
-        if (shopOrBuildingNumber.trim()) locationData.shopOrBuildingNumber = shopOrBuildingNumber.trim();
-        if (area.trim()) locationData.area = area.trim();
-        if (country.trim()) locationData.country = country.trim();
-        
-        console.log('📝 Using Manual Entry Mode:');
-        console.log('   Address:', locationData.address);
-        console.log('   City:', locationData.city);
-        console.log('   District:', locationData.district);
-      }
-
-      console.log('\n📦 Full Form Data:', JSON.stringify(locationData, null, 2));
-      console.log('\n🚀 Calling createLocation API...');
+      const locationData = {
+        userId: effectiveUserId,
+        name: formData.name.trim(),
+        shopOrBuildingNumber: formData.shopOrBuildingNumber.trim(),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        district: formData.district.trim(),
+        zipcode: formData.zipcode.trim(),
+        state: formData.state.trim(),
+        area: formData.area.trim(),
+        country: formData.country.trim(),
+        coordinates: formData.coordinates || undefined,
+      };
 
       const response = await apiService.createLocation(locationData);
-
-      console.log('\n📥 API Response:');
-      console.log('   Success:', response.success);
-      console.log('   Data:', JSON.stringify(response.data, null, 2));
-      console.log('   Error:', response.error);
+      console.log('Create location response:', response);
 
       if (response.success) {
-        console.log('\n✅ ✅ ✅ LOCATION CREATED SUCCESSFULLY! ✅ ✅ ✅');
         Alert.alert(
           'Success',
           'Location created successfully!',
           [
             {
               text: 'OK',
-              onPress: () => {
-                // Reset form
-                setName('');
-                setShopOrBuildingNumber('');
-                setAddress('');
-                setCity('');
-                setDistrict('');
-                setZipcode('');
-                setState('');
-                setArea('');
-                setCountry('India');
-                setCoordinates(null);
-                // Go back to save location screen and refresh
-                // @ts-ignore - TypeScript navigation issue
-                navigation.goBack();
-              }
-            }
+              onPress: () => navigation.goBack(),
+            },
           ]
         );
       } else {
         Alert.alert('Error', response.error || 'Failed to create location');
       }
     } catch (error) {
-      console.log('🚨 Error creating location:', error);
+      console.error('❌ Error creating location:', error);
       Alert.alert('Error', 'An error occurred while creating location');
     } finally {
       setLoading(false);
-      console.log('========================================\n');
     }
   };
 
+  const renderInputField = (
+    field: keyof LocationFormData,
+    label: string,
+    placeholder: string,
+    iconName: string,
+    keyboardType: 'default' | 'numeric' = 'default'
+  ) => {
+    const fieldValue = formData[field];
+    const stringValue = typeof fieldValue === 'string' ? fieldValue : '';
+    return (
+      <View style={styles.inputContainer} key={field}>
+        <Text style={styles.inputLabel}>{label}</Text>
+        <View style={styles.inputWrapper}>
+          <Icon name={iconName} size={20} color={theme.colors.primary} style={styles.inputIcon} />
+          <TextInput
+            style={styles.textInput}
+            placeholder={placeholder}
+            placeholderTextColor={theme.colors.textSecondary}
+            value={stringValue}
+            onChangeText={text => handleInputChange(field, text)}
+            keyboardType={keyboardType}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loadingText}>Creating location...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create New Location</Text>
-          <View style={styles.placeholder} />
-        </View>
-        <Text style={styles.headerSubtitle}>
-          Add a new delivery location
-        </Text>
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Input Method Toggle */}
-        <View style={styles.inputMethodContainer}>
-          <Text style={styles.inputMethodLabel}>Location Input Method:</Text>
-          <View style={styles.toggleContainer}>
-            <Text style={[
-              styles.toggleText,
-              useCoordinates ? styles.activeToggleText : styles.inactiveToggleText
-            ]}>
-              Coordinates
-            </Text>
-            <Switch
-              value={!useCoordinates}
-              onValueChange={(value) => setUseCoordinates(!value)}
-              trackColor={{ false: theme.colors.disabled, true: theme.colors.primary }}
-              thumbColor={useCoordinates ? theme.colors.card : theme.colors.primary}
-            />
-            <Text style={[
-              styles.toggleText,
-              !useCoordinates ? styles.activeToggleText : styles.inactiveToggleText
-            ]}>
-              Manual Entry
-            </Text>
+      <Statusbar />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" size={24} color={theme.colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Create New Location</Text>
           </View>
-        </View>
 
-        {/* Coordinate Input */}
-        {useCoordinates && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Coordinates (Priority)</Text>
-            <Text style={styles.sectionDescription}>
-              Enter coordinates in format: latitude, longitude (e.g., 22.3060, 74.3558)
-            </Text>
+          <View style={styles.formContainer}>
+            {renderInputField('name', 'Location Name', 'e.g., Main Shop, Home', 'storefront')}
+            {renderInputField('shopOrBuildingNumber', 'Shop/Building Number', 'e.g., 12A', 'location-city')}
+            {renderInputField('address', 'Address', 'e.g., Near Market Road', 'map-marker')}
+            {renderInputField('area', 'Area', 'e.g., Davanagere Taluku', 'map-marker')}
+            {renderInputField('city', 'City', 'e.g., Davanagere', 'city')}
+            {renderInputField('district', 'District', 'e.g., Davanagere', 'account-balance')}
+            {renderInputField('zipcode', 'Zipcode', 'e.g., 577007', 'local-post-office', 'numeric')}
+            {renderInputField('state', 'State', 'e.g., Karnataka', 'public')}
+            {renderInputField('country', 'Country', 'e.g., India', 'public')}
 
-            {/* Auto-fetched coordinates display */}
-            {autoLoading ? (
-              <View style={styles.autoFetchContainer}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={styles.autoFetchText}>Getting GPS location...</Text>
-              </View>
-            ) : coordinates ? (
-              <View style={styles.coordinatesDisplay}>
-                <View style={styles.coordinateRow}>
-                  <Text style={styles.coordinateLabel}>Latitude:</Text>
-                  <Text style={styles.coordinateValue}>{coordinates[0].toFixed(6)}</Text>
+            {/* Current Location Button */}
+            <TouchableOpacity 
+              style={[
+                styles.currentBtn,
+                loading && styles.currentBtnLoading
+              ]}
+              onPress={getCurrentLocation}
+              disabled={loading}
+            >
+              <Icon 
+                name="my-location" 
+                size={20} 
+                color="white" 
+                style={styles.gpsIcon} 
+              />
+              <Text style={styles.currentBtnText}>
+                {loading ? 'Getting Location...' : 'Get Current Location'}
+              </Text>
+              {loading && (
+                <View style={styles.loadingSpinner}>
+                  <Icon name="refresh" size={16} color="white" />
                 </View>
-                <View style={styles.coordinateRow}>
-                  <Text style={styles.coordinateLabel}>Longitude:</Text>
-                  <Text style={styles.coordinateValue}>{coordinates[1].toFixed(6)}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.refreshButton}
-                  onPress={autoFetchLocation}
-                >
-                  <Text style={styles.refreshButtonText}>🔄 Refresh Location</Text>
-                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+
+            {/* Latitude and Longitude Inputs */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Latitude</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="gps-fixed" size={20} color={theme.colors.primary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter latitude"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={latitude}
+                  onChangeText={setLatitude}
+                  keyboardType="numeric"
+                />
               </View>
-            ) : null}
-
-            <TextInput
-              style={styles.input}
-              placeholder="22.3060, 74.3558"
-              placeholderTextColor={theme.colors.textSecondary}
-              onChangeText={handleCoordinatesChange}
-              keyboardType="numbers-and-punctuation"
-            />
-          </View>
-        )}
-
-        {/* Manual Entry Fields */}
-        {!useCoordinates && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Location Details (Required)</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Address *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter address"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={address}
-                onChangeText={setAddress}
-              />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>City *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter city"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={city}
-                onChangeText={setCity}
-              />
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Longitude</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="gps-fixed" size={20} color={theme.colors.primary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter longitude"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={longitude}
+                  onChangeText={setLongitude}
+                  keyboardType="numeric"
+                />
+              </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>District *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter district"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={district}
-                onChangeText={setDistrict}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>State *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter state"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={state}
-                onChangeText={setState}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>ZIP Code *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter ZIP code"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={zipcode}
-                onChangeText={setZipcode}
-                keyboardType="numeric"
-              />
-            </View>
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleCreateLocation}
+              disabled={loading}
+            >
+              <Text style={styles.createButtonText}>Create Location</Text>
+            </TouchableOpacity>
           </View>
-        )}
-
-        {/* Optional Fields */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Optional Details</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Name/Title</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Main Shop, Home, Office"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Shop/House Number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., 12A, Shop No. 5"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={shopOrBuildingNumber}
-              onChangeText={setShopOrBuildingNumber}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Area</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., MG Road, Downtown"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={area}
-              onChangeText={setArea}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Country</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Country"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={country}
-              onChangeText={setCountry}
-            />
-          </View>
-        </View>
-
-        {/* Submit Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.disabledButton]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={styles.submitButtonText}>Create Location</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -513,94 +382,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+  },
+  loadingText: {
+    marginTop: theme.spacing.medium,
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+  },
   header: {
-    backgroundColor: theme.colors.card,
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: theme.spacing.medium,
+    backgroundColor: theme.colors.card,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.small,
-  },
   backButton: {
-    padding: theme.spacing.small,
-  },
-  backButtonText: {
-    fontSize: theme.fonts.size.medium,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  placeholder: {
-    width: 50, // Same width as back button area for centering
+    marginRight: theme.spacing.medium,
   },
   headerTitle: {
     fontSize: theme.fonts.size.xlarge,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.text,
-    marginBottom: theme.spacing.small,
   },
-  headerSubtitle: {
-    fontSize: theme.fonts.size.medium,
-    color: theme.colors.textSecondary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
+  formContainer: {
     padding: theme.spacing.medium,
   },
-  inputMethodContainer: {
-    backgroundColor: theme.colors.card,
-    padding: theme.spacing.medium,
-    borderRadius: theme.borderRadius.large,
-    marginBottom: theme.spacing.medium,
-    ...theme.shadows.card,
-  },
-  inputMethodLabel: {
-    fontSize: theme.fonts.size.medium,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.medium,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleText: {
-    fontSize: theme.fonts.size.medium,
-    fontWeight: theme.fonts.weight.medium,
-    flex: 1,
-  },
-  activeToggleText: {
-    color: theme.colors.primary,
-  },
-  inactiveToggleText: {
-    color: theme.colors.textSecondary,
-  },
-  section: {
-    backgroundColor: theme.colors.card,
-    padding: theme.spacing.medium,
-    borderRadius: theme.borderRadius.large,
-    marginBottom: theme.spacing.medium,
-    ...theme.shadows.card,
-  },
-  sectionTitle: {
-    fontSize: theme.fonts.size.large,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.small,
-  },
-  sectionDescription: {
-    fontSize: theme.fonts.size.medium,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.medium,
-    lineHeight: 20,
-  },
-  inputGroup: {
+  inputContainer: {
     marginBottom: theme.spacing.medium,
   },
   inputLabel: {
@@ -609,80 +427,70 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginBottom: theme.spacing.small,
   },
-  input: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.borderRadius.medium,
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: theme.borderRadius.medium,
-    padding: theme.spacing.medium,
+    paddingHorizontal: theme.spacing.small,
+  },
+  inputIcon: {
+    marginRight: theme.spacing.small,
+  },
+  textInput: {
+    flex: 1,
     fontSize: theme.fonts.size.medium,
     color: theme.colors.text,
-    backgroundColor: '#FAFAFA',
+    paddingVertical: theme.spacing.medium,
   },
-  buttonContainer: {
-    marginTop: theme.spacing.medium,
-    marginBottom: theme.spacing.large,
-  },
-  submitButton: {
+  createButton: {
     backgroundColor: theme.colors.primary,
     paddingVertical: theme.spacing.large,
-    borderRadius: theme.borderRadius.large,
+    borderRadius: theme.borderRadius.medium,
     alignItems: 'center',
+    marginTop: theme.spacing.medium,
+    marginBottom: 90,
     ...theme.shadows.card,
   },
-  disabledButton: {
-    backgroundColor: theme.colors.disabled,
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: theme.fonts.size.large,
-    fontWeight: theme.fonts.weight.bold,
-  },
-  autoFetchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.medium,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    borderRadius: theme.borderRadius.medium,
-    marginBottom: theme.spacing.medium,
-  },
-  autoFetchText: {
-    fontSize: theme.fonts.size.medium,
-    color: theme.colors.primary,
-    marginLeft: theme.spacing.small,
-  },
-  coordinatesDisplay: {
-    padding: theme.spacing.medium,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    borderRadius: theme.borderRadius.medium,
-    marginBottom: theme.spacing.medium,
-  },
-  coordinateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.small,
-  },
-  coordinateLabel: {
-    fontSize: theme.fonts.size.medium,
-    color: theme.colors.textSecondary,
-    fontWeight: theme.fonts.weight.medium,
-  },
-  coordinateValue: {
-    fontSize: theme.fonts.size.medium,
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.bold,
-  },
-  refreshButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.small,
-    borderRadius: theme.borderRadius.medium,
-    alignItems: 'center',
-    marginTop: theme.spacing.small,
-  },
-  refreshButtonText: {
-    color: 'white',
-    fontSize: theme.fonts.size.small,
-    fontWeight: theme.fonts.weight.medium,
-  },
+   createButtonText: {
+     color: 'white',
+     fontSize: theme.fonts.size.medium,
+     fontWeight: theme.fonts.weight.bold,
+   },
+
+   /* Current Location Button */
+   currentBtn: {
+     flexDirection: 'row',
+     backgroundColor: theme.colors.primary,
+     marginTop: 20,
+     padding: 16,
+     borderRadius: 16,
+     alignItems: 'center',
+     justifyContent: 'center',
+     elevation: 4,
+     shadowColor: theme.colors.primary,
+     shadowOpacity: 0.3,
+     shadowRadius: 8,
+     shadowOffset: { width: 0, height: 4 },
+     borderWidth: 1,
+     borderColor: 'rgba(255, 255, 255, 0.2)',
+     marginBottom: 12,
+   },
+   currentBtnLoading: {
+     backgroundColor: '#6c757d',
+   },
+   gpsIcon: {
+     marginRight: 8,
+   },
+   loadingSpinner: {
+     marginLeft: 8,
+   },
+   currentBtnText: {
+     fontSize: 16,
+     fontWeight: '700',
+     color: 'white',
+     fontFamily: theme.fonts.family.bold,
+   }
 });

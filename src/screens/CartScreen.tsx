@@ -349,7 +349,6 @@ const CartScreen: React.FC = () => {
   // Navigate to SaveLocationScreen for location selection
   const handleSelectLocation = () => {
     console.log('🗺️ Navigating to SaveLocationScreen for location selection');
-    // Navigate to Profile tab first, then to SaveLocation screen
     navigation.navigate('Profile', {
       screen: 'SaveLocation',
       params: {
@@ -360,6 +359,39 @@ const CartScreen: React.FC = () => {
         }
       }
     });
+  };
+
+  // Navigate to CreateLocationScreen
+  const handleCreateLocation = () => {
+    console.log('🗺️ Navigating to CreateLocationScreen');
+    navigation.navigate('Profile', {
+      screen: 'CreateLocationScreen',
+      params: {
+        isForCheckout: true,
+      }
+    });
+  };
+
+  // Show location options (select existing or create new)
+  const handleLocationOptions = () => {
+    Alert.alert(
+      'Delivery Location',
+      'Choose an option',
+      [
+        {
+          text: 'Select Saved Location',
+          onPress: handleSelectLocation
+        },
+        {
+          text: 'Create New Location',
+          onPress: handleCreateLocation
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
   };
 
   // Cash on Delivery
@@ -475,20 +507,88 @@ const CartScreen: React.FC = () => {
     
     // Check if location is selected
     if (!selectedLocation) {
-      Alert.alert(
-        'Select Delivery Location',
-        'Please select a delivery location before proceeding to payment.',
-        [
-          {
-            text: 'Select Location',
-            onPress: handleSelectLocation
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel'
+      // First check if user has any saved locations
+      try {
+        const profileResponse = await apiService.getUserProfile();
+        if (profileResponse.success && profileResponse.data) {
+          const userId = profileResponse.data.id;
+          const locationResponse = await apiService.getLocationByUserId(userId);
+          
+          if (locationResponse.success && locationResponse.data) {
+            const locationsData = locationResponse.data.data || locationResponse.data;
+            const hasLocation = locationsData && (
+              (Array.isArray(locationsData.data) && locationsData.data.length > 0) ||
+              (Array.isArray(locationsData) && locationsData.length > 0)
+            );
+            
+            if (hasLocation) {
+              // User has saved locations, navigate to select one
+              Alert.alert(
+                'Select Delivery Location',
+                'Please select a delivery location before proceeding to payment.',
+                [
+                  {
+                    text: 'Select Location',
+                    onPress: handleSelectLocation
+                  },
+                  {
+                    text: 'Cancel',
+                    style: 'cancel'
+                  }
+                ]
+              );
+            } else {
+              // No saved locations, go directly to create location
+              Alert.alert(
+                'No Saved Locations',
+                'You don\'t have any saved delivery locations. Please create one first.',
+                [
+                  {
+                    text: 'Create Location',
+                    onPress: handleCreateLocation
+                  },
+                  {
+                    text: 'Cancel',
+                    style: 'cancel'
+                  }
+                ]
+              );
+            }
+          } else {
+            // API error, try to select location anyway
+            Alert.alert(
+              'Select Delivery Location',
+              'Please select a delivery location before proceeding to payment.',
+              [
+                {
+                  text: 'Select Location',
+                  onPress: handleSelectLocation
+                },
+                {
+                  text: 'Cancel',
+                  style: 'cancel'
+                }
+              ]
+            );
           }
-        ]
-      );
+        }
+      } catch (error) {
+        console.log('Error checking saved locations:', error);
+        Alert.alert(
+          'Select Delivery Location',
+          'Please select a delivery location before proceeding to payment.',
+          [
+            {
+              text: 'Select Location',
+              onPress: handleSelectLocation
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
+      }
       return;
     }
     
@@ -677,11 +777,11 @@ const CartScreen: React.FC = () => {
              <View style={styles.deliveryContainer}>
                <Text style={styles.sectionTitle}>Delivery Information</Text>
                
-               {/* Location Selection Button */}
-               <TouchableOpacity
-                 style={styles.locationButton}
-                 onPress={handleSelectLocation}
-               >
+{/* Location Selection Button */}
+                <TouchableOpacity
+                  style={styles.locationButton}
+                  onPress={handleLocationOptions}
+                >
                  <Icon name="location-on" size={24} color="#007bff" />
                  <View style={styles.locationButtonContent}>
                    <Text style={styles.locationButtonText}>

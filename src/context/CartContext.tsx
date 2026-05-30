@@ -13,7 +13,7 @@ export interface Product {
   reviewCount: number;
   discount: number;
   category: string;
-  subCategory: string;
+  subCategory?: string;
   weight?: string;
   originalPrice?: number;
   inStock?: boolean;
