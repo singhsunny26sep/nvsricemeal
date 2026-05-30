@@ -24,7 +24,7 @@ interface LoginScreenProps {
   onSwitchToRegister?: () => void;
 }
 const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
-  const [loginMethod, setLoginMethod] = useState<'email' | 'mobile'>('email');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'mobile'>('mobile');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
