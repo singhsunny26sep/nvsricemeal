@@ -189,7 +189,7 @@ const CartScreen: React.FC = () => {
     });
 
     const totalAfterDiscount = subtotal - totalDiscount;
-    const deliveryCharges = cart.isDeliveryAvailable ? 40 : 0;
+    const deliveryCharges = cart.isDeliveryAvailable ? 0 : 0;
     
     // Apply coupon discount on the discounted total
     const couponDiscount = cart.couponDiscount || 0;
@@ -208,8 +208,6 @@ const CartScreen: React.FC = () => {
   const {
     subtotal,
     totalDiscount,
-    totalAfterDiscount,
-    deliveryCharges,
     couponDiscount,
     finalTotal
   } = calculateTotals();
@@ -288,7 +286,7 @@ const CartScreen: React.FC = () => {
 
     try {
       console.log('🔍 Verifying delivery for pincode:', pincodeInput);
-      const apiUrl = 'https://nvs-rice-mart.onrender.com/nvs-rice-mart/carts/verify-delivery';
+      const apiUrl = 'https://api.nvsricemart.com/nvs-rice-mart/carts/verify-delivery';
       console.log('🌐 API URL for delivery verification:', apiUrl);
 
       // Get token from AsyncStorage for authenticated request
@@ -842,7 +840,7 @@ const CartScreen: React.FC = () => {
                 <View style={styles.priceRow}>
                   <Text style={styles.priceLabel}>Delivery Charges</Text>
                   <Text style={styles.priceValue}>
-                    {deliveryCharges > 0 ? `₹${deliveryCharges}` : 'FREE'}
+                   FREE
                   </Text>
                 </View>
                 {couponDiscount > 0 && (

@@ -19,7 +19,7 @@ const testTokenDebug = async () => {
     
     // Try to test the API without token first
     console.log('\n🧪 Testing API without token...');
-    const response = await fetch('https://nvs-rice-mart.onrender.com/nvs-rice-mart/locations/getAll?country=india', {
+    const response = await fetch('https://api.nvsricemart.com/nvs-rice-mart/locations/getAll?country=india', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -39,7 +39,7 @@ const testTokenDebug = async () => {
       // Check if we can access a public endpoint
       console.log('\n🧪 Testing if there are any public endpoints...');
       try {
-        const publicResponse = await fetch('https://nvs-rice-mart.onrender.com/', {
+        const publicResponse = await fetch('https://api.nvsricemart.com/', {
           method: 'GET',
         });
         console.log('- Public endpoint status:', publicResponse.status);

@@ -56,7 +56,7 @@ export default function ExploreScreen() {
         setLoading(true)
       }
 
-      const response = await fetch(`https://nvs-rice-mart.onrender.com/nvs-rice-mart/products/getAll?page=${currentPage}&limit=10`, {
+      const response = await fetch(`https://api.nvsricemart.com/nvs-rice-mart/products/getAll?page=${currentPage}&limit=10`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

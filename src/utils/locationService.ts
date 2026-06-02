@@ -142,7 +142,7 @@ class LocationService {
       }
 
       // Send to locations/create endpoint
-      const response = await fetch('https://nvs-rice-mart.onrender.com/locations/create', {
+      const response = await fetch('https://api.nvsricemart.com/nvs-rice-mart/locations/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

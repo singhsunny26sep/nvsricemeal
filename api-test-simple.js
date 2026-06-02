@@ -5,7 +5,7 @@ const testAPI = async () => {
   try {
     // Test without token
     console.log('\n1️⃣ Testing API without token:');
-    const response1 = await fetch('https://nvs-rice-mart.onrender.com/nvs-rice-mart/locations/getAll?country=india', {
+    const response1 = await fetch('https://api.nvsricemart.com/nvs-rice-mart/locations/getAll?country=india', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -19,7 +19,7 @@ const testAPI = async () => {
     
     // Test with fake token
     console.log('\n2️⃣ Testing API with fake token:');
-    const response2 = await fetch('https://nvs-rice-mart.onrender.com/nvs-rice-mart/locations/getAll?country=india', {
+    const response2 = await fetch('https://api.nvsricemart.com/nvs-rice-mart/locations/getAll?country=india', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -34,7 +34,7 @@ const testAPI = async () => {
     
     // Test base URL
     console.log('\n3️⃣ Testing base URL:');
-    const response3 = await fetch('https://nvs-rice-mart.onrender.com/', {
+    const response3 = await fetch('https://api.nvsricemart.com/', {
       method: 'GET',
     });
     

@@ -219,7 +219,6 @@ export default function CreateLocationScreen() {
 
       const response = await apiService.createLocation(locationData);
       console.log('Create location response:', response);
-
       if (response.success) {
         Alert.alert(
           'Success',

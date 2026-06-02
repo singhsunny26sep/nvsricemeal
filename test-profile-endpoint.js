@@ -1,6 +1,6 @@
 // Test script to verify profile endpoint URL
 const API_CONFIG = {
-  BASE_URL: 'https://nvs-rice-mart.onrender.com/nvs-rice-mart',
+  BASE_URL: 'https://api.nvsricemart.com/nvs-rice-mart',
   ENDPOINTS: {
     USER: {
       PROFILE: '/users/get',
@@ -27,8 +27,8 @@ const sendOtpUrl = buildUrl(API_CONFIG.ENDPOINTS.AUTH.SEND_OTP);
 const verifyOtpUrl = buildUrl(API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP_MOBILE);
 
 console.log('Profile URL:', profileUrl);
-console.log('Expected: https://nvs-rice-mart.onrender.com/nvs-rice-mart/users/get');
-console.log('✅ Profile URL is correct:', profileUrl === 'https://nvs-rice-mart.onrender.com/nvs-rice-mart/users/get');
+console.log('Expected: https://api.nvsricemart.com/nvs-rice-mart/users/get');
+console.log('✅ Profile URL is correct:', profileUrl === 'https://api.nvsricemart.com/nvs-rice-mart/users/get');
 console.log('');
 
 console.log('User Update URL:', updateUrl);

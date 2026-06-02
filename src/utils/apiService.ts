@@ -885,6 +885,19 @@ console.log(endpoint,"++++++++++++++++++++++++++")
       body: JSON.stringify(request),
     });
   }
+
+  // Get orders by user ID
+  async getOrdersByUserId(userId: string): Promise<ApiResponse<any>> {
+    const endpoint = `/orders/getAll?userId=${userId}`;
+    
+    console.log('=== GET ORDERS BY USER ID DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'GET',
+    });
+  }
 }
 
 // Export singleton instance

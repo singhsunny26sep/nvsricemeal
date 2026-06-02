@@ -4,7 +4,7 @@ const testLocationAPI = async () => {
   
   try {
     // Test the API endpoint directly
-    const response = await fetch('https://nvs-rice-mart.onrender.com/nvs-rice-mart/locations/getAll?country=india', {
+    const response = await fetch('https://api.nvsricemart.com/nvs-rice-mart/locations/getAll?country=india', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
