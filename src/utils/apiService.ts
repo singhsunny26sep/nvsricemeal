@@ -886,18 +886,33 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     });
   }
 
-  // Get orders by user ID
-  async getOrdersByUserId(userId: string): Promise<ApiResponse<any>> {
-    const endpoint = `/orders/getAll?userId=${userId}`;
-    
-    console.log('=== GET ORDERS BY USER ID DEBUG ===');
-    console.log('User ID:', userId);
-    console.log('Full URL:', buildUrl(endpoint));
+   // Get orders by user ID
+   async getOrdersByUserId(userId: string): Promise<ApiResponse<any>> {
+     const endpoint = `/orders/getAll?userId=${userId}`;
+     
+     console.log('=== GET ORDERS BY USER ID DEBUG ===');
+     console.log('User ID:', userId);
+     console.log('Full URL:', buildUrl(endpoint));
 
-    return this.request<any>(endpoint, {
-      method: 'GET',
-    });
-  }
+     return this.request<any>(endpoint, {
+       method: 'GET',
+     });
+   }
+
+   // Update order status
+   async updateOrderStatus(orderId: string, status: string): Promise<ApiResponse<any>> {
+     const endpoint = `/orders/update/${orderId}`;
+     
+     console.log('=== UPDATE ORDER STATUS DEBUG ===');
+     console.log('Order ID:', orderId);
+     console.log('Status:', status);
+     console.log('Full URL:', buildUrl(endpoint));
+
+     return this.request<any>(endpoint, {
+       method: 'PUT',
+       body: JSON.stringify({ status }),
+     });
+   }
 }
 
 // Export singleton instance

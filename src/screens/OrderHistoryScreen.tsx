@@ -65,13 +65,14 @@ interface OrdersApiResponse {
 export default function OrderHistoryScreen() {
   const { auth } = useAuth();
   const [orders, setOrders] = useState<OrderItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [userId, setUserId] = useState<string | null>(null);
+   const [loading, setLoading] = useState<boolean>(true);
+   const [error, setError] = useState<string | null>(null);
+   const [refreshing, setRefreshing] = useState<boolean>(false);
+   const [loadingMore, setLoadingMore] = useState<boolean>(false);
+   const [currentPage, setCurrentPage] = useState<number>(1);
+   const [totalPages, setTotalPages] = useState<number>(1);
+   const [userId, setUserId] = useState<string | null>(null);
+   const [cancellingOrderIds, setCancellingOrderIds] = useState<Set<string>>(new Set());
 
   // Fetch user ID once and store it
   const fetchUserId = useCallback(async () => {
@@ -139,15 +140,38 @@ export default function OrderHistoryScreen() {
     setRefreshing(false);
   }, [fetchOrders]);
 
-  // Load more handler for pagination
-  const loadMoreOrders = useCallback(async () => {
-    if (loadingMore || currentPage >= totalPages) return;
-    
-    setLoadingMore(true);
-    const nextPage = currentPage + 1;
-    await fetchOrders(nextPage, true);
-    setLoadingMore(false);
-  }, [currentPage, totalPages, loadingMore, fetchOrders]);
+   // Load more handler for pagination
+   const loadMoreOrders = useCallback(async () => {
+     if (loadingMore || currentPage >= totalPages) return;
+     
+     setLoadingMore(true);
+     const nextPage = currentPage + 1;
+     await fetchOrders(nextPage, true);
+     setLoadingMore(false);
+   }, [currentPage, totalPages, loadingMore, fetchOrders]);
+
+   // Handle cancel order press
+   const handleCancelPress = async (orderId: string) => {
+     setCancellingOrderIds(prev => new Set(prev).add(orderId));
+     try {
+       const response = await apiService.updateOrderStatus(orderId, 'CANCELLED');
+       if (response.success) {
+         // Refetch orders to reflect the cancellation
+         await fetchOrders(currentPage, false);
+       } else {
+         throw new Error(response.error || 'Failed to cancel order');
+       }
+     } catch (err) {
+       console.error('Error cancelling order:', err);
+       alert('Failed to cancel order: ' + (err instanceof Error ? err.message : 'Unknown error'));
+     } finally {
+       setCancellingOrderIds(prev => {
+         const newSet = new Set(prev);
+         newSet.delete(orderId);
+         return newSet;
+       });
+     }
+   };
 
   // Helper: Format date and time
   const formatDateTime = (dateString: string) => {
@@ -158,25 +182,31 @@ export default function OrderHistoryScreen() {
     };
   };
 
-  // Helper: Get status style
-  const getStatusStyle = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        return { bg: '#FFF3E0', text: theme.colors.gold || '#FF9800' };
-      case 'CONFIRMED':
-        return { bg: '#E8F5E9', text: theme.colors.success || '#4CAF50' };
-      case 'PROCESSING':
-        return { bg: '#E3F2FD', text: theme.colors.secondary || '#2196F3' };
-      case 'DELIVERED':
-        return { bg: '#E8F5E9', text: '#2E7D32' };
-      case 'CANCELLED':
-        return { bg: '#FFEBEE', text: theme.colors.error || '#F44336' };
-      case 'RETURNED':
-        return { bg: '#FFF3E0', text: '#FF9800' };
-      default:
-        return { bg: '#F5F5F5', text: theme.colors.textSecondary || '#757575' };
-    }
-  };
+   // Helper: Get status style
+   const getStatusStyle = (status: string) => {
+     switch (status.toUpperCase()) {
+       case 'PENDING':
+         return { bg: '#FFF3E0', text: theme.colors.gold || '#FF9800' };
+       case 'CONFIRMED':
+         return { bg: '#E8F5E9', text: theme.colors.success || '#4CAF50' };
+       case 'PROCESSING':
+         return { bg: '#E3F2FD', text: theme.colors.secondary || '#2196F3' };
+       case 'DELIVERED':
+         return { bg: '#E8F5E9', text: '#2E7D32' };
+       case 'CANCELLED':
+         return { bg: '#FFEBEE', text: theme.colors.error || '#F44336' };
+       case 'RETURNED':
+         return { bg: '#FFF3E0', text: '#FF9800' };
+       default:
+         return { bg: '#F5F5F5', text: theme.colors.textSecondary || '#757575' };
+     }
+   };
+
+   // Helper: Check if order is cancellable
+   const isCancellable = (status: string) => {
+     const cancellableStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING'];
+     return cancellableStatuses.includes(status.toUpperCase());
+   };
 
   // Render product images strip
   const renderProductImages = (items: OrderItem['items']) => {
@@ -264,17 +294,26 @@ export default function OrderHistoryScreen() {
           </View>
         </View>
 
-        {/* Payment Method Footer */}
-        <View style={styles.paymentFooter}>
-          <Text style={styles.paymentMethodText}>
-            💳 {item.paymentMethod === 'COD' ? 'Cash on Delivery' : item.paymentMethod}
-          </Text>
-          {item.paymentStatus && (
-            <Text style={styles.paymentStatusText}>
-              {item.paymentStatus === 'NOT_REQUIRED' ? '✓ No payment required' : item.paymentStatus}
-            </Text>
-          )}
-        </View>
+         {/* Payment Method Footer */}
+         <View style={styles.paymentFooter}>
+           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+             <Text style={styles.paymentMethodText}>
+               💳 {item.paymentMethod === 'COD' ? 'Cash on Delivery' : item.paymentMethod}
+             </Text>
+             {item.paymentStatus && (
+               <Text style={styles.paymentStatusText} marginLeft={8}>
+                 {item.paymentStatus === 'NOT_REQUIRED' ? '✓ No payment required' : item.paymentStatus}
+               </Text>
+             )}
+           </View>
+           {isCancellable(item.status) && !cancellingOrderIds.has(item._id) ? (
+             <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancelPress(item._id)}>
+               <Text style={styles.cancelButtonText}>Cancel</Text>
+             </TouchableOpacity>
+           ) : cancellingOrderIds.has(item._id) ? (
+             <ActivityIndicator size="small" color={theme.colors.error} />
+           ) : null}
+         </View>
       </TouchableOpacity>
     );
   };
@@ -534,13 +573,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: theme.colors.primary,
   },
-  paymentFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-  },
+   paymentFooter: {
+     flexDirection: 'row',
+     justifyContent: 'space-between',
+     alignItems: 'center',
+     marginTop: 8,
+     paddingTop: 8,
+   },
+   cancelButton: {
+     backgroundColor: theme.colors.error || '#F44336',
+     paddingHorizontal: 16,
+     paddingVertical: 8,
+     borderRadius: 20,
+     marginLeft: 12,
+   },
+   cancelButtonText: {
+     color: 'white',
+     fontWeight: '600',
+     fontSize: theme.fonts.size.small,
+   },
   paymentMethodText: {
     fontSize: 12,
     color: theme.colors.textSecondary,
