@@ -133,14 +133,34 @@ export default function CreateLocationScreen() {
         setLatitude(location.latitude.toString());
         setLongitude(location.longitude.toString());
         
+        // Get address from coordinates using reverse geocoding
         Alert.alert(
           'Location Found! 📍',
-          `GPS coordinates obtained successfully!\n\nLatitude: ${location.latitude.toFixed(6)}\nLongitude: ${location.longitude.toFixed(6)}`
+          'Getting address details...',
+          [{ text: 'OK' }]
         );
+        
+        const addressData = await locationService.reverseGeocode(location.latitude, location.longitude);
+        
+        if (addressData.address) {
+          // Auto-fill address fields
+          handleInputChange('address', addressData.address);
+          handleInputChange('city', addressData.city || '');
+          handleInputChange('state', addressData.state || '');
+          handleInputChange('country', addressData.country || 'India');
+          handleInputChange('zipcode', addressData.zipcode || '');
+          handleInputChange('area', addressData.area || '');
+          
+          Alert.alert(
+            'Address Found! 🏠',
+            `Address: ${addressData.address}\nCity: ${addressData.city || 'N/A'}\nState: ${addressData.state || 'N/A'}`
+          );
+        }
         
         console.log('Location obtained:', {
           latitude: location.latitude,
           longitude: location.longitude,
+          address: addressData,
         });
       } else {
         Alert.alert(
@@ -202,7 +222,6 @@ export default function CreateLocationScreen() {
       console.log('=== CREATE LOCATION REQUEST ===');
       console.log('Form data:', formData);
       console.log('User ID:', userId);
-
       const locationData = {
         userId: effectiveUserId,
         name: formData.name.trim(),

@@ -9,6 +9,7 @@ import {
   FlatList,
   Dimensions,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -1077,6 +1078,19 @@ const transformedProduct: Product = {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.card} />
+      {/* Top Bar with Back Button */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Icon name="chevron-left" size={28} color={theme.colors.primary} />
+        </TouchableOpacity>
+      </View>
+
       {/* Image Gallery */}
       <View style={styles.imageSection}>
         <Image
@@ -1437,6 +1451,32 @@ const transformedProduct: Product = {
 };
 
 const styles = StyleSheet.create({
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 8,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    zIndex: 10,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(27, 80, 170, 0.1)',
+  },
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

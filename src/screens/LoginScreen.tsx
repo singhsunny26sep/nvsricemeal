@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,140 +8,39 @@ import {
   TextInput,
   Alert,
   Animated,
-  Dimensions,
-  Image,
-  ActivityIndicator,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { theme } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
 import Logo from '../components/Logo';
 
-interface LoginScreenProps {
-  onSwitchToRegister?: () => void;
-}
-const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToRegister }) => {
-  const [loginMethod, setLoginMethod] = useState<'email' | 'mobile'>('mobile');
-  const [email, setEmail] = useState('');
+const LoginScreen: React.FC = () => {
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-const [showOTPInput, setShowOTPInput] = useState(false);
-   const [otp, setOtp] = useState('');
-   const [sessionId, setSessionId] = useState('');
-   const otpInputs = React.useRef<Array<TextInput | null>>([]);
-   const { login } = useAuth();
+  const [showOTPInput, setShowOTPInput] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [, setSessionId] = useState('');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const focusValues = React.useRef<Record<string, Animated.Value>>({}).current;
+  const otpInputs = React.useRef<Array<TextInput | null>>([]);
+  const { login } = useAuth();
   const { strings } = useLanguage();
   const scaleValue = React.useRef(new Animated.Value(1)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-  const handleLogin = async () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (loginMethod === 'email') {
-      if (email === '' || password === '') {
-        Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.login?.fillAllFields || 'ದಯವಿಟ್ಟು ಇಮೇಲ್ ಮತ್ತು ಪಾಸ್‌ವರ್ಡ್ ನಮೂದಿಸಿ.');
-        return;
-      }
-      if (!emailRegex.test(email)) {
-        Alert.alert(strings?.common?.error || 'ದೋಷ', strings?.common?.invalidEmail || 'ದಯವಿಟ್ಟು ಮಾನ್ಯವಾದ ಇಮೇಲ್ ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ.');
-        return;
-      }
-      if (password.length < 6) {
-        Alert.alert(strings?.common?.error || 'ದೋಷ', 'ಪಾಸ್‌ವರ್ಡ್ ಕನಿಷ್ಠ 6 ಅಕ್ಷರಗಳಿರಬೇಕು.');
-        return;
-      }
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
-      setIsLoading(true);
-      try {
-        let response;
-        if (loginMethod === 'email') {
-          response = await apiService.login({
-            type: 'email',
-            email,
-            password,
-            fcmToken: 'dkcdkmdedmeidcwd', // This would typically come from FCM device registration
-          });
-        } else {
-          // Mobile login - Direct login with mobile number
-          if (phone === '') {
-            Alert.alert(strings?.common?.error || 'ದೋಷ', 'ದಯವಿಟ್ಟು ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.');
-            return;
-          }
-          // Direct mobile login (OTP will be sent by server)
-          setIsLoading(true);
-          try {
-            const response = await apiService.loginWithMobile({
-              mobile: phone
-            });
-
-            if (response && response.success && response.data) {
-              const { user, token } = response.data;
-              login({
-                ...user,
-                token,
-              });
-
-              Alert.alert(
-                strings?.login?.success || 'ಯಶಸ್ಸು',
-                strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
-              );
-            } else {
-              Alert.alert(
-                strings?.common?.error || 'ದೋಷ',
-                (response?.error) || 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ'
-              );
-            }
-          } catch (error) {
-            Alert.alert(
-              strings?.common?.error || 'ದೋಷ',
-              'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
-            );
-          } finally {
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        if (response && response.success && response.data) {
-          // Login successful
-          const { user, token } = response.data;
-          login({
-            ...user,
-            token,
-          });
-
-          Alert.alert(
-            strings?.login?.success || 'ಯಶಸ್ಸು',
-            strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
-          );
-        } else {
-          Alert.alert(
-            strings?.common?.error || 'ದೋಷ',
-            (response?.error) || 'ಲಾಗಿನ್ ವಿಫಲವಾಗಿದೆ'
-          );
-        }
-      } catch (error) {
-        Alert.alert(
-          strings?.common?.error || 'ದೋಷ',
-          'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // Mobile login validation
-      if (phone === '') {
-        Alert.alert(strings?.common?.error || 'ದೋಷ', 'ದಯವಿಟ್ಟು ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ನಮೂದಿಸಿ.');
-        return;
-      }
-      // Mobile validation is handled in the try block below
-    }
-  };
-
-
-  // Send OTP for mobile login
   const handleSendOTP = async () => {
     const mobileRegex = /^[6-9]\d{9}$/;
     if (!mobileRegex.test(phone)) {
@@ -158,18 +57,14 @@ const [showOTPInput, setShowOTPInput] = useState(false);
         type: 'phone',
       });
 
-      console.log('Send OTP API Response:', response);
-
       if (response.success) {
-        // Store sessionId from response data
         if (response.data?.data?.otpData?.Details) {
           setSessionId(response.data.data.otpData.Details);
-          console.log('Session ID stored:', response.data.data.otpData.Details);
         }
         setShowOTPInput(true);
         Alert.alert(
           strings?.login?.success || 'ಯಶಸ್ಸು',
-          'OTP ಕಳುಹಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ ಬಂದ OTP ನಮೂದಿಸಿ.'
+          'OTP ಕಳುಹಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಮೊಬೆಲ್ ಸಂಖ್ಯೆಗೆ ಬಂದ OTP ನಮೂದಿಸಿ.'
         );
       } else {
         Alert.alert(
@@ -187,7 +82,6 @@ const [showOTPInput, setShowOTPInput] = useState(false);
     }
   };
 
-  // Verify mobile OTP
   const handleVerifyMobileOTP = async () => {
     if (otp.length !== 6) {
       Alert.alert(
@@ -204,8 +98,6 @@ const [showOTPInput, setShowOTPInput] = useState(false);
         otp: otp,
       });
 
-      console.log('Verify Mobile OTP API Response:', response);
-
       if (response.success && response.data) {
         const { user, token } = response.data;
         login({
@@ -218,7 +110,6 @@ const [showOTPInput, setShowOTPInput] = useState(false);
           strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
         );
 
-        // Reset state
         setShowOTPInput(false);
         setOtp('');
         setSessionId('');
@@ -252,202 +143,208 @@ const [showOTPInput, setShowOTPInput] = useState(false);
     }).start();
   };
 
-  const handleForgotPassword = () => {
-    Alert.alert(
-      strings?.login?.forgotPassword || 'ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿದ್ದೀರಾ?',
-      strings?.login?.featureComingSoon || 'ಹೆಚ್ಚುವರಿ ವೈಶಿಷ್ಟ್ಯ ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ!'
-    );
-  };
+  const renderFloatingInput = (
+    icon: string,
+    placeholder: string,
+    value: string,
+    onChangeText: (text: string) => void,
+    fieldKey: string,
+    secureTextEntry?: boolean,
+    keyboardType?: any,
+    maxLength?: number,
+    autoCapitalize?: any
+  ) => {
+    if (!focusValues[fieldKey]) {
+      focusValues[fieldKey] = new Animated.Value(0);
+    }
+    const focusVal = focusValues[fieldKey];
+    const isFocused = focusedField === fieldKey;
+    const shouldFloat = isFocused || value.length > 0;
 
+    const labelTop = focusVal.interpolate({ inputRange: [0, 1], outputRange: [10, -10] });
+    const labelSize = focusVal.interpolate({ inputRange: [0, 1], outputRange: [14, 11] });
+    const labelColor = focusVal.interpolate({
+      inputRange: [0, 1],
+      outputRange: [theme.colors.textSecondary, theme.colors.primary],
+    });
+    const borderColor = focusVal.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(76, 175, 80, 0.15)', theme.colors.primary],
+    });
 
+    const animateFocus = (to: number) => {
+      Animated.timing(focusVal, {
+        toValue: to,
+        duration: 160,
+        useNativeDriver: false,
+      }).start();
+    };
 
-  return (
-    <ScrollView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary} />
-      <View style={styles.header}>
-        {/* <Logo
-          size="medium"
-          showText={true}
-          style={styles.logo}
-        /> */}
-        <Image resizeMode='contain'   style={styles.logo} source={require("../assets/img/logos.jpeg")}/>
-        <Text style={styles.subtitle}>{strings?.login?.welcomeBack || 'NVS ಅಕ್ಕಿ ಮಾಲ್‌ಗೆ ಮರಳಿ ಸ್ವಾಗತ'}</Text>
-      </View>
-      <View style={styles.formContainer}>
-        {/* Login Method Toggle */}
-        <View style={styles.loginMethodContainer}>
-          <TouchableOpacity
-            style={[
-              styles.loginMethodButton,
-              loginMethod === 'email' && styles.loginMethodButtonActive
-            ]}
-            onPress={() => setLoginMethod('email')}
-          >
-            <Text style={[
-              styles.loginMethodText,
-              loginMethod === 'email' && styles.loginMethodTextActive
-            ]}>
-              {strings?.login?.email || 'Email'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.loginMethodButton,
-              loginMethod === 'mobile' && styles.loginMethodButtonActive
-            ]}
-            onPress={() => setLoginMethod('mobile')}
-          >
-            <Text style={[
-              styles.loginMethodText,
-              loginMethod === 'mobile' && styles.loginMethodTextActive
-            ]}>
-              {strings?.profile?.phone || 'Phone'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Email/Phone Input */}
-        <View style={styles.inputContainer}>
-          <View style={styles.iconInput}>
-            <Icon
-              name={loginMethod === 'email' ? 'email' : 'phone'}
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+    return (
+      <View style={styles.inputContainer}>
+        <Animated.View style={[styles.iconInput, { borderColor }]}>
+          <Icon name={icon as any} size={22} color={theme.colors.textSecondary} />
+          <View style={styles.inputInner}>
+            <Animated.Text
+              style={[
+                styles.floatingPlaceholder,
+                { top: labelTop, fontSize: labelSize, color: labelColor },
+              ]}
+            >
+              {placeholder}
+            </Animated.Text>
             <TextInput
               style={styles.input}
-              placeholder={
-                loginMethod === 'email'
-                  ? (strings?.login?.email || 'ಇಮೇಲ್')
-                  : (strings?.profile?.phone || 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ')
-              }
-              value={loginMethod === 'email' ? email : phone}
-              onChangeText={loginMethod === 'email' ? setEmail : setPhone}
-              keyboardType={loginMethod === 'email' ? 'email-address' : 'phone-pad'}
-              autoCapitalize={loginMethod === 'email' ? 'none' : 'words'}
-              maxLength={loginMethod === 'mobile' ? 10 : undefined}
+              value={value}
+              onChangeText={onChangeText}
+              keyboardType={keyboardType}
+              secureTextEntry={secureTextEntry}
+              maxLength={maxLength}
+              autoCapitalize={autoCapitalize}
+              onFocus={() => {
+                setFocusedField(fieldKey);
+                animateFocus(shouldFloat ? 0 : 1);
+              }}
+              onBlur={() => {
+                setFocusedField(null);
+                if (value.length === 0) {
+                  animateFocus(0);
+                }
+              }}
+              placeholderTextColor={theme.colors.textSecondary}
             />
           </View>
-        </View>
-
-        {/* Password Input - Only show for email login */}
-        {loginMethod === 'email' && (
-          <View style={styles.inputContainer}>
-            <View style={styles.iconInput}>
-              <Icon name="lock" size={20} color={theme.colors.textSecondary} />
-              <TextInput
-                style={styles.input}
-                placeholder={strings?.login?.password || 'ಪಾಸ್‌ವರ್ಡ್'}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-        )}
-        <Animated.View style={[styles.loginButtonContainer, { transform: [{ scale: scaleValue }] }]}>
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={loginMethod === 'mobile' ? (showOTPInput ? handleVerifyMobileOTP : handleSendOTP) : handleLogin}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            activeOpacity={0.8}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={theme.colors.card} />
-            ) : (
-              <Text style={styles.loginButtonText}>
-                {loginMethod === 'mobile'
-                  ? (showOTPInput ? (strings?.login?.verifyOTP || 'OTP ಪರಿಶೀಲಿಸಿ') : (strings?.login?.sendOTP || 'OTP ಕಳುಹಿಸಿ'))
-                  : (strings?.login?.login || 'ಲಾಗಿನ್')
-                }
-              </Text>
-            )}
-          </TouchableOpacity>
         </Animated.View>
-        <View style={styles.registerContainer}>
-          <Text style={styles.registerText}>{strings?.login?.noAccount || "ಖಾತೆ ಇಲ್ಲವೇ?"} </Text>
-          <TouchableOpacity onPress={onSwitchToRegister}>
-            <Text style={styles.registerLink}>{strings?.login?.register || 'ನೋಂದಣಿ'}</Text>
-          </TouchableOpacity>
-        </View>
       </View>
-
-{/* OTP Input Modal for Mobile Login */}
-      {showOTPInput && (
-        <View style={styles.otpModal}>
-          <View style={styles.otpContainer}>
-            <Text style={styles.otpTitle}>OTP ಪರಿಶೀಲನೆ</Text>
-            <Text style={styles.otpSubtitle}>
-              ನಿಮ್ಮ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಗೆ ಕಳುಹಿಸಿದ 6 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ{'\n'}{phone}
-            </Text>
-
-            <View style={styles.otpInputContainer}>
-              {Array(6).fill(0).map((_, index) => (
-                <TextInput
-                  key={index}
-                  style={[styles.otpBox, otp[index] ? styles.otpBoxFilled : null]}
-                  value={otp[index] || ''}
-                  onChangeText={(text) => {
-                    if (text.length <= 1 && /^\d*$/.test(text)) {
-                      const newOtp = otp.padEnd(6, ' ').split('');
-                      newOtp[index] = text;
-                      setOtp(newOtp.join('').replace(/ /g, ''));
-                      if (text && index < 5) {
-                        otpInputs.current[index + 1]?.focus();
-                      }
-                    }
-                  }}
-                  onKeyPress={({ nativeEvent }) => {
-                    if (nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
-                      otpInputs.current[index - 1]?.focus();
-                    }
-                  }}
-                  keyboardType="numeric"
-                  maxLength={1}
-                  autoFocus={index === 0}
-                  ref={(ref) => {
-                    if (ref) {
-                      otpInputs.current[index] = ref;
-                    }
-                  }}
-                />
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
-              onPress={handleVerifyMobileOTP}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color={theme.colors.card} />
-              ) : (
-                <Text style={styles.verifyButtonText}>
-                  {strings?.login?.verifyOTP || 'OTP ಪರಿಶೀಲಿಸಿ'}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => {
-                setShowOTPInput(false);
-                setOtp('');
-                setSessionId('');
-              }}
-            >
-              <Text style={styles.closeButtonText}>ರದ್ದುಗೊಳಿಸಿ</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      </ScrollView>
     );
   };
+
+  const renderPrimaryButton = (label: string, onPress: () => void) => (
+    <Animated.View style={{ transform: [{ scale: scaleValue }] }}>
+      <TouchableOpacity
+        style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.8}
+        disabled={isLoading}
+      >
+        <LinearGradient
+          colors={['#1b50aa', '#3d81e8']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.loginButtonGradient, isLoading && styles.loginButtonGradientDisabled]}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.colors.card} />
+          ) : (
+            <Text style={styles.loginButtonText}>{label}</Text>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary} />
+      <LinearGradient
+        colors={['#1b50aa', '#3d81e8']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.logoWrap}>
+          <Logo size="large" showText={true} variant="circular" style={styles.logo} />
+        </View>
+        <Text style={styles.subtitle}>
+          {strings?.login?.welcomeBack || 'NVS ಅಕ್ಕಿ ಮಾಲ್‌ಗೆ ಮರಳಿ ಸ್ವಾಗತ'}
+        </Text>
+        <Text style={styles.tagline}>Fresh Rice, Delivered to Your Door</Text>
+      </LinearGradient>
+
+      <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
+        <View style={styles.phoneHint}>
+          <Icon name="info-outline" size={16} color={theme.colors.primary} />
+          <Text style={styles.phoneHintText}>
+            {strings?.login?.mobileLoginNote || 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ ಮತ್ತು OTP ಮೂಲಕ ಲಾಗಿನ್ ಮಾಡಿ'}
+          </Text>
+        </View>
+
+        {renderFloatingInput(
+          'phone',
+          strings?.profile?.phone || 'ಮೊಬೆಲ್ ಸಂಖ್ಯೆ',
+          phone,
+          setPhone,
+          'phone',
+          false,
+          'phone-pad',
+          10,
+          'none'
+        )}
+
+        {/* Inline OTP Input */}
+        {showOTPInput && (
+          <View style={styles.otpSection}>
+            <View style={styles.otpInputContainer}>
+              {Array(6)
+                .fill(0)
+                .map((_, index) => (
+                  <TextInput
+                    key={index}
+                    style={[
+                      styles.otpBox,
+                      otp[index] ? styles.otpBoxFilled : null,
+                      focusedField === `otp${index}` && styles.otpBoxFocused,
+                    ]}
+                    value={otp[index] || ''}
+                    onChangeText={(text) => {
+                      if (text.length <= 1 && /^\d*$/.test(text)) {
+                        const newOtp = otp.padEnd(6, ' ').split('');
+                        newOtp[index] = text;
+                        setOtp(newOtp.join('').replace(/ /g, ''));
+                        if (text && index < 5) {
+                          otpInputs.current[index + 1]?.focus();
+                        }
+                        setFocusedField(`otp${index}`);
+                      }
+                    }}
+                    onKeyPress={({ nativeEvent }) => {
+                      if (nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
+                        otpInputs.current[index - 1]?.focus();
+                      }
+                    }}
+                    keyboardType="numeric"
+                    maxLength={1}
+                    autoFocus={index === 0}
+                    onFocus={() => setFocusedField(`otp${index}`)}
+                    onBlur={() => setFocusedField(null)}
+                    ref={(ref) => {
+                      if (ref) {
+                        otpInputs.current[index] = ref;
+                      }
+                    }}
+                  />
+                ))}
+            </View>
+            <TouchableOpacity onPress={handleSendOTP} activeOpacity={0.6} style={styles.resendRow}>
+              <Text style={styles.resendOtp}>
+                {strings?.login?.resendOTP || 'ಮರುಗಮನಿಸಿ OTP'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {renderPrimaryButton(
+          showOTPInput
+            ? (strings?.login?.verifyOTP || 'OTP ಪರಿಶೀಲಿಸಿ')
+            : (strings?.login?.sendOTP || 'OTP ಕಳುಹಿಸಿ'),
+          showOTPInput ? handleVerifyMobileOTP : handleSendOTP
+        )}
+      </Animated.View>
+    </ScrollView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -458,21 +355,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: theme.spacing.xlarge * 1.5,
     paddingHorizontal: theme.spacing.large,
-    backgroundColor: theme.colors.primary,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    marginBottom: theme.spacing.large,
     ...theme.shadows.card,
     elevation: 8,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+  },
+  logoWrap: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 60,
+    padding: theme.spacing.small,
+    marginBottom: theme.spacing.medium,
   },
   logo: {
-    marginBottom: theme.spacing.medium,
-   height:100,
-   borderRadius:24
+    width: 140,
+    height: 140,
   },
   subtitle: {
     fontSize: theme.fonts.size.large,
@@ -481,14 +377,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
     fontFamily: theme.fonts.family.medium,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+  },
+  tagline: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.card,
+    opacity: 0.75,
+    marginTop: theme.spacing.small,
+    fontStyle: 'italic',
+  },
+  phoneHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    marginBottom: theme.spacing.large,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: theme.spacing.medium,
+    paddingVertical: theme.spacing.small,
+    borderRadius: theme.borderRadius.large,
+  },
+  phoneHintText: {
+    fontSize: theme.fonts.size.small,
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.family.medium,
   },
   formContainer: {
     flex: 1,
     paddingHorizontal: theme.spacing.large,
-    paddingBottom: theme.spacing.large,
+    paddingTop: theme.spacing.xlarge,
   },
   inputContainer: {
     marginBottom: theme.spacing.large,
@@ -501,210 +418,106 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.large,
     paddingVertical: theme.spacing.medium,
     ...theme.shadows.card,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.1)',
+  },
+  inputInner: {
+    flex: 1,
+    marginLeft: theme.spacing.medium,
   },
   input: {
     flex: 1,
-    marginLeft: theme.spacing.medium,
     fontSize: theme.fonts.size.large,
     color: theme.colors.text,
     fontFamily: theme.fonts.family.regular,
-    paddingVertical: theme.spacing.small,
+    paddingVertical: 0,
+    minHeight: 20,
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: theme.spacing.large,
-    paddingVertical: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.borderRadius.medium,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-  },
-  forgotPasswordText: {
-    color: theme.colors.primary,
-    fontSize: theme.fonts.size.medium,
-    fontWeight: theme.fonts.weight.bold,
-    fontFamily: theme.fonts.family.medium,
-  },
-  loginButtonContainer: {
-    marginVertical: theme.spacing.large,
+  floatingPlaceholder: {
+    position: 'absolute',
+    left: 0,
+    backgroundColor: 'transparent',
   },
   loginButton: {
-    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.large,
+    overflow: 'hidden',
+    marginVertical: theme.spacing.large,
+    ...theme.shadows.card,
+    elevation: 6,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginButtonGradient: {
     paddingVertical: theme.spacing.large,
     paddingHorizontal: theme.spacing.xlarge,
     borderRadius: theme.borderRadius.large,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 55,
-    ...theme.shadows.card,
-    elevation: 6,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    flexDirection: 'row',
+    gap: 8,
   },
-  loginButtonDisabled: {
-    backgroundColor: theme.colors.textSecondary,
-    opacity: 0.6,
+  loginButtonGradientDisabled: {
+    opacity: 0.8,
   },
   loginButtonText: {
     color: theme.colors.card,
     fontSize: theme.fonts.size.large,
     fontWeight: theme.fonts.weight.bold,
     fontFamily: theme.fonts.family.bold,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: theme.spacing.large,
-    paddingVertical: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.large,
-    borderRadius: theme.borderRadius.large,
-    backgroundColor: 'rgba(76, 175, 80, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.2)',
-  },
-  registerText: {
-    color: theme.colors.textSecondary,
-    fontSize: theme.fonts.size.medium,
-    fontFamily: theme.fonts.family.regular,
-  },
-  registerLink: {
-    color: theme.colors.primary,
-    fontSize: theme.fonts.size.medium,
-    fontWeight: theme.fonts.weight.bold,
-    marginLeft: theme.spacing.small,
-    fontFamily: theme.fonts.family.bold,
-    textDecorationLine: 'underline',
-  },
-  loginMethodContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    borderRadius: theme.borderRadius.large,
-    padding: 4,
-    marginBottom: theme.spacing.large,
-  },
-  loginMethodButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-    borderRadius: theme.borderRadius.medium,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-  },
-  loginMethodButtonActive: {
-    backgroundColor: theme.colors.primary,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  loginMethodText: {
-    fontSize: theme.fonts.size.medium,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textSecondary,
-    fontFamily: theme.fonts.family.medium,
-  },
-  loginMethodTextActive: {
-    color: theme.colors.card,
-    fontWeight: theme.fonts.weight.bold,
-    fontFamily: theme.fonts.family.bold,
-  },
-  otpModal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  otpContainer: {
+  otpSection: {
     backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius.large,
-    padding: theme.spacing.xlarge,
-    margin: theme.spacing.large,
-    width: '90%',
-    maxWidth: 400,
-    alignItems: 'center',
-  },
-  otpTitle: {
-    fontSize: theme.fonts.size.xlarge,
-    fontWeight: theme.fonts.weight.bold,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.small,
-    fontFamily: theme.fonts.family.bold,
-  },
-  otpSubtitle: {
-    fontSize: theme.fonts.size.medium,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
-marginBottom: theme.spacing.xlarge,
-    fontFamily: theme.fonts.family.regular,
+    padding: theme.spacing.large,
+    marginBottom: theme.spacing.large,
+    ...theme.shadows.card,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(27, 80, 170, 0.1)',
   },
   otpInputContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.xlarge,
-    gap:10
+    gap: 8,
+    marginBottom: theme.spacing.medium,
   },
   otpBox: {
-    width: 45,
+    flex: 1,
     height: 55,
     borderWidth: 1,
-    borderColor: 'rgba(76, 175, 80, 0.3)',
+    borderColor: 'rgba(27, 80, 170, 0.3)',
     borderRadius: theme.borderRadius.medium,
     fontSize: theme.fonts.size.xlarge,
     color: theme.colors.text,
     fontFamily: theme.fonts.family.bold,
     textAlign: 'center',
     backgroundColor: theme.colors.background,
+    paddingVertical: 0,
+  },
+  otpBoxFocused: {
+    borderColor: theme.colors.primary,
+    backgroundColor: 'rgba(27, 80, 170, 0.05)',
   },
   otpBoxFilled: {
     borderColor: theme.colors.primary,
-    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+    backgroundColor: 'rgba(27, 80, 170, 0.05)',
   },
-  verifyButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.xlarge,
-    borderRadius: theme.borderRadius.large,
-    marginBottom: theme.spacing.medium,
-    minWidth: 150,
-    alignItems: 'center',
+  resendRow: {
+    alignSelf: 'center',
   },
-  verifyButtonDisabled: {
-    backgroundColor: theme.colors.textSecondary,
-    opacity: 0.6,
-  },
-  verifyButtonText: {
-    color: theme.colors.card,
-    fontSize: theme.fonts.size.large,
-    fontWeight: theme.fonts.weight.bold,
-    fontFamily: theme.fonts.family.bold,
-  },
-  closeButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: theme.spacing.small,
-    paddingHorizontal: theme.spacing.medium,
-  },
-  closeButtonText: {
-    color: theme.colors.textSecondary,
+  resendOtp: {
+    color: theme.colors.primary,
     fontSize: theme.fonts.size.medium,
-    fontWeight: theme.fonts.weight.medium,
     fontFamily: theme.fonts.family.medium,
+    textAlign: 'center',
   },
 });
 

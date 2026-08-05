@@ -25,6 +25,7 @@ import Logo from '../components/Logo';
 import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
 import Statusbar from '../constants/Statusbar';
+import { locationService, LocationData } from '../utils/locationService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -226,10 +227,8 @@ const ProductItem: React.FC<ProductItemProps> = ({
       }
     } catch (error) {
       console.error('❌ HomeScreen - Error in handleAddToCart:', error);
-
       // Fallback to local cart update
       onAddToCart(item);
-
       Alert.alert(
         'Network Error ⚠️',
         `${item.name} added locally. Server sync will happen when online.`,
@@ -628,6 +627,9 @@ const HomeScreen: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const scrollViewRef = useRef<any>(null);
+  const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
+  const [locationAddress, setLocationAddress] = useState<string>('');
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   // Animated text for scrolling effect
   const animatedTextValue = useRef(new Animated.Value(0)).current;
@@ -734,6 +736,39 @@ const HomeScreen: React.FC = () => {
     setHasMore(true);
     fetchProductsByCategory(1, false);
   }, [selectedCategory]);
+
+  // Fetch current location on mount
+  useEffect(() => {
+    getCurrentUserLocation();
+  }, []);
+
+  const getCurrentUserLocation = async () => {
+    setIsFetchingLocation(true);
+    try {
+      const hasPermission = await locationService.requestLocationPermission('home');
+      if (!hasPermission) {
+        setLocationAddress('Enable location for better experience');
+        setIsFetchingLocation(false);
+        return;
+      }
+
+      const location = await locationService.getCurrentPosition('home');
+      if (location) {
+        setCurrentLocation(location);
+        const addressData = await locationService.reverseGeocode(location.latitude, location.longitude);
+        if (addressData.address) {
+          setLocationAddress(addressData.address);
+        } else {
+          setLocationAddress(`${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`);
+        }
+      }
+    } catch (error) {
+      console.error('Home location error:', error);
+      setLocationAddress('Location unavailable');
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  };
 
   const fetchProductsByCategory = async (
     currentPage = 1,
@@ -1024,6 +1059,32 @@ const HomeScreen: React.FC = () => {
           )}
         </TouchableOpacity>
       </View>
+      {currentLocation && (
+        <TouchableOpacity
+          style={styles.currentLocationContainer}
+          onPress={getCurrentUserLocation}
+          disabled={isFetchingLocation}
+        >
+          <Icon name="my-location" size={18} color={theme.colors.primary} />
+          <Text style={styles.currentLocationText} numberOfLines={1}>
+            {isFetchingLocation
+              ? 'Updating location...'
+              : locationAddress || 'Current location'}
+          </Text>
+          <Icon name="refresh" size={16} color={theme.colors.primary} />
+        </TouchableOpacity>
+      )}
+      {!currentLocation && !isFetchingLocation && (
+        <TouchableOpacity
+          style={[styles.currentLocationContainer, styles.locationDisabled]}
+          onPress={getCurrentUserLocation}
+        >
+          <Icon name="location-off" size={18} color={theme.colors.error} />
+          <Text style={[styles.currentLocationText, styles.locationDisabledText]}>
+            {locationAddress || 'Tap to enable location'}
+          </Text>
+        </TouchableOpacity>
+      )}
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
@@ -1031,14 +1092,6 @@ const HomeScreen: React.FC = () => {
       >
         <View style={styles.headerContainer}>
           {/* Delivery Area Message */}
-          <View style={styles.deliveryMessageContainer}>
-            <Icon name="location-on" size={30} color={theme.colors.primary} />
-            <Text style={styles.deliveryMessageText}>
-              Delivery available only in Davanagere: 577001, 577002, 577003,
-              577004, 577005, 577006
-            </Text>
-          </View>
-
           <View style={styles.searchContainer}>
             <Icon
               name="search"
@@ -1437,7 +1490,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingVertical: theme.spacing.small,
     paddingHorizontal: theme.spacing.small + 4,
-    borderRadius: 20,
+    borderRadius: 7,
     width: '100%',
     justifyContent: 'center',
     shadowColor: theme.colors.primary,
@@ -1733,6 +1786,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     overflow: 'hidden',
     flex: 1,
+  },
+  currentLocationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFEF5',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(164, 148, 61, 0.2)',
+    marginTop: 8,
+    gap: 8,
+  },
+  currentLocationText: {
+    flex: 1,
+    fontSize: theme.fonts.size.small + 1,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.family.medium,
+  },
+  locationDisabled: {
+    backgroundColor: '#FFF5F5',
+    borderColor: 'rgba(229, 57, 53, 0.3)',
+  },
+  locationDisabledText: {
+    color: theme.colors.error,
   },
 });
 

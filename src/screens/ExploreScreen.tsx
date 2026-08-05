@@ -10,10 +10,11 @@ import {
   TextInput,
   Animated,
   ActivityIndicator,
-  Alert
+  Alert,
 } from 'react-native'
-import React, { useState, useEffect } from 'react'
-import Ionicons from "react-native-vector-icons/Ionicons"
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import Ionicons from 'react-native-vector-icons/Ionicons'
+import LinearGradient from 'react-native-linear-gradient'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useNavigation } from '@react-navigation/native'
 import { useCart } from '../context/CartContext'
@@ -23,7 +24,7 @@ import HeaderSkeleton from '../components/HeaderSkeleton'
 import BannerSkeleton from '../components/BannerSkeleton'
 import { theme } from '../constants/theme'
 
-
+const GRADIENT_COLORS: string[] = ['#1b50aa', '#3d81e8']
 
 export default function ExploreScreen() {
   const { addToCart, addOrUpdateToCart } = useCart()
@@ -33,14 +34,13 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState<any>('')
   const [activeCategory, setActiveCategory] = useState('All')
   const [refreshing, setRefreshing] = useState(false)
-  const [refreshLoading, setRefreshLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const fadeAnim = useState(new Animated.Value(0))[0]
+  const searchFocusAnim = useState(new Animated.Value(0))[0]
 
-  // Fetch products from API with pagination
-  const fetchProducts = async (currentPage = 1, isLoadMore = false) => {
+  const fetchProducts = useCallback(async (currentPage = 1, isLoadMore = false) => {
     try {
       const storedToken = await AsyncStorage.getItem('userToken')
 
@@ -74,7 +74,7 @@ export default function ExploreScreen() {
           brand: product.brand,
           description: product.description,
           weight: `${product.weightInKg}kg`,
-          rating: 4.5, // You can add rating to your API or calculate dynamically
+          rating: 4.5,
           isFavorite: false,
           stockQuantity: product.stockQuantity,
           sku: product.SKU
@@ -86,14 +86,12 @@ export default function ExploreScreen() {
           setProducts(formattedProducts)
         }
 
-        // Check if there are more pages
         if (formattedProducts.length < 10) {
           setHasMore(false)
         } else {
           setHasMore(true)
         }
 
-        // Fade in animation only for initial load
         if (!isLoadMore) {
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -110,19 +108,18 @@ export default function ExploreScreen() {
     } finally {
       setLoading(false)
       setRefreshing(false)
-      setRefreshLoading(false)
       setLoadingMore(false)
     }
-  }
+  }, [fadeAnim])
+
   useEffect(() => {
     setPage(1)
     setHasMore(true)
     fetchProducts(1, false)
-  }, [])
+  }, [fetchProducts])
 
   const onRefresh = () => {
     setRefreshing(true)
-    setRefreshLoading(true)
     setPage(1)
     setHasMore(true)
     fetchProducts(1, false)
@@ -137,7 +134,6 @@ export default function ExploreScreen() {
   }
 
   const handleProductPress = (item: any) => {
-    // Navigate to ProductDetails screen (now available in main tabs)
     (navigation as any).navigate('ProductDetails', { product: item });
   };
 
@@ -150,20 +146,19 @@ export default function ExploreScreen() {
   }
 
   const handleAddToCart = async (product: any) => {
-    // Transform product to match Product interface
     const productForCart: Product = {
       id: product.id,
       name: product.name,
-      price: parseInt(product.price.replace('₹', '')), // Convert "₹800" to 800
+      price: parseInt(product.price.replace('₹', ''), 10),
       description: product.description || '',
       image: product.image,
       category: product.category,
       weight: product.weight,
       brand: product.brand,
       rating: product.rating || 4.5,
-      reviewCount: 0, // Default since not in API
+      reviewCount: 0,
       inStock: product.stockQuantity > 0,
-      discount: 0, // Default since not in API
+      discount: 0,
       nutritionInfo: {
         calories: '130 kcal',
         protein: '2.7 g',
@@ -184,16 +179,11 @@ export default function ExploreScreen() {
       console.log('🛒 Explore - Product ID:', product.id);
       console.log('🛒 Explore - Quantity: 1');
 
-      // Call the cart API to add/update item
       const success = await addOrUpdateToCart(product.id, 1);
 
       if (success) {
         console.log('✅ Explore - Cart API call successful');
-
-        // Also update local cart for immediate UI feedback
         addToCart(productForCart);
-
-        // Show success feedback
         Alert.alert(
           'Success! 🎉',
           `${product.name} added to cart!`,
@@ -205,7 +195,6 @@ export default function ExploreScreen() {
             {
               text: 'View Cart',
               onPress: () => {
-                // Navigate to cart tab
                 navigation.getParent()?.navigate('Cart');
               }
             }
@@ -213,11 +202,7 @@ export default function ExploreScreen() {
         );
       } else {
         console.log('❌ Explore - Cart API call failed');
-
-        // Still update local cart as fallback
         addToCart(productForCart);
-
-        // Show partial success feedback
         Alert.alert(
           'Partial Success ⚠️',
           `${product.name} added locally but server sync failed.`,
@@ -237,9 +222,7 @@ export default function ExploreScreen() {
       }
     } catch (error) {
       console.error('❌ Explore - Error in handleAddToCart:', error);
-      // Fallback to local cart update
       addToCart(productForCart);
-
       Alert.alert(
         'Network Error ⚠️',
         `${product.name} added locally. Server sync will happen when online.`,
@@ -259,7 +242,53 @@ export default function ExploreScreen() {
     }
   }
 
-  const renderProductItem = ({ item, index }: any) => (
+  const categories = useMemo(() => {
+    const cats = ['All']
+    products.forEach((p: any) => {
+      if (p.category && !cats.includes(p.category)) {
+        cats.push(p.category)
+      }
+    })
+    return cats
+  }, [products])
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product: any) => {
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.brand.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = activeCategory === 'All' ||
+        product.category === activeCategory ||
+        product.name.toLowerCase().includes(activeCategory.toLowerCase())
+      return matchesSearch && matchesCategory
+    })
+  }, [products, searchQuery, activeCategory])
+
+  const renderCategoryItem = ({ item }: { item: string }) => {
+    const isActive = item === activeCategory
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => {
+          setActiveCategory(item)
+          Animated.spring(searchFocusAnim, { toValue: 0, useNativeDriver: false }).start()
+        }}
+        style={[
+          styles.categoryButton,
+          isActive && styles.categoryButtonActive,
+        ]}
+      >
+        {isActive ? (
+          <LinearGradient colors={GRADIENT_COLORS} style={styles.categoryButtonGradient}>
+            <Text style={[styles.categoryButtonText, styles.categoryButtonTextActive]}>{item}</Text>
+          </LinearGradient>
+        ) : (
+          <Text style={styles.categoryButtonText}>{item}</Text>
+        )}
+      </TouchableOpacity>
+    )
+  }
+
+  const renderProductItem = ({ item }: any) => (
     <Animated.View
       style={[
         styles.productCard,
@@ -275,60 +304,38 @@ export default function ExploreScreen() {
       ]}
     >
       <TouchableOpacity onPress={() => handleProductPress(item)}>
-
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={() => toggleFavorite(item.id)}
-        >
-          <Ionicons
-            name={item.isFavorite ? "heart" : "heart-outline"}
-            size={20}
-            color={item.isFavorite ? "#FF6B6B" : "#666"}
+        <View style={styles.imageWrap}>
+          {item.stockQuantity === 0 && <View style={styles.soldOutOverlay} />}
+          <Image
+            source={{ uri: item.image }}
+            style={[
+              styles.productImage,
+              item.stockQuantity === 0 && styles.outOfStockImage
+            ]}
+            resizeMode="cover"
+            defaultSource={require('../assets/img/logos.jpeg')}
           />
-        </TouchableOpacity>
-
-        {/* Stock Status Badge */}
-        {item.stockQuantity <= 10 && item.stockQuantity > 0 && (
-          <View style={styles.lowStockBadge}>
-            <Text style={styles.lowStockText}>Low Stock</Text>
-          </View>
-        )}
-
-        {item.stockQuantity === 0 && (
-          <View style={styles.outOfStockBadge}>
-            <Text style={styles.outOfStockText}>Out of Stock</Text>
-          </View>
-        )}
-
-        <Image
-          source={{ uri: item.image }}
-          style={[
-            styles.productImage,
-            item.stockQuantity === 0 && styles.outOfStockImage
-          ]}
-          resizeMode="cover"
-          defaultSource={require('../assets/img/logo.png')} // Add a placeholder image
-        />
-
+          {item.stockQuantity === 0 && (
+            <View style={styles.soldOutBadge}>
+              <Text style={styles.soldOutBadgeText}>Sold Out</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.productInfo}>
           <Text style={styles.productBrand} numberOfLines={1}>{item.brand}</Text>
           <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={14} color="#FFD700" />
             <Text style={styles.ratingText}>{item.rating}</Text>
+            <Text style={styles.reviewCount}>({42})</Text>
           </View>
-
           <View style={styles.priceWeightContainer}>
             <Text style={styles.productPrice}>{item.price}</Text>
             <Text style={styles.productWeight}>{item.weight}</Text>
           </View>
-
           <View style={styles.categoryTag}>
             <Text style={styles.categoryText}>{item.category}</Text>
           </View>
-
-          {/* Stock Information */}
           <Text style={[
             styles.stockText,
             item.stockQuantity === 0 ? styles.outOfStockText :
@@ -336,8 +343,6 @@ export default function ExploreScreen() {
           ]}>
             {item.stockQuantity === 0 ? 'Out of Stock' : `${item.stockQuantity} in stock`}
           </Text>
-
-          {/* Add to Cart Button */}
           <TouchableOpacity
             style={[
               styles.addToCartButton,
@@ -346,11 +351,13 @@ export default function ExploreScreen() {
             onPress={() => handleAddToCart(item)}
             disabled={item.stockQuantity === 0}
           >
-            <Ionicons
-              name={item.stockQuantity === 0 ? "close-circle" : "add-circle"}
-              size={16}
-              color={item.stockQuantity === 0 ? "#ccc" : "white"}
-            />
+            {item.stockQuantity === 0 ? (
+              <Ionicons name="close-circle" size={16} color="#ccc" />
+            ) : (
+              <LinearGradient colors={GRADIENT_COLORS} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.cartIconGradient}>
+                <Ionicons name="add-circle" size={18} color="white" />
+              </LinearGradient>
+            )}
             <Text style={[
               styles.addToCartButtonText,
               item.stockQuantity === 0 && styles.addToCartButtonTextDisabled
@@ -359,22 +366,30 @@ export default function ExploreScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={[styles.favoriteButton, item.isFavorite && styles.favoriteButtonFilled]}
+          onPress={() => toggleFavorite(item.id)}
+        >
+          <Ionicons
+            name={item.isFavorite ? 'heart' : 'heart-outline'}
+            size={20}
+            color={item.isFavorite ? '#FF6B6B' : '#666'}
+          />
+        </TouchableOpacity>
+
+        {item.stockQuantity > 0 && item.stockQuantity <= 10 && (
+          <View style={styles.lowStockWrap}>
+            <Text style={styles.lowStockText}>Low Stock</Text>
+          </View>
+        )}
       </TouchableOpacity>
     </Animated.View>
   )
-
-  const filteredProducts = products.filter((product: any) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = activeCategory === 'All' ||
-      product.category === activeCategory ||
-      product.name.toLowerCase().includes(activeCategory.toLowerCase())
-    return matchesSearch && matchesCategory
-  })
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor={theme.colors.card} />
         <HeaderSkeleton animatedValue={fadeAnim} />
         <BannerSkeleton animatedValue={fadeAnim} />
         <SkeletonLoader count={8} />
@@ -384,51 +399,97 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-  
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.card} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient
+        colors={GRADIENT_COLORS}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.header}
+      >
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Discover</Text>
+          <View>
+            <Text style={styles.headerTitle}>Discover</Text>
+            <Text style={styles.headerSubtitle}>Fresh rice varieties & grocery</Text>
+          </View>
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => navigation.navigate('Notifications')}
           >
-            <Ionicons name="notifications-outline" size={24} color="#333" />
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
             <View style={styles.notificationBadge} />
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <Animated.View
+          style={[
+            styles.searchContainer,
+            {
+              borderColor: searchFocusAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['rgba(255,255,255,0.3)', theme.colors.primary],
+              }),
+              shadowOpacity: searchFocusAnim,
+            },
+          ]}
+        >
+          <Ionicons name="search" size={20} color="rgba(255,255,255,0.6)" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
+            placeholderTextColor="rgba(255,255,255,0.6)"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
+            onFocus={() => Animated.timing(searchFocusAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start()}
+            onBlur={() => Animated.timing(searchFocusAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start()}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#999" />
+              <Ionicons name="close-circle" size={20} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
           )}
-        </View>
-      </View>
+        </Animated.View>
+      </LinearGradient>
 
-      {/* Attractive Banner */}
-      {/* <AttractiveBanner
-        onBannerPress={(banner) => {
-          console.log('Banner pressed:', banner.title);
-          // Add your navigation logic here
-        }}
-      /> */}
+      {/* Promotional Banner */}
+      <LinearGradient
+        colors={['#FFF9C4', '#FFE082']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.banner}
+      >
+        <View style={styles.bannerContent}>
+          <Text style={styles.bannerTitle}>NVS RICE MART</Text>
+          <Text style={styles.bannerSubtitle}>Handpicked grains from Punjab farms</Text>
+          <TouchableOpacity style={styles.bannerButton} activeOpacity={0.8}>
+            <Text style={styles.bannerButtonText}>Shop Now</Text>
+          </TouchableOpacity>
+        </View>
+        <Image
+          source={require('../assets/img/logos.jpeg')}
+          style={styles.bannerImage}
+          resizeMode="contain"
+        />
+      </LinearGradient>
+
+      {/* Category Filter */}
+      <View style={styles.categoriesContainer}>
+        <FlatList
+          data={categories}
+          renderItem={renderCategoryItem}
+          keyExtractor={(item) => item}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesList}
+        />
+      </View>
 
       <FlatList
         data={filteredProducts}
         renderItem={renderProductItem}
-        keyExtractor={item => item.id}
+        keyExtractor={(item: any) => item.id}
         numColumns={2}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.productsList}
@@ -437,7 +498,7 @@ export default function ExploreScreen() {
         onRefresh={onRefresh}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color="#6366F1" /> : null}
+        ListFooterComponent={loadingMore ? <ActivityIndicator size="large" color={theme.colors.primary} /> : null}
         ListEmptyComponent={
           searchQuery || activeCategory !== 'All' ? (
             <View style={styles.emptyContainer}>
@@ -459,15 +520,13 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    marginBottom: 60
+    backgroundColor: theme.colors.background,
   },
   header: {
     padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerTop: {
     flexDirection: 'row',
@@ -478,7 +537,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color:theme.colors.primary,
+    color: 'white',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 2,
   },
   notificationButton: {
     padding: 8,
@@ -496,77 +560,114 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
     height: 50,
+    borderWidth: 1,
   },
   searchIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: 'white',
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 16,
+    padding: 18,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+  },
+  bannerContent: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  bannerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#5a4500',
+    marginBottom: 2,
+  },
+  bannerSubtitle: {
+    fontSize: 12,
+    color: '#7a6620',
+    marginBottom: 8,
+  },
+  bannerButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  bannerButtonText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  bannerImage: {
+    width: 80,
+    height: 80,
   },
   categoriesContainer: {
-    paddingVertical: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.card,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   categoriesList: {
     paddingHorizontal: 20,
+    gap: 10,
   },
   categoryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderRadius: 20,
-    backgroundColor: '#f8f8f8',
-    marginRight: 8,
+    backgroundColor: '#f4f6fb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(27, 80, 170, 0.08)',
+  },
+  categoryButtonGradient: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
   },
   categoryButtonActive: {
-    backgroundColor: '#980747',
+    backgroundColor: theme.colors.primary,
   },
   categoryButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#666',
+    textTransform: 'capitalize',
   },
   categoryButtonTextActive: {
     color: 'white',
   },
-  resultsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: 'white',
-  },
-  resultsText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
   productsList: {
     padding: 16,
     paddingTop: 8,
-
+    paddingBottom: 32,
   },
   columnWrapper: {
     justifyContent: 'space-between',
     marginBottom: 16,
-
   },
   productCard: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.card,
     borderRadius: 16,
     padding: 12,
     margin: 4,
@@ -577,57 +678,17 @@ const styles = StyleSheet.create({
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 6,
     borderWidth: 1,
     borderColor: '#f0f0f0',
     position: 'relative',
-
   },
-  favoriteButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    zIndex: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    padding: 6,
-  },
-  lowStockBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    zIndex: 2,
-    backgroundColor: '#FFF3CD',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  outOfStockBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    zIndex: 2,
-    backgroundColor: '#F8D7DA',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  lowStockText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#856404',
-  },
-  outOfStockText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#721C24',
-  },
-  inStockText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#155724',
+  imageWrap: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   productImage: {
     width: '100%',
@@ -638,6 +699,45 @@ const styles = StyleSheet.create({
   outOfStockImage: {
     opacity: 0.5,
   },
+  soldOutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  soldOutBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  soldOutBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  lowStockWrap: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 7,
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 6,
+  },
+  favoriteButtonFilled: {
+    backgroundColor: 'rgba(255, 255, 255, 1)',
+  },
   productInfo: {
     paddingHorizontal: 4,
   },
@@ -646,7 +746,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 2,
     fontWeight: '500',
-    textTransform: "capitalize"
+    textTransform: 'capitalize',
   },
   productName: {
     fontSize: 14,
@@ -654,8 +754,7 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 6,
     lineHeight: 18,
-    textTransform: "capitalize"
-
+    textTransform: 'capitalize',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -668,6 +767,11 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 4,
   },
+  reviewCount: {
+    fontSize: 11,
+    color: '#999',
+    marginLeft: 4,
+  },
   priceWeightContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -675,7 +779,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   productPrice: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
     color: theme.colors.primary,
   },
@@ -695,12 +799,53 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#6366F1',
+    color: theme.colors.primary,
     textTransform: 'uppercase',
   },
   stockText: {
     fontSize: 10,
     fontWeight: '500',
+  },
+  lowStockText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#856404',
+  },
+  outOfStockText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#721C24',
+  },
+  inStockText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#155724',
+  },
+  addToCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    gap: 5,
+  },
+  addToCartButtonDisabled: {
+    backgroundColor: '#f0f0f0',
+  },
+  cartIconGradient: {
+    borderRadius: 10,
+    padding: 2,
+  },
+  addToCartButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  addToCartButtonTextDisabled: {
+    color: '#ccc',
   },
   emptyContainer: {
     flex: 1,
@@ -719,27 +864,5 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     textAlign: 'center',
-  },
-  addToCartButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor:theme.colors.primary,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginTop: 8,
-  },
-  addToCartButtonDisabled: {
-    backgroundColor: '#f0f0f0',
-  },
-  addToCartButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  addToCartButtonTextDisabled: {
-    color: '#ccc',
   },
 })

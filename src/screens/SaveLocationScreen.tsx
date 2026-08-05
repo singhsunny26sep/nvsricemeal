@@ -359,6 +359,12 @@ const [locations, setLocations] = useState<Location[]>([]);
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
+         <TouchableOpacity
+              style={styles.createButtonLarge}
+              onPress={handleCreateLocation}
+            >
+              <Text style={styles.createButtonText}>+ Create Location</Text>
+            </TouchableOpacity>
       </View>
     );
   }
@@ -368,8 +374,18 @@ const [locations, setLocations] = useState<Location[]>([]);
       <Statusbar/>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Saved Locations</Text>
-          <TouchableOpacity 
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="chevron-left" size={28} color={theme.colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Saved Locations</Text>
+          </View>
+          <TouchableOpacity
             style={styles.createButton}
             onPress={handleCreateLocation}
           >
@@ -458,6 +474,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.small,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.small,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(27, 80, 170, 0.1)',
   },
   createButton: {
     backgroundColor: theme.colors.primary,

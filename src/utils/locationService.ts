@@ -1,4 +1,4 @@
-import Geolocation from '@react-native-community/geolocation';
+import GetLocation from 'react-native-get-location';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { PERMISSIONS, request, RESULTS } from 'react-native-permissions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,26 +18,43 @@ class LocationService {
       await locationLogger.logPermissionRequested(context, 'manual');
 
       if (Platform.OS === 'android') {
+        const hasFineLocation = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+        if (hasFineLocation) {
+          await locationLogger.logPermissionResult('granted', context);
+          return true;
+        }
+
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           {
             title: 'Location Permission',
-            message: 'This app needs access to your location to provide better services.',
+            message:
+              'This app needs access to your location to show nearby stores and set delivery address.',
             buttonNeutral: 'Ask Me Later',
             buttonNegative: 'Cancel',
             buttonPositive: 'OK',
-          }
+          },
         );
 
-        const result = granted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' :
-          granted === PermissionsAndroid.RESULTS.DENIED ? 'denied' : 'blocked';
+        const result =
+          granted === PermissionsAndroid.RESULTS.GRANTED
+            ? 'granted'
+            : granted === PermissionsAndroid.RESULTS.DENIED
+            ? 'denied'
+            : 'blocked';
         await locationLogger.logPermissionResult(result, context);
         return granted === PermissionsAndroid.RESULTS.GRANTED;
       } else {
         // iOS
         const result = await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
-        const mappedResult = result === RESULTS.GRANTED ? 'granted' :
-          result === RESULTS.DENIED ? 'denied' : 'blocked';
+        const mappedResult =
+          result === RESULTS.GRANTED
+            ? 'granted'
+            : result === RESULTS.DENIED
+            ? 'denied'
+            : 'blocked';
 
         await locationLogger.logPermissionResult(mappedResult, context);
         return result === RESULTS.GRANTED;
@@ -51,28 +68,102 @@ class LocationService {
 
   // Get current position
   async getCurrentPosition(context: string = 'general'): Promise<LocationData> {
-    return new Promise((resolve, reject) => {
-      Geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          console.log('Current position:', { latitude, longitude });
-          // Log successful location retrieval
-          locationLogger.logLocationRetrieved([latitude, longitude], context);
-          resolve({ latitude, longitude });
-        },
-        (error) => {
-          console.error('Error getting current position:', error);
-          // Log failed location retrieval
-          locationLogger.logLocationSaveFailed(`Failed to retrieve location: ${error.message}`, context);
-          reject(error);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 10000,
-        }
+    try {
+      const location = await GetLocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+      });
+      console.log('Current position:', {
+        latitude: location.latitude,
+        longitude: location.longitude,
+      });
+      locationLogger.logLocationRetrieved(
+        [location.latitude, location.longitude],
+        context,
       );
-    });
+      return { latitude: location.latitude, longitude: location.longitude };
+    } catch (error) {
+      console.error('Error getting current position:', error);
+      locationLogger.logLocationSaveFailed(
+        `Failed to retrieve location: ${error}`,
+        context,
+      );
+      throw error;
+    }
+  }
+
+  // Reverse geocode coordinates to address using Google Maps API
+  async reverseGeocode(latitude: number, longitude: number): Promise<{
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zipcode?: string;
+    area?: string;
+  }> {
+    try {
+      const apiKey = 'AIzaSyBjOyQJKvI37gg2PKY7HJmdJohZbdqYZq4';
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const result = data.results[0];
+        const addressComponents = result.address_components;
+        
+        let street = '';
+        let city = '';
+        let state = '';
+        let country = 'India';
+        let zipcode = '';
+        let area = '';
+
+        addressComponents.forEach((component: any) => {
+          const types = component.types;
+          if (types.includes('street_number') || types.includes('route')) {
+            street = component.long_name;
+          } else if (types.includes('sublocality') || types.includes('neighborhood')) {
+            area = component.long_name;
+          } else if (types.includes('locality')) {
+            city = component.long_name;
+          } else if (types.includes('administrative_area_level_1')) {
+            state = component.long_name;
+          } else if (types.includes('postal_code')) {
+            zipcode = component.long_name;
+          } else if (types.includes('country')) {
+            country = component.long_name;
+          }
+        });
+
+        const fullAddress = result.formatted_address;
+        
+        console.log('Reverse geocode result:', {
+          address: fullAddress,
+          street,
+          city,
+          state,
+          country,
+          zipcode,
+          area
+        });
+
+        return {
+          address: fullAddress,
+          city,
+          state,
+          country,
+          zipcode,
+          area,
+        };
+      }
+
+      console.warn('No geocode results found');
+      return {};
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      return {};
+    }
   }
 
   // Get location with permission check
@@ -177,30 +268,15 @@ class LocationService {
     }
   }
 
-  // Watch position changes
-  watchPosition(callback: (location: LocationData) => void): void {
-    this.watchId = Geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        callback({ latitude, longitude });
-      },
-      (error) => {
-        console.error('Error watching position:', error);
-      },
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 10, // Update every 10 meters
-      }
+  // Watch position changes (not supported by react-native-get-location)
+  watchPosition(_callback: (location: LocationData) => void): void {
+    console.warn(
+      'watchPosition is not supported with react-native-get-location. Use getCurrentPosition instead.',
     );
   }
 
-  // Stop watching position
-  stopWatching(): void {
-    if (this.watchId !== null) {
-      Geolocation.clearWatch(this.watchId);
-      this.watchId = null;
-    }
-  }
+  // Stop watching position (no-op)
+  stopWatching(): void {}
 }
 
 export const locationService = new LocationService();
