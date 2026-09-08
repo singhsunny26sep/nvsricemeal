@@ -243,7 +243,7 @@ class ApiService {
     const endpoint = API_CONFIG.ENDPOINTS.AUTH.REGISTER;
 
     const response = await this.request<{ user: User; token: string }>(endpoint, {
-      method: 'POST',
+      method: 'PUT',
       body: JSON.stringify(request),
     });
 
@@ -481,6 +481,124 @@ class ApiService {
     return response;
   }
 
+  // Update user profile with formData
+ // Update user profile with formData
+// Update user profile with formData
+// Update user profile with formData - FIXED for React Native
+async updateUserProfile(formData: FormData): Promise<ApiResponse<any>> {
+  const endpoint = API_CONFIG.ENDPOINTS.USER.UPDATE;
+  const url = buildUrl(endpoint);
+
+  console.log('🔄 =======================================');
+  console.log('🔄 UPDATE PROFILE API CALL');
+  console.log('🔄 =======================================');
+  console.log('🔗 Full URL:', url);
+  console.log('📍 Endpoint:', endpoint);
+  console.log('⏰ Request Time:', new Date().toISOString());
+
+  const token = await AsyncStorage.getItem('userToken');
+  console.log('🔑 UPDATE PROFILE: Token from AsyncStorage:', token ? `${token.substring(0, 20)}...` : 'NULL/MISSING');
+  console.log('🔑 UPDATE PROFILE: Token exists:', !!token);
+
+  if (!token) {
+    console.error('🚨 UPDATE PROFILE FAILED - No token found in AsyncStorage');
+    return {
+      success: false,
+      error: 'Authentication token missing. Please login again.',
+    };
+  }
+
+  // Log FormData contents - React Native compatible
+  console.log('📦 Request Body (FormData):');
+  try {
+    // Access FormData parts through _parts (React Native internal)
+    // @ts-ignore - React Native specific
+    const parts = formData._parts || [];
+    for (const part of parts) {
+      const key = part[0];
+      const value = part[1];
+      if (value && typeof value === 'object' && value.uri) {
+        console.log(`  ${key}: [FILE]`, value.name || value.uri);
+      } else {
+        console.log(`  ${key}:`, value);
+      }
+    }
+  } catch (err) {
+    console.log('⚠️ Could not log FormData contents:', err);
+  }
+
+  console.log('🚀 Making PUT request to update user profile...');
+
+  const requestStartTime = Date.now();
+
+  try {
+    // IMPORTANT: Do NOT set Content-Type header for FormData
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const requestEndTime = Date.now();
+    const requestDuration = requestEndTime - requestStartTime;
+
+    const responseText = await response.text();
+    console.log('📥 =======================================');
+    console.log('📥 UPDATE PROFILE RESPONSE');
+    console.log('📥 =======================================');
+    console.log('⏱️ Request Duration:', requestDuration + 'ms');
+    console.log('✅ Response Status:', response.status);
+    console.log('📦 Response Text:', responseText);
+    console.log('🕐 Response Time:', new Date().toISOString());
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('📊 Parsed Response Data:', JSON.stringify(data, null, 2));
+    } catch (parseError) {
+      console.error('Failed to parse update profile response:', parseError);
+      return {
+        success: false,
+        error: 'Invalid JSON response from server',
+      };
+    }
+
+    if (!response.ok) {
+      console.log('💥 UPDATE PROFILE FAILED - HTTP Error');
+      return {
+        success: false,
+        error: data.message || data.error || `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    console.log('🎉 =======================================');
+    console.log('🎉 UPDATE PROFILE SUCCESSFUL!');
+    console.log('🎉 =======================================');
+    
+    return {
+      success: true,
+      data: data,
+    };
+  } catch (networkError) {
+    const requestEndTime = Date.now();
+    const requestDuration = requestEndTime - requestStartTime;
+
+    console.error('🚨 =======================================');
+    console.error('🚨 UPDATE PROFILE NETWORK ERROR');
+    console.error('🚨 =======================================');
+    console.error('⏱️ Failed after:', requestDuration + 'ms');
+    console.error('💬 Error message:', networkError instanceof Error ? networkError.message : 'Unknown network error');
+    console.error('🔗 Failed URL:', url);
+    console.error('🚨 =======================================');
+
+    return {
+      success: false,
+      error: networkError instanceof Error ? networkError.message : 'Network error occurred. Please check your internet connection.',
+    };
+  }
+}
   // Logout
   async logout(): Promise<ApiResponse<{ loggedOut: boolean }>> {
     const endpoint = API_CONFIG.ENDPOINTS.AUTH.LOGOUT;

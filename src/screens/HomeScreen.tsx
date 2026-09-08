@@ -1016,48 +1016,42 @@ const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.headerTop}>
-        <Image
-          style={styles.imageBox}
-          resizeMode="contain"
-          source={require('../assets/img/logos.jpeg')}
-        />
+        <View style={styles.headerTopRow}>
+          <View style={styles.headerLeft}>
+            <Image
+              style={styles.imageBox}
+              resizeMode="contain"
+              source={require('../assets/img/logos.jpeg')}
+            />
+            <View style={styles.headerBrandContainer}>
+              <Text style={styles.headerBrandText}>NVSRICEMART</Text>
+              <Text style={styles.headerSubText}>Fresh & Premium Quality</Text>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Icon name="notifications" size={22} color={theme.colors.primary} />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cartIconContainer}
+              onPress={() => navigation.navigate('CartScreen')}
+            >
+              <Icon name="shopping-cart" size={24} color="white" />
+              {cart.items.length > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cart.items.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
         <View
           style={styles.headerTextContainer}
           onLayout={e => setTextWidth(e.nativeEvent.layout.width)}
         >
-          <Animated.Text
-            ref={textRef}
-            style={[
-              styles.headerText,
-              {
-                transform: [{ translateX: animatedTextValue }],
-              },
-            ]}
-          >
-            Best Price & Best Quality 🎉 •
-          </Animated.Text>
-          <Animated.Text
-            style={[
-              styles.headerText,
-              {
-                transform: [{ translateX: animatedTextValue }],
-              },
-            ]}
-          >
-            Best Price & Best Quality 🎉 •
-          </Animated.Text>
+          
         </View>
-        <TouchableOpacity
-          style={styles.cartIconContainer}
-          onPress={() => navigation.navigate('CartScreen')}
-        >
-          <Icon name="shopping-cart" size={24} color={theme.colors.primary} />
-          {cart.items.length > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cart.items.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
       </View>
       {currentLocation && (
         <TouchableOpacity
@@ -1205,33 +1199,86 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   headerTop: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: theme.spacing.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(164, 148, 61, 0.25)',
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.medium,
-    backgroundColor: '#FFFEF5',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(164, 148, 61, 0.2)',
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  cartIconContainer: {
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerBrandContainer: {
+    marginLeft: 14,
+    justifyContent: 'center',
+  },
+  headerBrandText: {
+    fontSize: isLargeScreen ? 18 : 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    fontFamily: theme.fonts.family.bold,
+    letterSpacing: 0.3,
+    lineHeight: 20,
+  },
+  headerSubText: {
+    fontSize: isSmallScreen ? 10 : 11,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.family.medium,
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  iconButton: {
     position: 'relative',
-    padding: theme.spacing.small,
+    padding: theme.spacing.small + 2,
     backgroundColor: '#FFFEF5',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(164, 148, 61, 0.2)',
     shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E53935',
+    borderWidth: 1.5,
+    borderColor: 'white',
+  },
+  cartIconContainer: {
+    position: 'relative',
+    padding: theme.spacing.small + 2,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
   },
   cartBadge: {
     position: 'absolute',
@@ -1532,11 +1579,12 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.small,
   },
   imageBox: {
-    height: isSmallScreen ? 40 : isLargeScreen ? 80 : 50,
-    width: isSmallScreen ? 40 : isLargeScreen ? 80 : 50,
-    borderRadius: 12,
+    height: isSmallScreen ? 44 : isLargeScreen ? 60 : 52,
+    width: isSmallScreen ? 44 : isLargeScreen ? 60 : 52,
+    borderRadius: 14,
     borderWidth: 2,
-    borderColor: 'rgba(164, 148, 61, 0.3)',
+    borderColor: 'rgba(164, 148, 61, 0.35)',
+    backgroundColor: '#FFFEF5',
   },
   videoContainer: {
     height: isSmallScreen ? 160 : isLargeScreen ? 240 : 200,
@@ -1786,6 +1834,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     overflow: 'hidden',
     flex: 1,
+    marginTop: 10,
+    backgroundColor: 'rgba(164, 148, 61, 0.08)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   currentLocationContainer: {
     flexDirection: 'row',

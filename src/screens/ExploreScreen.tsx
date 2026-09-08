@@ -452,40 +452,8 @@ export default function ExploreScreen() {
           )}
         </Animated.View>
       </LinearGradient>
-
-      {/* Promotional Banner */}
-      <LinearGradient
-        colors={['#FFF9C4', '#FFE082']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.banner}
-      >
-        <View style={styles.bannerContent}>
-          <Text style={styles.bannerTitle}>NVS RICE MART</Text>
-          <Text style={styles.bannerSubtitle}>Handpicked grains from Punjab farms</Text>
-          <TouchableOpacity style={styles.bannerButton} activeOpacity={0.8}>
-            <Text style={styles.bannerButtonText}>Shop Now</Text>
-          </TouchableOpacity>
-        </View>
-        <Image
-          source={require('../assets/img/logos.jpeg')}
-          style={styles.bannerImage}
-          resizeMode="contain"
-        />
-      </LinearGradient>
-
-      {/* Category Filter */}
       <View style={styles.categoriesContainer}>
-        <FlatList
-          data={categories}
-          renderItem={renderCategoryItem}
-          keyExtractor={(item) => item}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesList}
-        />
       </View>
-
       <FlatList
         data={filteredProducts}
         renderItem={renderProductItem}

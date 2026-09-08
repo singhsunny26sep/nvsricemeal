@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,21 @@ import {
   Animated,
   StatusBar,
   ActivityIndicator,
+  Image,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import OtpVerify from 'react-native-otp-verify';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
-import Logo from '../components/Logo';
+import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
@@ -32,6 +37,99 @@ const LoginScreen: React.FC = () => {
   const { strings } = useLanguage();
   const scaleValue = React.useRef(new Animated.Value(1)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const otpRef = useRef('');
+  const phoneRef = useRef('');
+
+  useEffect(() => {
+    otpRef.current = otp;
+  }, [otp]);
+
+  useEffect(() => {
+    phoneRef.current = phone;
+  }, [phone]);
+
+  const otpHandler = (message: string) => {
+    console.log('SMS Retriever Message:', message);
+    const otpMatch = /(\d{4,6})/g.exec(message);
+    if (otpMatch && otpMatch[1]) {
+      const extractedOtp = otpMatch[1];
+      console.log('Extracted OTP:', extractedOtp);
+      setOtp(extractedOtp);
+      if (extractedOtp.length === 6) {
+        setTimeout(() => {
+          verifyOTPHandler(extractedOtp);
+        }, 500);
+      }
+    }
+  };
+
+  const verifyOTPHandler = async (otpValue: string) => {
+    if (otpValue.length !== 6) {
+      Alert.alert(
+        strings?.common?.error || 'ದೋಷ',
+        'ದಯವಿಟ್ಟು 6 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiService.verifyMobileOTP({
+        mobile: phoneRef.current,
+        otp: otpValue,
+      });
+
+      if (response.success && response.data) {
+        const user = (response.data as any)?.data?.user || (response.data as any)?.user;
+        const token = (response.data as any)?.data?.token || (response.data as any)?.token;
+        
+        if (user && user.isSignUpCompleted === false) {
+          if (token) {
+            await AsyncStorage.setItem('userToken', token);
+          }
+          
+          setShowOTPInput(false);
+          setOtp('');
+          setSessionId('');
+          
+          setTimeout(() => {
+            (navigation as any).navigate('ProfileCompletion', { user });
+          }, 300);
+        } else if (user && token) {
+          login({
+            ...user,
+            token,
+          });
+
+          Alert.alert(
+            strings?.login?.success || 'ಯಶಸ್ಸು',
+            strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
+          );
+
+          setShowOTPInput(false);
+          setOtp('');
+          setSessionId('');
+        } else {
+          Alert.alert(
+            strings?.common?.error || 'ದೋಷ',
+            response.error || 'OTP ತಪ್ಪಾಗಿದೆ'
+          );
+        }
+      } else {
+        Alert.alert(
+          strings?.common?.error || 'ದೋಷ',
+          response.error || 'OTP ತಪ್ಪಾಗಿದೆ'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        strings?.common?.error || 'ದೋಷ',
+        'ನೆಟ್‌ವರ್ಕ್ ದೋಷ ಸಂಭವಿಸಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -40,6 +138,31 @@ const LoginScreen: React.FC = () => {
       useNativeDriver: true,
     }).start();
   }, [fadeAnim]);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      OtpVerify.getHash()
+        .then((hash) => {
+          console.log('SMS Retriever Hash:', hash);
+        })
+        .catch((error) => {
+          console.log('SMS Retriever Hash Error:', error);
+        });
+
+      OtpVerify.getOtp()
+        .then(() => OtpVerify.addListener(otpHandler))
+        .catch((error) => {
+          console.log('OTP Listener Error:', error);
+        });
+    }
+
+    return () => {
+      if (Platform.OS === 'android') {
+        OtpVerify.removeListener();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSendOTP = async () => {
     const mobileRegex = /^[6-9]\d{9}$/;
@@ -83,7 +206,8 @@ const LoginScreen: React.FC = () => {
   };
 
   const handleVerifyMobileOTP = async () => {
-    if (otp.length !== 6) {
+    const currentOtp = otp;
+    if (currentOtp.length !== 6) {
       Alert.alert(
         strings?.common?.error || 'ದೋಷ',
         'ದಯವಿಟ್ಟು 6 ಅಂಕಿಯ OTP ನಮೂದಿಸಿ.'
@@ -95,24 +219,45 @@ const LoginScreen: React.FC = () => {
     try {
       const response = await apiService.verifyMobileOTP({
         mobile: phone,
-        otp: otp,
+        otp: currentOtp,
       });
 
       if (response.success && response.data) {
-        const { user, token } = response.data;
-        login({
-          ...user,
-          token,
-        });
+        const user = (response.data as any)?.data?.user || (response.data as any)?.user;
+        const token = (response.data as any)?.data?.token || (response.data as any)?.token;
+        
+        if (user && user.isSignUpCompleted === false) {
+          if (token) {
+            await AsyncStorage.setItem('userToken', token);
+          }
 
-        Alert.alert(
-          strings?.login?.success || 'ಯಶಸ್ಸು',
-          strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
-        );
+          setShowOTPInput(false);
+          setOtp('');
+          setSessionId('');
+          
+          setTimeout(() => {
+            (navigation as any).navigate('ProfileCompletion', { user });
+          }, 300);
+        } else if (user && token) {
+          login({
+            ...user,
+            token,
+          });
 
-        setShowOTPInput(false);
-        setOtp('');
-        setSessionId('');
+          Alert.alert(
+            strings?.login?.success || 'ಯಶಸ್ಸು',
+            strings?.login?.loginSuccess || 'ಲಾಗಿನ್ ಯಶಸ್ವಿಯಾಗಿದೆ!'
+          );
+
+          setShowOTPInput(false);
+          setOtp('');
+          setSessionId('');
+        } else {
+          Alert.alert(
+            strings?.common?.error || 'ದೋಷ',
+            response.error || 'OTP ತಪ್ಪಾಗಿದೆ'
+          );
+        }
       } else {
         Alert.alert(
           strings?.common?.error || 'ದೋಷ',
@@ -255,7 +400,7 @@ const LoginScreen: React.FC = () => {
         style={styles.header}
       >
         <View style={styles.logoWrap}>
-          <Logo size="large" showText={true} variant="circular" style={styles.logo} />
+         <Image source={require('../assets/img/logos.jpeg')} style={styles.logo} />
         </View>
         <Text style={styles.subtitle}>
           {strings?.login?.welcomeBack || 'NVS ಅಕ್ಕಿ ಮಾಲ್‌ಗೆ ಮರಳಿ ಸ್ವಾಗತ'}
@@ -317,6 +462,7 @@ const LoginScreen: React.FC = () => {
                     keyboardType="numeric"
                     maxLength={1}
                     autoFocus={index === 0}
+                    textContentType={index === 0 ? 'oneTimeCode' : 'none'}
                     onFocus={() => setFocusedField(`otp${index}`)}
                     onBlur={() => setFocusedField(null)}
                     ref={(ref) => {
@@ -341,6 +487,8 @@ const LoginScreen: React.FC = () => {
             : (strings?.login?.sendOTP || 'OTP ಕಳುಹಿಸಿ'),
           showOTPInput ? handleVerifyMobileOTP : handleSendOTP
         )}
+
+       
       </Animated.View>
     </ScrollView>
   );
@@ -518,6 +666,20 @@ const styles = StyleSheet.create({
     fontSize: theme.fonts.size.medium,
     fontFamily: theme.fonts.family.medium,
     textAlign: 'center',
+  },
+  switchAuthButton: {
+    marginTop: theme.spacing.large,
+    alignItems: 'center',
+  },
+  switchAuthText: {
+    fontSize: theme.fonts.size.medium,
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.family.regular,
+  },
+  switchAuthLink: {
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.family.bold,
+    fontWeight: 'bold',
   },
 });
 

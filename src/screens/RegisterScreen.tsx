@@ -15,12 +15,10 @@ import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
 import Logo from '../components/Logo';
 import LanguageSelector from '../components/LanguageSelector';
+import { useNavigation } from '@react-navigation/native';
 
-interface RegisterScreenProps {
-  onSwitchToLogin?: () => void;
-}
-
-const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
+const RegisterScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -47,6 +45,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
         email,
         password,
         role: 'user', // Default role as per your API example
+        
       });
 
       if (response.success && response.data) {
@@ -138,7 +137,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ onSwitchToLogin }) => {
 
         <View style={styles.loginContainer}>
           <Text style={styles.loginText}>{strings?.login?.noAccount || "ಖಾತೆ ಇದೆಯೇ?"} </Text>
-          <TouchableOpacity onPress={onSwitchToLogin}>
+          <TouchableOpacity onPress={() => (navigation as any).navigate('Login')}>
             <Text style={styles.loginLink}>{strings?.login?.login || 'ಲಾಗಿನ್'}</Text>
           </TouchableOpacity>
         </View>

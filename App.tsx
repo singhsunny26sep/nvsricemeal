@@ -30,6 +30,7 @@ import NotificationScreen from './src/screens/NotificationScreen';
 import CartScreen from './src/screens/CartScreen';
 import ExploreScreen from './src/screens/ExploreScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import ProfileCompletionScreen from './src/screens/ProfileCompletionScreen';
 
 import {
   CartProvider,
@@ -46,6 +47,7 @@ import Statusbar from './src/constants/Statusbar';
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const ProfileStack = createStackNavigator();
+const AuthStack = createStackNavigator();
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from './src/constants/theme';
 import LocationFillPage from './src/screens/LocationFillPage';
@@ -191,6 +193,10 @@ function ProfileStackNavigator() {
         name="SharePage"
         component={SharePage}
       />
+      <ProfileStack.Screen
+        name="ProfileCompletion"
+        component={ProfileCompletionScreen}
+      />
 
     </ProfileStack.Navigator>
   );
@@ -218,6 +224,37 @@ function ExploreStackNavigator() {
         component={ProductDetailsScreen}
       />
     </ExploreStack.Navigator>
+  );
+}
+
+function AuthStackNavigator() {
+  const { auth } = useAuth();
+
+  if (auth.loading) {
+    return <SplashScreen onFinish={() => {}} />;
+  }
+
+  return (
+    <AuthStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <AuthStack.Screen
+        name="Login"
+        component={LoginScreen}
+        initialParams={{ onSwitchToRegister: () => {} }}
+      />
+      <AuthStack.Screen
+        name="Register"
+        component={RegisterScreen}
+        initialParams={{ onSwitchToLogin: () => {} }}
+      />
+      <AuthStack.Screen
+        name="ProfileCompletion"
+        component={ProfileCompletionScreen}
+      />
+    </AuthStack.Navigator>
   );
 }
 
@@ -352,8 +389,7 @@ function MainTabs() {
 }
 
 function AuthScreens() {
-  const { auth, login } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'register'>('login');
+  const { auth } = useAuth();
   const [isSplashFinished, setIsSplashFinished] = useState(false);
 
   if (auth.loading || !isSplashFinished) {
@@ -361,11 +397,7 @@ function AuthScreens() {
   }
 
   if (!auth.isAuthenticated) {
-    return currentScreen === 'login' ? (
-      <LoginScreen onSwitchToRegister={() => setCurrentScreen('register')} />
-    ) : (
-      <RegisterScreen onSwitchToLogin={() => setCurrentScreen('login')} />
-    );
+    return <AuthStackNavigator />;
   }
 
   return <MainTabs />;
