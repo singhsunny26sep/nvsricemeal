@@ -57,31 +57,37 @@ const [locations, setLocations] = useState<Location[]>([]);
 
        console.log('🌍 Fetching locations from API...');
        
-       // Get user profile to fetch userId
-       const profileResponse = await apiService.getUserProfile();
-       
-       if (profileResponse.success && profileResponse.data) {
-         const userId = profileResponse.data.id;
-         console.log('🌍 User ID found:', userId);
+        // Get user profile to fetch userId
+        const profileResponse = await apiService.getUserProfile();
+        
+        if (profileResponse.success && profileResponse.data) {
+          const userId = profileResponse.data.id;
+          console.log('🌍 User ID found:', userId);
+          
+          // Use getAll endpoint with userId as query parameter
+          const response = await apiService.getLocations(userId);
          
-         // Use getAll endpoint with userId as query parameter
-         const response = await apiService.getLocations(userId, 'india');
-         
-         if (response.success && response.data) {
-           // Handle the nested response structure
-           const locationsData = response.data.data || response.data;
-           
-           if (locationsData && Array.isArray(locationsData.data)) {
-             setLocations(locationsData.data);
-             console.log('✅ Locations fetched successfully:', locationsData.data.length, 'locations');
-           } else if (locationsData && Array.isArray(locationsData)) {
-             setLocations(locationsData);
-             console.log('✅ Locations fetched successfully:', locationsData.length, 'locations');
-           } else {
-             console.log('⚠️ No locations data found in response');
-             setLocations([]);
-           }
-         } else {
+          if (response.success && response.data) {
+            // Check if API response body explicitly indicates no data
+            if (response.data?.success === false) {
+              console.log('⚠️ API indicates no locations found');
+              setLocations([]);
+            } else {
+              // Handle the nested response structure
+              const locationsData = response.data.data || response.data;
+              
+              if (locationsData && Array.isArray(locationsData.data)) {
+                setLocations(locationsData.data);
+                console.log('✅ Locations fetched successfully:', locationsData.data.length, 'locations');
+              } else if (locationsData && Array.isArray(locationsData)) {
+                setLocations(locationsData);
+                console.log('✅ Locations fetched successfully:', locationsData.length, 'locations');
+              } else {
+                console.log('⚠️ No locations data found in response');
+                setLocations([]);
+              }
+            }
+          } else {
            console.log('❌ API call failed:', response.error);
            setError(response.error || 'Failed to fetch locations');
          }

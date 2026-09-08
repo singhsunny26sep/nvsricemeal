@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useCart } from './src/context/CartContext';
 import {
@@ -44,10 +44,12 @@ import {
   useLanguage,
 } from './src/context/LanguageContext';
 import Statusbar from './src/constants/Statusbar';
+import { apiService } from './src/utils/apiService';
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const ProfileStack = createStackNavigator();
 const AuthStack = createStackNavigator();
+const RootStack = createStackNavigator();
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from './src/constants/theme';
 import LocationFillPage from './src/screens/LocationFillPage';
@@ -388,6 +390,77 @@ function MainTabs() {
   );
 }
 
+// Root stack navigator that gates access to MainTabs behind location creation
+function RootStackNavigator() {
+  const { auth } = useAuth();
+  const [initialRoute, setInitialRoute] = useState<'MainTabs' | 'CreateLocationScreen' | null>(null);
+
+  useEffect(() => {
+    const checkLocations = async () => {
+      try {
+        let userId = auth.user?.id || (auth.user as any)?._id;
+
+        if (!userId) {
+          const profileResponse = await apiService.getUserProfile();
+          if (profileResponse.success && profileResponse.data) {
+            userId = profileResponse.data.id;
+          }
+        }
+
+        if (!userId) {
+          setInitialRoute('CreateLocationScreen');
+          return;
+        }
+
+        console.log('Checking saved locations for user:', userId);
+        const response = await apiService.getLocations(userId);
+
+        let locationsList: any[] = [];
+        if (response.success && response.data) {
+          // Check if API response body explicitly indicates failure (e.g., { success: false, message: "No any location found" })
+          if (response.data?.success === false) {
+            console.log('API body indicates no location data — setting CreateLocationScreen');
+          } else {
+            const rawData = response.data?.data || response.data;
+            if (rawData && Array.isArray(rawData.data)) {
+              locationsList = rawData.data;
+            } else if (rawData && Array.isArray(rawData)) {
+              locationsList = rawData;
+            }
+          }
+        }
+
+        setInitialRoute(locationsList.length > 0 ? 'MainTabs' : 'CreateLocationScreen');
+      } catch (error) {
+        console.error('Error checking saved locations:', error);
+        setInitialRoute('CreateLocationScreen');
+      }
+    };
+
+    checkLocations();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (initialRoute === null) {
+    return <SplashScreen onFinish={() => {}} />;
+  }
+
+  return (
+    <RootStack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName={initialRoute}
+    >
+      <RootStack.Screen name="MainTabs" component={MainTabs} />
+      <RootStack.Screen
+        name="CreateLocationScreen"
+        component={CreateLocationScreen}
+        options={{ presentation: 'modal', gestureEnabled: false }}
+        initialParams={{ isLocationGate: true }}
+      />
+    </RootStack.Navigator>
+  );
+}
+
 function AuthScreens() {
   const { auth } = useAuth();
   const [isSplashFinished, setIsSplashFinished] = useState(false);
@@ -400,7 +473,7 @@ function AuthScreens() {
     return <AuthStackNavigator />;
   }
 
-  return <MainTabs />;
+  return <RootStackNavigator />;
 }
 
 export default function App() {

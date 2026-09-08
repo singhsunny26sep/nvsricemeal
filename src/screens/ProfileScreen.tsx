@@ -163,7 +163,7 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
         <Image
-          source={require("../assets/img/logos.jpeg")}
+          source={userProfile?.avatar ? { uri: userProfile.avatar } : require('../assets/img/logos.jpeg')}
           style={styles.avatar}
         />
         <Text style={styles.name}>{user.name}</Text>

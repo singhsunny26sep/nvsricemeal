@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -91,6 +92,15 @@ export default function CreateLocationScreen() {
   useEffect(() => {
     fetchUserId();
   }, []);
+
+  // When in location-gate mode, prevent Android back button from exiting
+  useEffect(() => {
+    const isLocationGate = route.params?.isLocationGate;
+    if (!isLocationGate) return;
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => backHandler.remove();
+  }, [route.params?.isLocationGate]);
 
   const fetchUserId = async () => {
     try {
@@ -245,7 +255,14 @@ export default function CreateLocationScreen() {
           [
             {
               text: 'OK',
-              onPress: () => navigation.goBack(),
+              onPress: () => {
+                const isLocationGate = route.params?.isLocationGate;
+                if (isLocationGate) {
+                  (navigation as any).replace('MainTabs');
+                } else {
+                  navigation.goBack();
+                }
+              },
             },
           ]
         );

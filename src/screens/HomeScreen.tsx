@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,12 +17,13 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Video from 'react-native-video';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { Product } from '../constants/products';
 import { useCart } from '../context/CartContext';
 import { theme } from '../constants/theme';
 import Logo from '../components/Logo';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { apiService } from '../utils/apiService';
 import Statusbar from '../constants/Statusbar';
 import { locationService, LocationData } from '../utils/locationService';
@@ -609,6 +610,8 @@ const HomeScreen: React.FC = () => {
   const { addToCart, cart, addOrUpdateToCart } = useCart();
   const { strings } = useLanguage();
   const navigation = useNavigation<any>();
+  const { auth } = useAuth();
+  const hasNavigatedToCreateLocationRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category>({
     id: 'all',
@@ -630,6 +633,7 @@ const HomeScreen: React.FC = () => {
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
   const [locationAddress, setLocationAddress] = useState<string>('');
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+  const [savedLocation, setSavedLocation] = useState<any>(null);
 
   // Animated text for scrolling effect
   const animatedTextValue = useRef(new Animated.Value(0)).current;
@@ -737,10 +741,77 @@ const HomeScreen: React.FC = () => {
     fetchProductsByCategory(1, false);
   }, [selectedCategory]);
 
-  // Fetch current location on mount
-  useEffect(() => {
-    getCurrentUserLocation();
-  }, []);
+   // Check if user has saved locations on screen focus
+   // If no locations exist, redirect to CreateLocationScreen every time
+   // until a location is actually created (ref only set when locations ARE found)
+   const checkSavedLocations = useCallback(async () => {
+     if (hasNavigatedToCreateLocationRef.current) return;
+
+     try {
+       // Get userId from auth context, fallback to profile API
+       let userId = auth.user?.id || (auth.user as any)?._id;
+
+       if (!userId) {
+         const profileResponse = await apiService.getUserProfile();
+         if (profileResponse.success && profileResponse.data) {
+           userId = profileResponse.data.id;
+         }
+       }
+
+       if (!userId) {
+         console.log('Unable to determine user ID for location check');
+         return;
+       }
+
+       console.log('Checking saved locations for user:', userId);
+
+       // Fetch saved locations from API
+       const response = await apiService.getLocations(userId);
+       console.log('Location API response:', response);
+
+        // If API response failed or there is no data, navigate to CreateLocationScreen
+        if (!response.success) {
+          console.log('No location data in API response — redirecting to CreateLocationScreen');
+          navigation.navigate('CreateLocationScreen');
+          return;
+        }
+
+        // Parse locations from response (handles nested data structures)
+        let locationsList: any[] = [];
+        // Check if API response body explicitly indicates failure (e.g., { success: false, message: "No any location found" })
+        if (response.data?.success === false) {
+          console.log('API body indicates no location data — redirecting to CreateLocationScreen');
+          navigation.navigate('CreateLocationScreen');
+          return;
+        } else if (response.data) {
+          const rawData = response.data?.data || response.data;
+          if (rawData && Array.isArray(rawData.data)) {
+            locationsList = rawData.data;
+          } else if (rawData && Array.isArray(rawData)) {
+            locationsList = rawData;
+          }
+        }
+
+        console.log('Parsed locations count:', locationsList.length);
+
+        // If no saved locations found, navigate to CreateLocationScreen
+        if (locationsList.length === 0) {
+          console.log('No saved locations found — redirecting to CreateLocationScreen');
+          navigation.navigate('CreateLocationScreen');
+        } else {
+          console.log('Saved locations found:', locationsList.length);
+          setSavedLocation(locationsList[0]);
+          // Only mark as verified when locations exist — blocks re-checking
+          hasNavigatedToCreateLocationRef.current = true;
+        }
+      } catch (error) {
+       console.error('Error checking saved locations:', error);
+     }
+   }, [navigation, auth]);
+
+   useFocusEffect(() => {
+     checkSavedLocations();
+   });
 
   const getCurrentUserLocation = async () => {
     setIsFetchingLocation(true);
@@ -1053,29 +1124,31 @@ const HomeScreen: React.FC = () => {
           
         </View>
       </View>
-      {currentLocation && (
+      {savedLocation ? (
         <TouchableOpacity
           style={styles.currentLocationContainer}
-          onPress={getCurrentUserLocation}
-          disabled={isFetchingLocation}
+          onPress={() =>
+            (navigation as any).getParent()?.navigate('Profile', {
+              screen: 'SaveLocation',
+            })
+          }
+          activeOpacity={0.7}
         >
-          <Icon name="my-location" size={18} color={theme.colors.primary} />
+          <Icon name="location-on" size={18} color={theme.colors.primary} />
           <Text style={styles.currentLocationText} numberOfLines={1}>
-            {isFetchingLocation
-              ? 'Updating location...'
-              : locationAddress || 'Current location'}
+            {savedLocation.name || savedLocation.address || 'My Location'}
           </Text>
-          <Icon name="refresh" size={16} color={theme.colors.primary} />
+          <Icon name="chevron-right" size={16} color={theme.colors.primary} />
         </TouchableOpacity>
-      )}
-      {!currentLocation && !isFetchingLocation && (
+      ) : (
         <TouchableOpacity
           style={[styles.currentLocationContainer, styles.locationDisabled]}
-          onPress={getCurrentUserLocation}
+          onPress={() => navigation.navigate('CreateLocationScreen')}
+          activeOpacity={0.7}
         >
           <Icon name="location-off" size={18} color={theme.colors.error} />
           <Text style={[styles.currentLocationText, styles.locationDisabledText]}>
-            {locationAddress || 'Tap to enable location'}
+            No saved location — tap to add one
           </Text>
         </TouchableOpacity>
       )}
