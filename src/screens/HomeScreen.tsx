@@ -348,98 +348,39 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({
   banners,
   banner,
 }) => {
-  // If we have multiple banners, show carousel
-  if (banners && banners.length > 0) {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const scrollRef = useRef<any>(null);
-
-    // Auto-slide every 3 seconds
-    useEffect(() => {
-      if (banners.length > 1) {
-        const interval = setInterval(() => {
-          setCurrentIndex(prevIndex => {
-            const nextIndex = (prevIndex + 1) % banners.length;
-            return nextIndex;
-          });
-        }, 3000);
-        return () => clearInterval(interval);
-      }
-    }, [banners.length]);
-
-    // Scroll to current index when it changes
-    useEffect(() => {
-      if (scrollRef.current && banners.length > 1) {
-        try {
-          scrollRef.current.scrollTo({
-            x: currentIndex * width,
-            animated: true,
-          });
-        } catch (e) {
-          console.log('Scroll error:', e);
-        }
-      }
-    }, [currentIndex, banners.length]);
-
-    const onScroll = (event: any) => {
-      const slideIndex = Math.round(event.nativeEvent.contentOffset.x / width);
-      setCurrentIndex(slideIndex);
-    };
-
-    const renderBanner = ({ item }: { item: any }) => (
-      <View style={styles.bannerSlide}>
-<Image
-           source={{
-             uri:
-               item?.image ||
-               'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop',
-           }}
-           style={styles.bannerImage}
-           resizeMode="stretch"
-         />
-      </View>
-    );
-
-    return (
-      <View style={styles.carouselContainer}>
-        <FlatList
-          data={banners}
-          renderItem={renderBanner}
-          keyExtractor={(item, index) => `banner-${index}`}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          ref={scrollRef}
-        />
-        {banners.length > 1 && (
-          <View style={styles.paginationContainer}>
-            {banners.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  index === currentIndex
-                    ? styles.paginationDotActive
-                    : styles.paginationDotInactive,
-                ]}
-              />
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  // Single banner (fallback)
+  // Always call hooks in the same order (no conditional hook calls)
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(0);
+  const scrollRef = useRef<any>(null);
   const [videoState, setVideoState] = useState({
     playing: true,
     loading: true,
     error: false,
     showControls: false,
   });
-
   const videoRef = useRef<any>(null);
+
+  // Auto-slide every 3 seconds (only when multiple banners)
+  useEffect(() => {
+    if (banners && banners.length > 1) {
+      const interval = setInterval(() => {
+        const nextIndex = (currentIndexRef.current + 1) % banners.length;
+        currentIndexRef.current = nextIndex;
+        setCurrentIndex(nextIndex);
+        if (scrollRef.current) {
+          try {
+            scrollRef.current.scrollToOffset({
+              offset: nextIndex * width,
+              animated: true,
+            });
+          } catch (e) {
+            console.log('Scroll error:', e);
+          }
+        }
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [banners?.length]);
 
   // Fix Cloudinary URL function
   const getVideoUrl = (url: string) => {
@@ -496,6 +437,70 @@ const VideoBanner: React.FC<{ banners?: any[]; banner?: any }> = ({
   const videoUrl = banner?.video ? getVideoUrl(banner.video) : null;
   console.log(videoUrl, '%%%%%%%%%%%%%%%%%%%%%%%%%');
 
+  const onScroll = (event: any) => {
+    const slideIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+    currentIndexRef.current = slideIndex;
+    setCurrentIndex(slideIndex);
+  };
+
+  const renderBanner = ({ item }: { item: any }) => (
+    <View style={styles.bannerSlide}>
+      <Image
+        source={{
+          uri:
+            item?.image ||
+            'https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=800&h=400&fit=crop',
+        }}
+        style={styles.bannerImage}
+        resizeMode="stretch"
+      />
+    </View>
+  );
+
+  // If we have banners, show carousel
+  if (banners && banners.length > 0) {
+    return (
+      <View style={styles.carouselContainer}>
+        <FlatList
+          data={banners}
+          renderItem={renderBanner}
+          keyExtractor={(item, index) => `banner-${index}`}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          ref={scrollRef}
+          getItemLayout={(_, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
+          onScrollToIndexFailed={() => {
+            console.log('scrollToIndex failed, trying scrollToOffset');
+          }}
+          removeClippedSubviews={false}
+        />
+        {banners.length > 1 && (
+          <View style={styles.paginationContainer}>
+            {banners.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.paginationDot,
+                  index === currentIndex
+                    ? styles.paginationDotActive
+                    : styles.paginationDotInactive,
+                ]}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // Single banner (fallback)
   // If no video, show image banner with overlay
   if (!videoUrl || videoState.error) {
     return (
@@ -624,8 +629,6 @@ const HomeScreen: React.FC = () => {
   const [isProductsLoading, setIsProductsLoading] = useState(false);
   const [banner, setBanner] = useState<any>(null);
   const [banners, setBanners] = useState<any[]>([]);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const bannerScrollRef = useRef<any>(null);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -715,25 +718,6 @@ const HomeScreen: React.FC = () => {
     fetchBanner();
   }, []);
 
-  // Auto-slide banners every 3 seconds
-  useEffect(() => {
-    if (banners.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentBannerIndex(prevIndex => {
-          const nextIndex = (prevIndex + 1) % banners.length;
-          if (bannerScrollRef.current) {
-            bannerScrollRef.current.scrollTo({
-              x: nextIndex * width,
-              animated: true,
-            });
-          }
-          return nextIndex;
-        });
-      }, 3000);
-
-      return () => clearInterval(interval);
-    }
-  }, [banners.length]);
   // Fetch products when category changes
   useEffect(() => {
     setPage(1);
@@ -1095,7 +1079,7 @@ const HomeScreen: React.FC = () => {
               source={require('../assets/img/logos.jpeg')}
             />
             <View style={styles.headerBrandContainer}>
-              <Text style={styles.headerBrandText}>NVSRICEMART</Text>
+              <Text style={styles.headerBrandText}>NVS RICE MART</Text>
               <Text style={styles.headerSubText}>Fresh & Premium Quality</Text>
             </View>
           </View>
@@ -1159,24 +1143,7 @@ const HomeScreen: React.FC = () => {
       >
         <View style={styles.headerContainer}>
           {/* Delivery Area Message */}
-          <View style={styles.searchContainer}>
-            <Icon
-              name="search"
-              size={20}
-              color={theme.colors.textSecondary}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={
-                strings?.home?.searchPlaceholder || 'ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ...'
-              }
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor={theme.colors.textSecondary}
-            />
-          </View>
-
+      
           {/* Banner Section */}
           <VideoBanner banners={banners} banner={banner} />
         </View>
@@ -1263,7 +1230,7 @@ const styles = StyleSheet.create({
     padding: isSmallScreen ? theme.spacing.medium : theme.spacing.large,
    
     backgroundColor: theme.colors.card,
-    borderBottomLeftRadius: 24,
+    borderBottomLeftRadius: 10,
     borderBottomRightRadius: 24,
     shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },

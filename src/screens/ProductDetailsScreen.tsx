@@ -217,40 +217,6 @@ const transformedProduct: Product = {
     (product as any)._id,
   ]);
 
-  // Mock reviews data
-  const reviews: Review[] = [
-    {
-      id: '1',
-      user: 'Rajesh K.',
-      rating: 5,
-      comment:
-        'Excellent quality basmati rice. Perfect for biryani! The aroma and grain length are exceptional.',
-      date: '2024-01-10',
-    },
-    {
-      id: '2',
-      user: 'Priya M.',
-      rating: 4,
-      comment:
-        'Good rice, nice aroma. Will buy again. Delivery was prompt and packaging was secure.',
-      date: '2024-01-08',
-    },
-    {
-      id: '3',
-      user: 'Amit S.',
-      rating: 5,
-      comment:
-        'Best basmati rice I have tried. Highly recommended for daily cooking and special occasions.',
-      date: '2024-01-05',
-    },
-    {
-      id: '4',
-      user: 'Sneha R.',
-      rating: 4,
-      comment: 'Good value for money. Rice cooks well and has nice fragrance.',
-      date: '2024-01-03',
-    },
-  ];
 
   // Fetch related products from API
   const fetchRelatedProducts = async (category: string) => {
@@ -1202,7 +1168,7 @@ const transformedProduct: Product = {
         {[
           { key: 'description', label: 'Description' },
           { key: 'specifications', label: 'Specifications' },
-          { key: 'reviews', label: `Reviews (${reviews.length})` },
+        
         ].map(tab => (
           <TouchableOpacity
             key={tab.key}
@@ -1354,16 +1320,10 @@ const transformedProduct: Product = {
               </TouchableOpacity>
             </View>
 
-            <FlatList
-              data={reviews}
-              renderItem={renderReview}
-              keyExtractor={item => item.id}
-              scrollEnabled={false}
-            />
+           
           </View>
         )}
       </View>
-
       {/* Related Products */}
       <View style={styles.relatedSection}>
         <View style={styles.relatedSectionHeader}>

@@ -365,12 +365,12 @@ const [locations, setLocations] = useState<Location[]>([]);
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
-         <TouchableOpacity
+         {/* <TouchableOpacity
               style={styles.createButtonLarge}
               onPress={handleCreateLocation}
             >
               <Text style={styles.createButtonText}>+ Create Location</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
       </View>
     );
   }

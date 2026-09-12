@@ -238,16 +238,7 @@ const ProfileScreen: React.FC = () => {
           <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
-      <View style={styles.menuSection}>
-        <Text style={styles.menuSectionTitle}>Settings</Text>
-        <TouchableOpacity style={styles.menuItem} onPress={handleSavedLocations}>
-          <View style={styles.menuItemLeft}>
-            <Icon name="location-on" size={24} color={theme.colors.primary} />
-            <Text style={styles.menuItemText}>Saved Locations</Text>
-          </View>
-          <Icon name="arrow-forward" size={20} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+     
       <View style={styles.menuSection}>
         <Text style={styles.menuSectionTitle}>Settings</Text>
         <TouchableOpacity style={styles.menuItem} onPress={handleLanguageSelection}>
