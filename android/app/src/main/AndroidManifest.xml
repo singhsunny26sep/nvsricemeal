@@ -17,10 +17,17 @@
         android:usesCleartextTraffic="${usesCleartextTraffic}"
         android:supportsRtl="true">
       
-      <!-- Google Maps API Key -->
+       <!-- Google Maps API Key -->
       <meta-data 
         android:name="com.google.android.geo.API_KEY" 
         android:value="AIzaSyBjOyQJKvI37gg2PKY7HJmdJohZbdqYZq4"/>
+      <service
+        android:name=".MessagingService"
+        android:exported="false">
+        <intent-filter>
+          <action android:name="com.google.firebase.MESSAGING_EVENT" />
+        </intent-filter>
+      </service>
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { apiService } from '../utils/apiService';
 import { useNavigation } from '@react-navigation/native';
+import { FCM_STORAGE_KEY } from '../utils/firebase';
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -74,9 +75,11 @@ const LoginScreen: React.FC = () => {
 
     setIsLoading(true);
     try {
+      const fcmToken = await AsyncStorage.getItem(FCM_STORAGE_KEY);
       const response = await apiService.verifyMobileOTP({
         mobile: phoneRef.current,
         otp: otpValue,
+        fcmToken: fcmToken || '',
       });
 
       if (response.success && response.data) {
@@ -217,9 +220,11 @@ const LoginScreen: React.FC = () => {
 
     setIsLoading(true);
     try {
+      const fcmToken = await AsyncStorage.getItem(FCM_STORAGE_KEY);
       const response = await apiService.verifyMobileOTP({
         mobile: phone,
         otp: currentOtp,
+        fcmToken: fcmToken || '',
       });
 
       if (response.success && response.data) {

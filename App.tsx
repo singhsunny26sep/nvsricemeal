@@ -45,6 +45,7 @@ import {
 } from './src/context/LanguageContext';
 import Statusbar from './src/constants/Statusbar';
 import { apiService } from './src/utils/apiService';
+import { initializeFCM } from './src/utils/firebase';
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const ProfileStack = createStackNavigator();
@@ -464,6 +465,12 @@ function RootStackNavigator() {
 function AuthScreens() {
   const { auth } = useAuth();
   const [isSplashFinished, setIsSplashFinished] = useState(false);
+
+  useEffect(() => {
+    initializeFCM().catch((error) => {
+      console.log('FCM initialization failed:', error);
+    });
+  }, []);
 
   if (auth.loading || !isSplashFinished) {
     return <SplashScreen onFinish={() => setIsSplashFinished(true)} />;

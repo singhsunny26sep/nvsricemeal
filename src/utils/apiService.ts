@@ -1016,20 +1016,34 @@ console.log(endpoint,"++++++++++++++++++++++++++")
      });
    }
 
-   // Update order status
-   async updateOrderStatus(orderId: string, status: string): Promise<ApiResponse<any>> {
-     const endpoint = `/orders/update/${orderId}`;
-     
-     console.log('=== UPDATE ORDER STATUS DEBUG ===');
-     console.log('Order ID:', orderId);
-     console.log('Status:', status);
-     console.log('Full URL:', buildUrl(endpoint));
+  // Update order status
+  async updateOrderStatus(orderId: string, status: string): Promise<ApiResponse<any>> {
+    const endpoint = `/orders/update/${orderId}`;
+    
+    console.log('=== UPDATE ORDER STATUS DEBUG ===');
+    console.log('Order ID:', orderId);
+    console.log('Status:', status);
+    console.log('Full URL:', buildUrl(endpoint));
 
-     return this.request<any>(endpoint, {
-       method: 'PUT',
-       body: JSON.stringify({ status }),
-     });
-   }
+    return this.request<any>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // Update FCM token for the logged-in user
+  async updateFcmToken(fcmToken: string): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.USER.UPDATE;
+
+    console.log('=== UPDATE FCM TOKEN DEBUG ===');
+    console.log('Endpoint:', endpoint);
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ fcmToken }),
+    });
+  }
 }
 
 // Export singleton instance
