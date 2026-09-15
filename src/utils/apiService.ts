@@ -1064,6 +1064,21 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     });
   }
 
+  // Cancel order with a reason
+  async cancelOrder(orderId: string, reason: string): Promise<ApiResponse<any>> {
+    const endpoint = `/orders/${orderId}/cancel`;
+
+    console.log('=== CANCEL ORDER DEBUG ===');
+    console.log('Order ID:', orderId);
+    console.log('Cancel reason:', reason);
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   // Update FCM token for the logged-in user
   async updateFcmToken(fcmToken: string): Promise<ApiResponse<any>> {
     const endpoint = API_CONFIG.ENDPOINTS.USER.UPDATE;

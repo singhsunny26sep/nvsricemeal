@@ -11,7 +11,10 @@ import {
   Dimensions,
   Modal,
   ScrollView,
+  Alert,
+  TextInput,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../utils/apiService';
 import { theme } from '../constants/theme';
@@ -217,6 +220,9 @@ export default function OrderHistoryScreen() {
   const [cancellingOrderIds, setCancellingOrderIds] = useState<Set<string>>(new Set());
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
   const [detailsVisible, setDetailsVisible] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   // -------- Fetch user id --------
   const fetchUserId = useCallback(async () => {
@@ -290,28 +296,54 @@ export default function OrderHistoryScreen() {
     setLoadingMore(false);
   }, [currentPage, totalPages, loadingMore, fetchOrders]);
 
-  const handleCancelPress = async (orderId: string) => {
-    setCancellingOrderIds((prev) => new Set(prev).add(orderId));
+  // -------- Cancel flow --------
+  const openCancelModal = (orderId: string) => {
+    setCancelOrderId(orderId);
+    setCancelReason('');
+    setCancelModalVisible(true);
+  };
+
+  const handleCancelOrder = async () => {
+    if (!cancelOrderId) return;
+
+    const trimmedReason = cancelReason.trim();
+    if (!trimmedReason) {
+      Alert.alert('Reason Required', 'Please enter a reason for cancellation.');
+      return;
+    }
+
+    setCancelModalVisible(false);
+    setCancellingOrderIds((prev) => new Set(prev).add(cancelOrderId));
     try {
-      const response = await apiService.updateOrderStatus(orderId, 'CANCELLED');
+      console.log('🔍 Cancelling order:', cancelOrderId, 'Reason:', trimmedReason);
+      const response = await apiService.cancelOrder(cancelOrderId, trimmedReason);
+
       if (response.success) {
+        console.log('✅ Order cancelled successfully');
         await fetchOrders(currentPage, false);
+        Alert.alert('Order Cancelled', 'Your order has been cancelled successfully.');
       } else {
         throw new Error(response.error || 'Failed to cancel order');
       }
     } catch (err) {
       console.error('Error cancelling order:', err);
-      alert(
-        'Failed to cancel order: ' +
-          (err instanceof Error ? err.message : 'Unknown error')
+      Alert.alert(
+        'Cancellation Failed',
+        (err instanceof Error ? err.message : 'Unknown error')
       );
     } finally {
       setCancellingOrderIds((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(orderId);
+        newSet.delete(cancelOrderId);
         return newSet;
       });
+      setCancelOrderId(null);
+      setCancelReason('');
     }
+  };
+
+  const handleCancelPress = (orderId: string) => {
+    openCancelModal(orderId);
   };
 
   // -------- Helpers --------
@@ -902,6 +934,58 @@ export default function OrderHistoryScreen() {
     );
   };
 
+  // -------- Cancel Reason Modal --------
+  const renderCancelReasonModal = () => {
+    return (
+      <Modal
+        visible={cancelModalVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <View style={styles.cancelModalOverlay}>
+          <View style={styles.cancelModalContent}>
+            <View style={styles.cancelModalHeader}>
+              <Text style={styles.cancelModalTitle}>Cancel Order</Text>
+              <TouchableOpacity
+                style={styles.cancelModalClose}
+                onPress={() => setCancelModalVisible(false)}
+              >
+                <Icon name="close" size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.cancelModalLabel}>Reason for cancellation:</Text>
+            <TextInput
+              style={styles.cancelReasonInput}
+              placeholder="Enter reason (e.g. Galti se order ho gaya tha)"
+              value={cancelReason}
+              onChangeText={setCancelReason}
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              maxLength={200}
+            />
+
+            <View style={styles.cancelModalButtons}>
+              <TouchableOpacity
+                style={styles.cancelModalButton}
+                onPress={() => setCancelModalVisible(false)}
+              >
+                <Text style={styles.cancelModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelModalButton, styles.confirmCancelButton]}
+                onPress={handleCancelOrder}
+              >
+                <Text style={styles.confirmCancelButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   // -------- States --------
   if (loading && orders.length === 0) {
     return (
@@ -973,6 +1057,7 @@ export default function OrderHistoryScreen() {
       />
 
       {renderDetailsModal()}
+      {renderCancelReasonModal()}
     </View>
   );
 }
@@ -1556,6 +1641,92 @@ const styles = StyleSheet.create({
   },
 
   // ------- Footer / States -------
+   // ------- Cancel Reason Modal -------
+  cancelModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  cancelModalContent: {
+    backgroundColor: theme.colors.card,
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 400,
+    overflow: 'hidden',
+    ...theme.shadows.card,
+    elevation: 10,
+  },
+  cancelModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  cancelModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    fontFamily: theme.fonts.family.bold,
+  },
+  cancelModalClose: {
+    padding: 4,
+  },
+  cancelModalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    fontFamily: theme.fonts.family.medium,
+  },
+  cancelReasonInput: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: theme.colors.text,
+    backgroundColor: '#FAFAFA',
+    minHeight: 80,
+    textAlignVertical: 'top',
+    fontFamily: theme.fonts.family.regular,
+  },
+  cancelModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  cancelModalButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  cancelModalButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.family.medium,
+  },
+  confirmCancelButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  confirmCancelButtonText: {
+    color: theme.colors.card,
+    fontFamily: theme.fonts.family.bold,
+  },
+
   footerLoader: {
     flexDirection: 'row',
     justifyContent: 'center',
