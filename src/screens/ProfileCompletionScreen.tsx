@@ -11,14 +11,13 @@ import {
   Image,
   StatusBar,
   Platform,
-  Modal,
   KeyboardAvoidingView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DatePicker from 'react-native-date-picker';
 import { theme } from '../constants/theme';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -37,7 +36,6 @@ const ProfileCompletionScreen: React.FC = () => {
   const [imageUri, setImageUri] = useState<string | null>(initialUser.image || null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
-  const [tempDate, setTempDate] = useState<Date>(dob ? new Date(dob) : new Date());
   const { strings } = useLanguage();
 
   const handlePickImage = () => {
@@ -64,22 +62,14 @@ const ProfileCompletionScreen: React.FC = () => {
   };
 
   const openDatePicker = () => {
-    setTempDate(dob ? new Date(dob) : new Date());
     setIsDatePickerVisible(true);
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setIsDatePickerVisible(false);
-    }
-
-    if (selectedDate) {
-      setTempDate(selectedDate);
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      setDob(`${year}-${month}-${day}`);
-    }
+  const handleDateChange = (selectedDate: Date) => {
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    setDob(`${year}-${month}-${day}`);
   };
 
   const validateForm = () => {
@@ -325,42 +315,21 @@ const ProfileCompletionScreen: React.FC = () => {
             <Icon name="calendar-today" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
-          {/* Date Picker Modal */}
-          {(Platform.OS === 'ios' || isDatePickerVisible) && (
-            <Modal
-              visible={isDatePickerVisible}
-              transparent
-              animationType="slide"
-              onRequestClose={() => setIsDatePickerVisible(false)}
-            >
-              <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setIsDatePickerVisible(false)}
-              >
-                <View style={styles.modalContent}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Select Date of Birth</Text>
-                    <TouchableOpacity onPress={() => setIsDatePickerVisible(false)}>
-                      <Icon name="close" size={24} color={theme.colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.datePickerContainer}>
-                    <DateTimePicker
-                      value={tempDate}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={handleDateChange}
-                      maximumDate={new Date()}
-                      minimumDate={new Date(1900, 0, 1)}
-                      style={styles.datePicker}
-                    />
-
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </Modal>
-          )}
+           {/* Date Picker */}
+          <DatePicker
+            modal
+            open={isDatePickerVisible}
+            date={dob ? new Date(dob) : new Date()}
+            mode="date"
+            maximumDate={new Date()}
+            minimumDate={new Date(1900, 0, 1)}
+            onConfirm={(date) => {
+              handleDateChange(date);
+              setIsDatePickerVisible(false);
+            }}
+            onCancel={() => setIsDatePickerVisible(false)}
+            theme="light"
+          />
 
           {/* Submit Button */}
           <TouchableOpacity
@@ -538,54 +507,6 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.family.bold,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.card,
-    borderTopLeftRadius: theme.borderRadius.large,
-    borderTopRightRadius: theme.borderRadius.large,
-    paddingBottom: theme.spacing.large,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.large,
-    paddingVertical: theme.spacing.medium,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  modalTitle: {
-    fontSize: theme.fonts.size.xlarge,
-    fontWeight: 'bold',
-    color: theme.colors.text,
-    fontFamily: theme.fonts.family.bold,
-  },
-  datePickerContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.large,
-  },
-  datePicker: {
-    width: '100%',
-  },
-  datePickerDoneButton: {
-    marginTop: theme.spacing.medium,
-    paddingVertical: theme.spacing.medium,
-    paddingHorizontal: theme.spacing.xlarge,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.medium,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  datePickerDoneText: {
-    color: theme.colors.card,
-    fontSize: theme.fonts.size.large,
-    fontWeight: 'bold',
-    fontFamily: theme.fonts.family.bold,
   },
   noteText: {
     marginTop: theme.spacing.medium,

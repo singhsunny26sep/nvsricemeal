@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../constants/theme';
+
+const SUPPORT_PHONE = '+917892958566';
 
 const HelpSupportScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -76,12 +79,27 @@ const HelpSupportScreen: React.FC = () => {
     setMessage('');
   };
 
-  const handleCallSupport = () => {
-    Alert.alert('Call Support', 'Call us at +91-7337777705 for immediate assistance.');
+  const handleCallSupport = async () => {
+    const url = `tel:${SUPPORT_PHONE}`;
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      Linking.openURL(url);
+    } else {
+      Alert.alert(
+        'Call Support',
+        `Call us at +91-7892958566 for immediate assistance.`,
+      );
+    }
   };
 
-  const handleEmailSupport = () => {
-    Alert.alert('Email Support', 'Send us an email at ricemartnvs@gmail.com');
+  const handleEmailSupport = async () => {
+    const url = 'mailto:ricemartnvs@gmail.com';
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) {
+      Linking.openURL(url);
+    } else {
+      Alert.alert('Email Support', 'Send us an email at ricemartnvs@gmail.com');
+    }
   };
 
   return (

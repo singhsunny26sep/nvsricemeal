@@ -1084,7 +1084,14 @@ const HomeScreen: React.FC = () => {
             </View>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() =>
+                (navigation as any).getParent()?.navigate('Profile', {
+                  screen: 'Notifications',
+                })
+              }
+            >
               <Icon name="notifications" size={22} color={theme.colors.primary} />
               <View style={styles.notificationDot} />
             </TouchableOpacity>
@@ -1105,7 +1112,6 @@ const HomeScreen: React.FC = () => {
           style={styles.headerTextContainer}
           onLayout={e => setTextWidth(e.nativeEvent.layout.width)}
         >
-          
         </View>
       </View>
       {savedLocation ? (

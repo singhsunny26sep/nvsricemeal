@@ -113,3 +113,15 @@ export const API_URLS = {
 // Test token for development (replace with actual token from login)
 // This should be removed in production and only use tokens from API responses
 export const TEST_TOKEN = '';
+
+// App version (must match versionName in android/app/build.gradle)
+export const APP_VERSION = '9.0';
+
+// Play Store URL for this app
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.nvsricemart';
+
+// Update check endpoint (the API should return { latestVersion: string, updateMessage?: string, forceUpdate?: boolean })
+export const APP_UPDATE_ENDPOINT = '/appSettings/get';
+
+// Key used in AsyncStorage to cache the last "don't remind me" timestamp
+export const UPDATE_REMIND_LATER_KEY = 'update_remind_later';

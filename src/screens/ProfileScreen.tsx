@@ -189,13 +189,7 @@ const ProfileScreen: React.FC = () => {
           </View>
           <Text style={styles.value}>{user.phone || 'Not available'}</Text>
         </View>
-        <View style={styles.infoItem}>
-          <View style={styles.labelContainer}>
-            <Icon name="location-on" size={18} color={theme.colors.textSecondary} />
-            <Text style={styles.label}>Address</Text>
-          </View>
-          <Text style={styles.value}>{userProfile?.address || 'Not available'}</Text>
-        </View>
+        
       </View>
       <View style={styles.menuSection}>
         <Text style={styles.menuSectionTitle}>Account</Text>

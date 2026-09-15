@@ -315,7 +315,7 @@ export default function CreateLocationScreen() {
 
   return (
     <View style={styles.container}>
-      <Statusbar />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
@@ -330,20 +330,7 @@ export default function CreateLocationScreen() {
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Create New Location</Text>
           </View>
-
-          <View style={styles.formContainer}>
-            {renderInputField('name', 'Location Name', 'e.g., Main Shop, Home', 'storefront')}
-            {renderInputField('shopOrBuildingNumber', 'Shop/Building Number', 'e.g., 12A', 'location-city')}
-            {renderInputField('address', 'Address', 'e.g., Near Market Road', 'map-marker')}
-            {renderInputField('area', 'Area', 'e.g., Davanagere Taluku', 'map-marker')}
-            {renderInputField('city', 'City', 'e.g., Davanagere', 'city')}
-            {renderInputField('district', 'District', 'e.g., Davanagere', 'account-balance')}
-            {renderInputField('zipcode', 'Zipcode', 'e.g., 577007', 'local-post-office', 'numeric')}
-            {renderInputField('state', 'State', 'e.g., Karnataka', 'public')}
-            {renderInputField('country', 'Country', 'e.g., India', 'public')}
-
-            {/* Current Location Button */}
-            <TouchableOpacity 
+    <TouchableOpacity 
               style={[
                 styles.currentBtn,
                 loading && styles.currentBtnLoading
@@ -367,8 +354,21 @@ export default function CreateLocationScreen() {
               )}
             </TouchableOpacity>
 
+          <View style={styles.formContainer}>
+            {renderInputField('name', 'Location Name', 'e.g., Main Shop, Home', 'storefront')}
+            {renderInputField('shopOrBuildingNumber', 'Shop/Building Number', 'e.g.,', 'location-city')}
+            {renderInputField('address', 'Address', 'e.g.,', 'map-marker')}
+            {renderInputField('area', 'Area', 'e.g.,  ', 'map-marker')}
+            {renderInputField('city', 'City', 'e.g., ', 'city')}
+            {renderInputField('district', 'District', 'e.g.', 'account-balance')}
+            {renderInputField('zipcode', 'Zipcode', 'e.g.', 'local-post-office', 'numeric')}
+            {renderInputField('state', 'State', 'e.g.', 'public')}
+            {renderInputField('country', 'Country', 'e.g., ', 'public')}
+
+            {/* Current Location Button */}
+        
             {/* Latitude and Longitude Inputs */}
-            <View style={styles.inputContainer}>
+            {/* <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Latitude</Text>
               <View style={styles.inputWrapper}>
                 <Icon name="gps-fixed" size={20} color={theme.colors.primary} style={styles.inputIcon} />
@@ -396,7 +396,7 @@ export default function CreateLocationScreen() {
                   keyboardType="numeric"
                 />
               </View>
-            </View>
+            </View> */}
 
             <TouchableOpacity
               style={styles.createButton}
@@ -497,6 +497,7 @@ const styles = StyleSheet.create({
 
    /* Current Location Button */
    currentBtn: {
+    width: '50%',
      flexDirection: 'row',
      backgroundColor: theme.colors.primary,
      marginTop: 20,
@@ -512,6 +513,7 @@ const styles = StyleSheet.create({
      borderWidth: 1,
      borderColor: 'rgba(255, 255, 255, 0.2)',
      marginBottom: 12,
+     marginLeft: 16,
    },
    currentBtnLoading: {
      backgroundColor: '#6c757d',

@@ -52,6 +52,7 @@ interface User {
   avatar?: string;
   bio?: string;
   address?: string;
+  locationId?: string;
 }
 
 interface OTPSessionData {
@@ -466,6 +467,7 @@ class ApiService {
         avatar: actualData.image || actualData.avatar,
         bio: actualData.bio || '',
         address: actualData.address || '',
+        locationId: actualData.locationId,
       };
 
       console.log('🔑 PROFILE FETCH: Transformed user data:', transformedUser);
@@ -893,6 +895,20 @@ console.log(endpoint,"++++++++++++++++++++++++++")
     });
   }
 
+  // Verify delivery for a specific location
+  async verifyDeliveryByLocation(locationId: string): Promise<ApiResponse<any>> {
+    const endpoint = API_CONFIG.ENDPOINTS.CART.VERIFY_DELIVERY;
+
+    console.log('=== VERIFY DELIVERY BY LOCATION DEBUG ===');
+    console.log('Location ID:', locationId);
+    console.log('Full URL:', buildUrl(endpoint));
+
+    return this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ locationId }),
+    });
+  }
+
   // Check delivery availability for a product and location
   async checkDeliveryAvailability(productId: string, zipCode: string): Promise<ApiResponse<any>> {
     const endpoint = `${API_CONFIG.ENDPOINTS.PRODUCTS_API.CHECK_DELIVERY}/${productId}`;
@@ -972,7 +988,24 @@ console.log(endpoint,"++++++++++++++++++++++++++")
 
       return this.request<any>(endpoint, {
         method: 'POST',
-        body: JSON.stringify(locationData),
+        body: JSON.stringify({
+          ...locationData,
+          type: 'CUSTOMER',
+          isDefault: true,
+        }),
+      });
+    }
+
+    // Check if a pincode / service area is serviceable
+    async checkServiceArea(zipcode: string): Promise<ApiResponse<any>> {
+      const endpoint = `/service-areas/check?zipcode=${encodeURIComponent(zipcode)}`;
+
+      console.log('=== CHECK SERVICE AREA DEBUG ===');
+      console.log('Pincode:', zipcode);
+      console.log('Full URL:', buildUrl(endpoint));
+
+      return this.request<any>(endpoint, {
+        method: 'GET',
       });
     }
 

@@ -73,7 +73,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
               console.error('Error getting location:', error);
               Alert.alert(
                 'Location Error',
-                'Unable to get your current location. Please check your GPS settings.',
+                '',
                 [{ text: 'OK' }]
               );
             },

@@ -8,7 +8,6 @@ import {
   Image,
   Dimensions,
   Alert,
-  TextInput,
   ScrollView,
   Animated,
   Easing,
@@ -113,18 +112,16 @@ interface SelectedLocation {
 }
 
 const CartScreen: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity, setPincode, clearCart, syncCartFromServer, isSyncing } = useCart();
+  const { cart, removeFromCart, updateQuantity, clearCart, syncCartFromServer, isSyncing } = useCart();
   const { auth } = useAuth();
   const { strings } = useLanguage();
   const navigation = useNavigation<any>();
 
-  // Selected location state for checkout
+   // Selected location state for checkout
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation | null>(null);
-  const [pincodeInput, setPincodeInput] = useState(cart.pincode || '');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessWave, setShowSuccessWave] = useState(false);
   const [syncError, setSyncError] = useState('');
-  const [deliveryErrorMessage, setDeliveryErrorMessage] = useState('');
   const hasSyncedRef = useRef(false);
 
   // Animation refs
@@ -272,77 +269,7 @@ const CartScreen: React.FC = () => {
     } catch (error) {
       console.error('Error saving order:', error);
     }
-  };
-
-  // Handle pincode check for delivery verification
-  const handlePincodeCheck = async () => {
-    if (!pincodeInput || pincodeInput.length !== 6) {
-      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit pincode.');
-      return;
-    }
-
-    setIsLoading(true);
-    setDeliveryErrorMessage('');
-
-    try {
-      console.log('🔍 Verifying delivery for pincode:', pincodeInput);
-      const apiUrl = 'https://api.nvsricemart.com/nvs-rice-mart/carts/verify-delivery';
-      console.log('🌐 API URL for delivery verification:', apiUrl);
-
-      // Get token from AsyncStorage for authenticated request
-      const token = await AsyncStorage.getItem('userToken');
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ zipcode: pincodeInput }),
-      });
-
-      const responseData = await response.json();
-      console.log('📥 API Response:', responseData);
-
-      if (responseData.success) {
-        console.log('✅ Delivery verification successful');
-        setPincode(pincodeInput, true);
-        setDeliveryErrorMessage('');
-        Alert.alert('✅ Delivery Available', 'Delivery is available for this pincode.');
-      } else {
-        console.log('❌ Delivery verification failed:', responseData);
-
-        // Check if some items are not deliverable
-        const errorData = responseData.data?.error || responseData.error;
-        console.log(errorData,"this is error Data")
-        if (errorData && errorData.unavailableItems && Array.isArray(errorData.unavailableItems)) {
-          const unavailableItems = errorData.unavailableItems;
-          console.log('📦 Unavailable items:', unavailableItems);
-
-          const unavailableNames = unavailableItems.map((item: any) => {
-            const cartItem = cart.items.find(cartItem => cartItem.product.id === item.productId);
-            return cartItem ? cartItem.product.name : `Product ${item.productId}`;
-          }).join(', ');
-
-          setPincode(pincodeInput, false);
-          setDeliveryErrorMessage(responseData.message || 'Some items are not deliverable to this pincode');
-         
-        } else {
-          // General delivery not available
-          setPincode(pincodeInput, false);
-          setDeliveryErrorMessage(responseData.message || 'Delivery not available for this pincode.');
-          Alert.alert('❌ Delivery Not Available', responseData.message || 'Delivery not available for this pincode.');
-        }
-      }
-    } catch (error) {
-      console.error('💥 Error verifying delivery:', error);
-      setPincode(pincodeInput, false);
-      setDeliveryErrorMessage('Unable to verify delivery. Please try again.');
-      Alert.alert('❌ Verification Error', 'Unable to verify delivery. Please check your connection and try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+   };
 
   // Navigate to SaveLocationScreen for location selection
   const handleSelectLocation = () => {
@@ -380,14 +307,7 @@ const CartScreen: React.FC = () => {
           text: 'Select Saved Location',
           onPress: handleSelectLocation
         },
-        {
-          text: 'Create New Location',
-          onPress: handleCreateLocation
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        }
+        
       ]
     );
   };
@@ -511,7 +431,7 @@ const CartScreen: React.FC = () => {
         if (profileResponse.success && profileResponse.data) {
           const userId = profileResponse.data.id;
           const locationResponse = await apiService.getLocationByUserId(userId);
-          
+           
           if (locationResponse.success && locationResponse.data) {
             const locationsData = locationResponse.data.data || locationResponse.data;
             const hasLocation = locationsData && (
@@ -590,21 +510,17 @@ const CartScreen: React.FC = () => {
       return;
     }
     
-    if (!cart.pincode) {
-      Alert.alert('Delivery Check Required', 'Please check delivery availability for your area first.');
-      return;
-    }
-
-    // Verify delivery before proceeding
+    // Verify delivery using locationId
     setIsLoading(true);
     try {
-      console.log('🔍 Verifying delivery before checkout for pincode:', cart.pincode);
-      const response = await apiService.verifyDelivery(cart.pincode);
+      console.log('🔍 Verifying delivery for locationId:', selectedLocation._id);
+      const response = await apiService.verifyDeliveryByLocation(selectedLocation._id);
 
       if (response.success) {
-        console.log('✅ Delivery verification successful for checkout');
+        console.log('✅ Delivery verification successful');
+        console.log('📋 Preview data:', response.data);
         setIsLoading(false);
-        // Proceed with payment options
+        // Proceed with payment options (COD + Online)
         Alert.alert(
           'Choose Payment Method',
           `Order Total: ₹${finalTotal}\n\nSelect your preferred payment method:`,
@@ -625,55 +541,27 @@ const CartScreen: React.FC = () => {
         );
       } else {
         setIsLoading(false);
-        console.log('❌ Delivery verification failed during checkout:', response.error);
-
-        // Check if some items are not deliverable
-        const errorData = response.data?.error || response.error;
-        if (errorData && errorData.unavailableItems && Array.isArray(errorData.unavailableItems)) {
-          const unavailableItems = errorData.unavailableItems;
-          console.log('📦 Unavailable items during checkout:', unavailableItems);
-
-          // Show detailed message about unavailable items
-          const unavailableNames = unavailableItems.map((item: any) => {
-            const cartItem = cart.items.find(cartItem => cartItem.product.id === item.productId);
-            return cartItem ? cartItem.product.name : `Product ${item.productId}`;
-          }).join(', ');
-
-          setDeliveryErrorMessage(response.message || 'Some items are not deliverable to this pincode');
-          Alert.alert(
-            '⚠️ Items Not Deliverable',
-            `${response.message}\n\nUnavailable items:\n${unavailableNames}\n\nPlease remove these items or try a different pincode.`,
-            [
-              {
-                text: 'Remove Items',
-                onPress: () => {
-                  // Remove unavailable items from cart
-                  unavailableItems.forEach((item: any) => {
-                    removeFromCart(item.productId);
-                  });
-                  // Update delivery status
-                  setPincode(cart.pincode, true);
-                  setDeliveryErrorMessage(''); // Clear message after removal
-                }
-              },
-              {
-                text: 'Change Pincode',
-                style: 'cancel'
-              }
-            ]
-          );
-        } else {
-          // General delivery not available
-          setPincode(cart.pincode, false);
-          setDeliveryErrorMessage(response.message || 'Delivery not available for this pincode.');
-          Alert.alert(response.message || 'Delivery not available for this pincode.');
-        }
+        console.log('❌ Delivery verification failed:', response.error);
+        Alert.alert(
+          'Delivery Not Available',
+          response.message || response.error || 'Delivery is not available to your selected location. Please choose a different location.',
+          [
+            {
+              text: 'Change Location',
+              onPress: handleLocationOptions
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            }
+          ]
+        );
       }
     } catch (error) {
       setIsLoading(false);
-      console.error('💥 Error verifying delivery during checkout:', error);
+      console.error('💥 Error verifying delivery:', error);
       Alert.alert(
-        '❌ Verification Error',
+        'Error',
         'Unable to verify delivery. Please try again.'
       );
     }
@@ -776,7 +664,7 @@ const CartScreen: React.FC = () => {
                <Text style={styles.sectionTitle}>Delivery Information</Text>
                
 {/* Location Selection Button */}
-                <TouchableOpacity
+               <TouchableOpacity
                   style={styles.locationButton}
                   onPress={handleLocationOptions}
                 >
@@ -793,34 +681,7 @@ const CartScreen: React.FC = () => {
                  </View>
                  <Icon name="chevron-right" size={24} color="#999" />
                </TouchableOpacity>
-
-               <View style={styles.pincodeContainer}>
-                 <TextInput
-                   style={styles.pincodeInput}
-                   placeholder="Enter Pincode"
-                   value={pincodeInput}
-                   onChangeText={(text) => { setPincodeInput(text); setDeliveryErrorMessage(''); }}
-                   keyboardType="numeric"
-                   maxLength={6}
-                 />
-                 <TouchableOpacity
-                   style={styles.checkButton}
-                   onPress={handlePincodeCheck}
-                 >
-                   <Text style={styles.checkButtonText}>Check</Text>
-                 </TouchableOpacity>
-               </View>
-               {cart.pincode && cart.isDeliveryAvailable && !deliveryErrorMessage && (
-                 <Text style={[styles.deliveryStatus, { color: '#28a745' }]}>
-                   ✅ Delivery available to {cart.pincode}
-                 </Text>
-               )}
-               {cart.pincode && deliveryErrorMessage && (
-                 <Text style={[styles.deliveryStatus, { color: cart.isDeliveryAvailable ? '#ff9800' : '#dc3545' }]}>
-                   {deliveryErrorMessage}
-                 </Text>
-               )}
-             </View>
+            </View>
             
             </ScrollView>
 
@@ -856,15 +717,15 @@ const CartScreen: React.FC = () => {
               </View>
 
               <TouchableOpacity
-                style={[styles.checkoutButton, (!cart.isDeliveryAvailable || isLoading) && styles.disabledButton]}
+                style={[styles.checkoutButton, isLoading && styles.disabledButton]}
                 onPress={handleCheckout}
-                disabled={!cart.isDeliveryAvailable || isLoading}
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color="white" size="small" />
                 ) : (
                   <Text style={styles.checkoutButtonText}>
-                    {cart.isDeliveryAvailable ? `Place Order - ₹${finalTotal}` : 'Check Delivery Area'}
+                    {`Place Order - ₹${finalTotal}`}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -1158,35 +1019,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 4,
-  },
-  pincodeContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  pincodeInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#dee2e6',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    backgroundColor: '#f8f9fa',
-  },
-  checkButton: {
-    backgroundColor: '#007bff',
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    justifyContent: 'center',
-  },
-  checkButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  deliveryStatus: {
-    fontSize: 14,
-    marginTop: 8,
-    fontWeight: '500',
   },
   bottomContainer: {
     backgroundColor: 'white',

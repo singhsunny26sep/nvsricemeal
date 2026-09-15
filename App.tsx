@@ -46,6 +46,7 @@ import {
 import Statusbar from './src/constants/Statusbar';
 import { apiService } from './src/utils/apiService';
 import { initializeFCM } from './src/utils/firebase';
+import AppUpdateBanner from './src/components/AppUpdateBanner';
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const ProfileStack = createStackNavigator();
@@ -396,35 +397,46 @@ function RootStackNavigator() {
   const { auth } = useAuth();
   const [initialRoute, setInitialRoute] = useState<'MainTabs' | 'CreateLocationScreen' | null>(null);
 
-  useEffect(() => {
-    const checkLocations = async () => {
-      try {
-        let userId = auth.user?.id || (auth.user as any)?._id;
+   useEffect(() => {
+     const checkLocations = async () => {
+       try {
+         let userId = auth.user?.id || (auth.user as any)?._id;
+         let profileLocationId: string | undefined;
 
-        if (!userId) {
-          const profileResponse = await apiService.getUserProfile();
-          if (profileResponse.success && profileResponse.data) {
-            userId = profileResponse.data.id;
-          }
-        }
+         // Step 2: GET /users/get -> { locationId, name, ... }
+         const profileResponse = await apiService.getUserProfile();
+         if (profileResponse.success && profileResponse.data) {
+           if (!userId) {
+             userId = profileResponse.data.id;
+           }
+           profileLocationId = profileResponse.data.locationId;
+         }
 
-        if (!userId) {
-          setInitialRoute('CreateLocationScreen');
-          return;
-        }
+         if (!userId) {
+           setInitialRoute('CreateLocationScreen');
+           return;
+         }
 
-        console.log('Checking saved locations for user:', userId);
-        const response = await apiService.getLocations(userId);
+         // locationId hai? -> go to listing (MainTabs)
+         if (profileLocationId) {
+           console.log('User has locationId:', profileLocationId);
+           setInitialRoute('MainTabs');
+           return;
+         }
 
-        let locationsList: any[] = [];
-        if (response.success && response.data) {
-          // Check if API response body explicitly indicates failure (e.g., { success: false, message: "No any location found" })
-          if (response.data?.success === false) {
-            console.log('API body indicates no location data — setting CreateLocationScreen');
-          } else {
-            const rawData = response.data?.data || response.data;
-            if (rawData && Array.isArray(rawData.data)) {
-              locationsList = rawData.data;
+         // locationId NAHI -> address add screen (fallback: check saved locations list)
+         console.log('Checking saved locations for user:', userId);
+         const response = await apiService.getLocations(userId);
+
+         let locationsList: any[] = [];
+         if (response.success && response.data) {
+           // Check if API response body explicitly indicates failure (e.g., { success: false, message: "No any location found" })
+           if (response.data?.success === false) {
+             console.log('API body indicates no location data — setting CreateLocationScreen');
+           } else {
+             const rawData = response.data?.data || response.data;
+             if (rawData && Array.isArray(rawData.data)) {
+               locationsList = rawData.data;
             } else if (rawData && Array.isArray(rawData)) {
               locationsList = rawData;
             }
@@ -433,12 +445,12 @@ function RootStackNavigator() {
 
         setInitialRoute(locationsList.length > 0 ? 'MainTabs' : 'CreateLocationScreen');
       } catch (error) {
-        console.error('Error checking saved locations:', error);
-        setInitialRoute('CreateLocationScreen');
-      }
-    };
+         console.error('Error checking saved locations:', error);
+         setInitialRoute('CreateLocationScreen');
+       }
+     };
 
-    checkLocations();
+     checkLocations();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -477,10 +489,20 @@ function AuthScreens() {
   }
 
   if (!auth.isAuthenticated) {
-    return <AuthStackNavigator />;
+    return (
+      <>
+        <AuthStackNavigator />
+        <AppUpdateBanner />
+      </>
+    );
   }
 
-  return <RootStackNavigator />;
+  return (
+    <>
+      <RootStackNavigator />
+      <AppUpdateBanner />
+    </>
+  );
 }
 
 export default function App() {
